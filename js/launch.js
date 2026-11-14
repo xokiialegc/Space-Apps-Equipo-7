@@ -123,6 +123,7 @@
 
   function end(ok, title, text) {
     st.done = true; mode = 'end'; held = false; firing = false;
+    msg('');
     $('#cockpit').style.transform = '';
     setFire(ok ? 'APAGADO' : 'FALLO', false);
     $('#le-title').textContent = title; $('#le-text').innerHTML = text;
@@ -291,7 +292,7 @@
     const rho = Math.exp(-st.h / 12);
     $('#cockpit').style.transform = firing
       ? 'translate(' + ((Math.random() - 0.5) * 4 * (0.4 + rho)).toFixed(1) + 'px,' + ((Math.random() - 0.5) * 4 * (0.4 + rho)).toFixed(1) + 'px)' : '';
-    $('#heat').style.opacity = st.q > 0.6 ? Math.min(0.35, (st.q - 0.6) * 0.4) : 0;
+    $('#heat').style.opacity = st.q > 0.6 ? Math.min(0.18, (st.q - 0.6) * 0.25) : 0;
   }
 
   function loop(now) {
@@ -299,7 +300,8 @@
     if (mode === 'off' || $('#screen-launch').classList.contains('hidden')) { mode = 'off'; return; }
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (mode === 'launch') update(dt);
-    if (mode !== 'end' || dt) { drawView(dt, now); drawPanels(); }
+    A.sky.draw(st, firing, mode, dt, now);
+    drawView(dt, now); drawPanels();
     if (mode !== 'off') raf = requestAnimationFrame(loop);
   }
   function startLoop() { last = performance.now(); if (!raf) raf = requestAnimationFrame(loop); }

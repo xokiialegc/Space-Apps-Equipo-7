@@ -126,3 +126,34 @@ fallo, y paso al segmento espacial.
 Recorrido completo en Chrome sin interfaz con piloto automático: verificación → confirmación →
 cuenta atrás → órbita (combustible 15 %, energía 88 %, integridad 100 %) → segmento espacial.
 Se comprobó que el holograma de verificación cabe sin barra de desplazamiento.
+
+## Etapa 4 · Vista exterior animada por las ventanas (14-11-2026)
+
+### Pedido
+Cambiar lo que se ve fuera de las ventanas: cielo al principio y, al salir a órbita, el espacio.
+Añadir animaciones.
+
+### Qué se hizo
+1. **Cristales transparentes**: a partir de la imagen de cabina se generó una máscara de las
+   ventanas (detección de las zonas oscuras del espacio pintado, recortada al contorno del
+   tablero) y se exportó como `assets/cockpit.webp` con canal alfa. Los hologramas pintados en
+   el parabrisas original se eliminaron para que el cristal quede limpio.
+2. **Lienzo detrás de la cabina** (`js/sky.js`), dibujado en cada cuadro según la altitud y la
+   velocidad del despegue:
+   - Cielo azul diurno que se oscurece hasta el negro del espacio (de 0 a ~75 km).
+   - Torre de lanzamiento en la ventana izquierda con baliza parpadeante; cae al despegar.
+   - Vapor durante la cuenta atrás y humo al encender los motores.
+   - Nubes de cúmulos que derivan con el viento, se acercan y pasan hacia abajo al atravesarlas.
+   - Estelas de condensación en el cristal según la densidad del aire y la velocidad.
+   - Resplandor naranja de plasma cuando la presión dinámica es alta; reflejo de los motores.
+   - Inclinación progresiva del horizonte (giro de gravedad).
+   - Estrellas que aparecen y titilan, Sol con rayos y destellos de lente.
+   - La Tierra asomando por abajo con su atmósfera, nubes y continentes que se desplazan.
+3. La vibración de la cabina mueve también la vista exterior.
+
+### Sin cambios
+Física, controles, monitores y condiciones de éxito y fallo de la Fase 1.
+
+### Pruebas
+Recorrido completo con piloto automático, con capturas en plataforma, atravesando nubes,
+cielo oscureciéndose y en órbita con la Tierra visible. Sin errores de JavaScript.

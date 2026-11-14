@@ -181,7 +181,8 @@
   <!-- ============ FASE 1 · CABINA: VERIFICACIÓN Y DESPEGUE ============ -->
   <section id="screen-launch" class="absolute inset-0 hidden bg-black">
     <div id="cockpit" class="absolute inset-0">
-      <img src="assets/cockpit.jpg" alt="" draggable="false" class="absolute max-w-none" style="left:-24px;top:0;width:1649px;height:900px">
+      <canvas id="sky" width="1600" height="900" class="absolute inset-0"></canvas>
+      <img src="assets/cockpit.webp" alt="" draggable="false" class="absolute inset-0 max-w-none" style="width:1600px;height:900px">
       <div id="heat" class="absolute inset-0 pointer-events-none opacity-0"></div>
 
       <!-- placa superior del tablero -->
@@ -317,6 +318,7 @@
 
 <script src="js/menu.js"></script>
 <script src="js/mission.js"></script>
+<script src="js/sky.js"></script>
 <script src="js/launch.js"></script>
 <script src="js/game.js"></script>
 </body>

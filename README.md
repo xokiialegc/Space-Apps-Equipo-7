@@ -31,10 +31,11 @@ Abre `index.html` en un navegador (o publica la carpeta en GitHub Pages / cualqu
 
 ```
 index.html      Menú principal, cabina de vuelo y paneles
-assets/cockpit.jpg  Imagen de la cabina (Fase 1)
+assets/cockpit.webp Imagen de la cabina con los cristales transparentes (Fase 1)
 css/style.css   Estilos propios (neón, título metálico, indicadores)
 js/menu.js      Fondo espacial, botones, ajustes, personalización, guardado
 js/mission.js   Configuración de misión, briefing, telemetría y verificación de lanzamiento
+js/sky.js       Vista animada por las ventanas: cielo → espacio
 js/launch.js    Fase 1 en la cabina: verificación (holograma), cuenta atrás y despegue
 js/game.js      Segmento espacial: crucero a Marte (prototipo)
 docs/PROCESO.md Bitácora del proceso de desarrollo
