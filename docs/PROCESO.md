@@ -93,3 +93,36 @@ combustible e integridad 100 % → paso al segmento espacial. Sin errores de Jav
 ### Pendiente
 - Usar de verdad en vuelo los cinco indicadores del manual (escudo, soporte vital, potencia).
 - Fases siguientes: segmento espacial completo, llegada y descenso en Marte, evaluación final.
+
+## Etapa 3 · Cabina ilustrada para la Fase 1 (14-11-2026)
+
+### Pedido
+Usar la imagen de cabina aportada por el equipo para el lanzamiento, en primera persona desde
+la revisión de cargas. El texto de instrucción para revisar los recursos debe aparecer delante
+del monitor; en el monitor, una ventana con el despegue y los porcentajes de combustible y
+energía. Mantener el resto de mecánicas y el 2D.
+
+### Qué se cambió
+1. **Fondo**: `assets/cockpit.jpg` cubre el escenario de 1600×900 (escalado ×1,61, recorte
+   lateral de 24 px).
+2. **Verificación en la cabina**: la verificación de carga y presupuesto y la confirmación de
+   Control de Misión salen del briefing y aparecen como **holograma** sobre el parabrisas,
+   delante del tablero. El briefing queda en dos pasos (bienvenida y telemetría).
+3. **Monitores del tablero** (superpuestos exactamente sobre las pantallas de la ilustración):
+   - Central: **cámara exterior** del despegue (torre, cohete, nubes, cielo que oscurece, curvatura
+     terrestre, llama y plasma) con **combustible %** y **energía %**.
+   - Izquierdo: altitud y velocidad. Derecho: presión dinámica e integridad.
+   - Placa superior: reloj de misión (T-10 … T+). Pantalla lateral derecha: botón **IMPULSORES**
+     (bloqueado → listo → encendidos).
+4. **Hologramas** en el parabrisas para la cuenta atrás y los avisos.
+5. **Energía**: nuevo indicador; baja con la aviónica y más con los motores encendidos (menos si
+   se llevan paneles solares extra). En esta fase es informativo, no provoca fallos.
+
+### Sin cambios
+Física del despegue (empuje, combustible, presión dinámica, gravedad), condiciones de éxito y
+fallo, y paso al segmento espacial.
+
+### Pruebas
+Recorrido completo en Chrome sin interfaz con piloto automático: verificación → confirmación →
+cuenta atrás → órbita (combustible 15 %, energía 88 %, integridad 100 %) → segmento espacial.
+Se comprobó que el holograma de verificación cabe sin barra de desplazamiento.

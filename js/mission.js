@@ -75,7 +75,7 @@
 
   // ---------- 1. Bienvenida ----------
   function pageIntro() {
-    head('INSTRUCTOR JEFE — CONTROL DE MISIÓN', 'Programa de Simulación Orbital', '1 / 3');
+    head('INSTRUCTOR JEFE — CONTROL DE MISIÓN', 'Programa de Simulación Orbital', '1 / 2');
     body.innerHTML =
       '<p class="motto">Bienvenido, cadete.</p>' +
       '<p>Has sido seleccionado para participar en el Programa de Simulación Orbital, un entrenamiento diseñado para preparar a la próxima generación de exploradores espaciales.</p>' +
@@ -98,7 +98,7 @@
 
   // ---------- 2. Manual rápido de telemetría ----------
   function pageTelemetry() {
-    head('MANUAL RÁPIDO DE TELEMETRÍA', 'Lo que controlarás durante la misión', '2 / 3');
+    head('MANUAL RÁPIDO DE TELEMETRÍA', 'Lo que controlarás durante la misión', '2 / 2');
     const seen = new Set();
     body.innerHTML =
       '<div class="quote"><div class="who">INSTRUCTOR</div>Antes del lanzamiento, debes aprender a interpretar los instrumentos de tu nave. ' +
@@ -116,67 +116,10 @@
     body.querySelectorAll('.tab').forEach((b) => b.onclick = () => { A.beep(520, 0.06); sel(+b.dataset.i); });
     sel(0);
     foot.innerHTML = btn('b-back', 'Atrás') + btn('b-next', 'Fase 1 · Preparación y despegue');
-    click('#b-back', pageIntro); click('#b-next', pageLaunch);
+    click('#b-back', pageIntro); click('#b-next', () => A.startCockpit(calc()));
   }
 
-  // ---------- 3. Fase 1 — Segmento de lanzamiento ----------
-  function pageLaunch() {
-    head('FASE 1 — PREPARACIÓN Y DESPEGUE', 'Segmento de lanzamiento · Verificación y puesta en órbita', '3 / 3');
-    const k = calc(), done = { mass: false, cost: false };
-    body.innerHTML =
-      '<div class="quote"><div class="who">INSTRUCTOR</div>Cadete, la configuración de tu nave ya ha sido seleccionada desde el menú principal. ' +
-      'Ahora debemos verificar que el vehículo y su carga cumplen los requisitos necesarios para iniciar la expedición. Evalúa dos factores:</div>' +
-      '<div class="grid grid-cols-2 gap-5">' +
-      '<div class="seg"><b>CAPACIDAD DE CARGA</b>Comprueba que la masa total de la nave no supere la capacidad máxima del vehículo de lanzamiento seleccionado.' +
-      '<div class="mt-3 mb-2">Vehículo: <b style="display:inline">' + k.launcher.name + '</b><br>Módulos: ' + (k.mods.map((m) => m.name).join(', ') || 'ninguno') + '</div>' +
-      btn('v-mass', '[ Verificar capacidad de carga ]') + '<div id="r-mass" class="mt-3"></div></div>' +
-      '<div class="seg"><b>COSTE DE LANZAMIENTO</b>Verifica que los servicios de lanzamiento y puesta en órbita se encuentren dentro del presupuesto disponible.' +
-      '<div class="mt-3 mb-2">Presupuesto del programa: ' + k.budget + ' M$<br>&nbsp;</div>' +
-      btn('v-cost', '[ Comprobar presupuesto ]') + '<div id="r-cost" class="mt-3"></div></div></div>' +
-      '<div class="quote mt-4"><div class="who">INSTRUCTOR — CONSEJO DE VUELO</div>La selección del vehículo ya está hecha. Tu responsabilidad ahora es comprobar que todo está preparado para el despegue. ' +
-      'Una misión segura comienza con una verificación rigurosa.</div>';
-    foot.innerHTML = btn('b-back', 'Atrás') + '<div id="fix"></div>' + btn('b-go', '[ Autorizar lanzamiento ]', ' disabled');
-    const refresh = () => {
-      if (done.mass && done.cost) {
-        if (k.massOk && k.costOk) $('#b-go').disabled = false;
-        else {
-          $('#fix').innerHTML = btn('b-fix', 'Reconfigurar nave');
-          click('#b-fix', () => { A.show('menu'); A.actions.custom(); });
-        }
-      }
-    };
-    click('#v-mass', () => {
-      done.mass = true;
-      $('#r-mass').innerHTML = k.massOk
-        ? '<div class="ok">✓ Masa total ' + k.mass + ' t de ' + k.cap + ' t admitidas. Margen: ' + (k.cap - k.mass) + ' t.</div>'
-        : '<div class="alert"><b>ALERTA:</b> Capacidad de carga del lanzador superada (' + k.mass + ' t de ' + k.cap + ' t).</div>';
-      refresh();
-    });
-    click('#v-cost', () => {
-      done.cost = true;
-      $('#r-cost').innerHTML = k.costOk
-        ? '<div class="ok">✓ Coste ' + k.cost + ' M$ de ' + k.budget + ' M$. Margen: ' + (k.budget - k.cost) + ' M$.</div>'
-        : '<div class="alert"><b>ALERTA:</b> Presupuesto superado (' + k.cost + ' M$ de ' + k.budget + ' M$).</div>';
-      refresh();
-    });
-    click('#b-back', pageTelemetry); click('#b-go', pageConfirm);
-  }
-
-  // ---------- Confirmación ----------
-  function pageConfirm() {
-    head('CONTROL DE MISIÓN', 'Confirmación de lanzamiento', 'LISTO');
-    body.innerHTML =
-      '<div class="ok">✓ Vehículo de lanzamiento confirmado.</div><div class="ok">✓ Carga útil verificada.</div><div class="ok">✓ Trayectoria inicial calculada.</div>' +
-      '<p class="mt-4">Todos los sistemas se encuentran dentro de los parámetros establecidos.</p>' +
-      '<p class="motto">Cadete, tienes autorización para iniciar la secuencia de lanzamiento.</p>' +
-      '<div class="quote mt-4"><div class="who">CÓMO PILOTAR EL DESPEGUE</div>Mantén <b>ESPACIO</b> (o el botón de impulsores) para encender los cohetes. ' +
-      'El combustible baja mientras aceleras. En la atmósfera densa, vigila la <b>presión dinámica</b>: si supera el 100 % la estructura se daña, así que suelta el impulso un momento. ' +
-      'Pero no esperes demasiado: sin empuje la gravedad te frena y el combustible no sobra. Objetivo: <b>7,8 km/s</b> por encima de <b>100 km</b>.</div>';
-    foot.innerHTML = btn('b-back', 'Atrás') + btn('b-go', 'Iniciar secuencia de lanzamiento');
-    click('#b-back', pageLaunch); click('#b-go', () => A.startLaunch(calc()));
-  }
-
-  A.mission = { LAUNCHERS, MODULES, BUDGET, calc };
+  A.mission = { LAUNCHERS, MODULES, BUDGET, calc, telemetry: pageTelemetry };
   A.startBriefing = function () {
     try { $('#brief-bg').getContext('2d').drawImage(A.bg, 0, 0); } catch (e) { /* fondo opcional */ }
     A.audio(); A.show('brief'); pageIntro();

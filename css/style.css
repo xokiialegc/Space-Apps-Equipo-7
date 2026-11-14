@@ -93,3 +93,39 @@ body.no-anim #shuttle, body.no-anim #flames { animation: none; }
 .opt.on { border-color: #7fdcff; background: rgba(25,180,255,.25); color: #fff; }
 .gauge--s { width: 200px; }
 .bar i.danger { background: linear-gradient(90deg, #ff9a3c, #ff3c3c); box-shadow: 0 0 8px #ff3c3c; }
+
+/* Cabina de lanzamiento (imagen + monitores superpuestos) */
+#cockpit { will-change: transform; }
+#heat { background: radial-gradient(ellipse at 50% 30%, rgba(255,140,50,.9), rgba(255,60,20,0) 70%); mix-blend-mode: screen; }
+.mon { background: linear-gradient(180deg, rgba(4,16,32,.97), rgba(2,9,20,.97)); border-radius: 3px;
+  box-shadow: inset 0 0 14px rgba(25,180,255,.35), 0 0 6px rgba(25,180,255,.35); color: #bfe9ff; overflow: hidden; }
+.mon::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 3px); }
+.mon-lbl { font-family: Orbitron, sans-serif; font-size: 8.5px; letter-spacing: .12em; color: #6fc8f5; }
+.mon-val { font-family: Orbitron, sans-serif; font-size: 10px; color: #fff; }
+.mon-big { font-family: Orbitron, sans-serif; font-size: 17px; color: #fff; text-shadow: 0 0 6px rgba(25,180,255,.9); }
+.mbar { height: 4px; background: rgba(25,180,255,.18); margin-top: 2px; }
+.mbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #1560d8, #7fdcff); box-shadow: 0 0 5px #19b4ff; }
+.mbar i.danger { background: linear-gradient(90deg, #ff9a3c, #ff3c3c); box-shadow: 0 0 5px #ff3c3c; }
+.fire { cursor: pointer; border: 1px solid rgba(255,90,60,.5); }
+.fire .font-display { color: #ff9a7a; }
+.fire.ready { border-color: #3cff9e; } .fire.ready .font-display { color: #9dffcf; }
+.fire.is-held { background: linear-gradient(180deg, rgba(120,40,10,.97), rgba(60,15,5,.97)); border-color: #ffb43c; }
+.fire.is-held .font-display { color: #ffd27a; }
+.holo { background: linear-gradient(180deg, rgba(12,48,96,.62), rgba(4,22,52,.72)); border: 1px solid rgba(110,210,255,.85);
+  box-shadow: 0 0 28px rgba(25,180,255,.45), inset 0 0 36px rgba(25,180,255,.18); backdrop-filter: blur(3px); padding: 14px 22px;
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px)); color: #e6f6ff;
+  text-shadow: 0 0 6px rgba(25,180,255,.55); }
+.holo::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(140,220,255,.06) 0 1px, transparent 1px 4px); }
+.holo > * { position: relative; z-index: 1; }
+.brief--holo { font-size: 15.5px; line-height: 1.35; }
+.brief--holo p { margin-bottom: 8px; }
+.brief--holo .quote, .brief--holo .ok, .brief--holo .alert { font-size: 15px; padding: 5px 12px; margin-bottom: 7px; }
+.brief--holo .who { font-size: 12px; margin-bottom: 2px; }
+.holo .neon-btn--sm { height: 38px; font-size: 13px; }
+.brief--holo .seg .mt-2 { margin-top: 5px; }
+.brief--holo .seg { font-size: 15px; padding: 6px 12px; background: rgba(4,20,45,.55); }
+.brief--holo .seg .ok, .brief--holo .seg .alert { margin: 0; }
+.brief--holo .motto { font-size: 18px; }
+.mon-tight { letter-spacing: .04em; font-size: 8px; }

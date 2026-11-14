@@ -178,26 +178,67 @@
     </div>
   </section>
 
-  <!-- ============ FASE 1 · DESPEGUE (CABINA) ============ -->
-  <section id="screen-launch" class="absolute inset-0 hidden">
-    <canvas id="launch" width="1600" height="900" class="absolute inset-0"></canvas>
-    <div id="launch-frame" class="absolute inset-0 pointer-events-none"></div>
-    <div class="absolute top-[18px] left-0 right-0 flex justify-center gap-10 font-display text-[13px] tracking-[.3em] text-sky-300">
-      <span>FASE 1 · SEGMENTO DE LANZAMIENTO</span><span id="l-clock">T - 10</span>
-    </div>
-    <div id="l-count" class="absolute left-0 right-0 top-[250px] text-center font-display font-black text-[150px] title-metal pointer-events-none"></div>
-    <div class="absolute left-0 right-0 bottom-0 h-[200px] px-10 pb-6 pt-8 flex items-end justify-between gap-4">
-      <div class="gauge gauge--s"><label>Altitud</label><b id="l-alt">0</b><small>km</small><div class="bar"><i id="lb-alt"></i></div></div>
-      <div class="gauge gauge--s"><label>Velocidad</label><b id="l-vel">0.0</b><small>/ 7.8 km/s</small><div class="bar"><i id="lb-vel"></i></div></div>
-      <div class="gauge gauge--s"><label>Presión dinámica</label><b id="l-q">0</b><small>% del límite</small><div class="bar"><i id="lb-q"></i></div></div>
-      <div class="flex flex-col items-center gap-3">
-        <div class="neon-wrap"><button id="l-fire" class="neon-btn neon-btn--sm" style="min-width:330px;height:58px">🔥 Impulsores (Espacio)</button></div>
-        <div id="l-msg" class="text-[17px] tracking-wider text-sky-100 h-6 text-center w-[380px] whitespace-nowrap"></div>
+  <!-- ============ FASE 1 · CABINA: VERIFICACIÓN Y DESPEGUE ============ -->
+  <section id="screen-launch" class="absolute inset-0 hidden bg-black">
+    <div id="cockpit" class="absolute inset-0">
+      <img src="assets/cockpit.jpg" alt="" draggable="false" class="absolute max-w-none" style="left:-24px;top:0;width:1649px;height:900px">
+      <div id="heat" class="absolute inset-0 pointer-events-none opacity-0"></div>
+
+      <!-- placa superior del tablero -->
+      <div class="mon absolute flex items-center justify-center" style="left:755px;top:443px;width:102px;height:18px">
+        <span id="l-clock" class="font-display text-[11px] tracking-[.15em]">T - 10</span>
       </div>
-      <div class="gauge gauge--s"><label>Integridad</label><b id="l-hull">100</b><small>%</small><div class="bar"><i id="lb-hull"></i></div></div>
-      <div class="gauge gauge--s"><label>Combustible</label><b id="l-fuel">100</b><small>%</small><div class="bar"><i id="lb-fuel"></i></div></div>
+
+      <!-- monitor central: cámara exterior del despegue + combustible y energía -->
+      <div class="mon absolute" style="left:693px;top:483px;width:221px;height:121px">
+        <canvas id="launch" width="442" height="184" class="block" style="width:221px;height:92px"></canvas>
+        <div class="absolute left-[6px] top-[3px] mon-lbl">CÁM. EXTERIOR · AEON-01</div>
+        <div class="absolute left-0 right-0 bottom-0 h-[29px] px-[6px] grid grid-cols-2 gap-[8px] items-center border-t border-sky-400/40">
+          <div><div class="flex justify-between mon-lbl mon-tight"><span>COMBUSTIBLE</span><b id="l-fuel" class="mon-val">100%</b></div><div class="mbar"><i id="lb-fuel"></i></div></div>
+          <div><div class="flex justify-between mon-lbl mon-tight"><span>ENERGÍA</span><b id="l-energy" class="mon-val">100%</b></div><div class="mbar"><i id="lb-energy"></i></div></div>
+        </div>
+      </div>
+
+      <!-- monitor izquierdo: altitud y velocidad -->
+      <div class="mon absolute px-[8px] py-[5px]" style="left:492px;top:508px;width:158px;height:84px">
+        <div class="mon-lbl">FASE 1 · ASCENSO</div>
+        <div class="flex justify-between items-baseline mt-[3px]"><span class="mon-lbl">ALTITUD</span><span><b id="l-alt" class="mon-big">0</b> <small class="mon-lbl">km</small></span></div>
+        <div class="mbar"><i id="lb-alt"></i></div>
+        <div class="flex justify-between items-baseline mt-[3px]"><span class="mon-lbl">VELOCIDAD</span><span><b id="l-vel" class="mon-big">0.0</b> <small class="mon-lbl">/7.8 km/s</small></span></div>
+        <div class="mbar"><i id="lb-vel"></i></div>
+      </div>
+
+      <!-- monitor derecho: presión dinámica e integridad -->
+      <div class="mon absolute px-[8px] py-[5px]" style="left:962px;top:510px;width:164px;height:84px">
+        <div class="mon-lbl">ESTRUCTURA</div>
+        <div class="flex justify-between items-baseline mt-[3px]"><span class="mon-lbl">PRESIÓN DIN.</span><span><b id="l-q" class="mon-big">0</b> <small class="mon-lbl">%</small></span></div>
+        <div class="mbar"><i id="lb-q"></i></div>
+        <div class="flex justify-between items-baseline mt-[3px]"><span class="mon-lbl">INTEGRIDAD</span><span><b id="l-hull" class="mon-big">100</b> <small class="mon-lbl">%</small></span></div>
+        <div class="mbar"><i id="lb-hull"></i></div>
+      </div>
+
+      <!-- pantalla lateral: encendido de impulsores -->
+      <button id="l-fire" class="mon fire absolute flex flex-col items-center justify-center" style="left:1158px;top:604px;width:116px;height:54px">
+        <span class="mon-lbl">IMPULSORES</span><span id="l-fire-txt" class="font-display text-[13px] tracking-[.12em]">BLOQUEADO</span>
+      </button>
+
+      <!-- hologramas del parabrisas -->
+      <div id="l-count" class="absolute left-0 right-0 top-[230px] text-center font-display font-black text-[120px] title-metal pointer-events-none"></div>
+      <div id="l-msg-box" class="holo absolute hidden items-center justify-center text-center" style="left:560px;top:388px;width:480px;height:40px">
+        <span id="l-msg" class="text-[18px] tracking-wide"></span>
+      </div>
+      <div id="holo" class="holo absolute flex flex-col" style="left:230px;top:12px;width:1140px;height:468px">
+        <div class="flex items-baseline gap-4 whitespace-nowrap">
+          <div id="holo-who" class="font-display text-[15px] tracking-[.18em] text-sky-200"></div>
+          <div id="holo-sub" class="text-[13px] tracking-[.2em] text-sky-300/90 uppercase"></div>
+        </div>
+        <div class="h-px bg-gradient-to-r from-neon to-transparent my-2"></div>
+        <div id="holo-body" class="brief brief--holo flex-1 overflow-y-auto pr-2"></div>
+        <div id="holo-foot" class="pt-2 flex items-center justify-between gap-4"></div>
+      </div>
     </div>
-    <div id="launch-end" class="absolute inset-0 hidden items-center justify-center bg-black/70">
+
+    <div id="launch-end" class="absolute inset-0 hidden items-center justify-center bg-black/60">
       <div class="panel w-[760px] text-center">
         <div class="text-[15px] tracking-[.3em] text-sky-400">CONTROL DE MISIÓN</div>
         <h2 id="le-title" class="mt-2 font-display text-3xl tracking-[.2em] text-sky-200"></h2>

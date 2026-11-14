@@ -1,54 +1,142 @@
-/* AEON-01 — Fase 1: despegue en primera persona desde la cabina.
-   Modelo simplificado (unidades de juego):
+/* AEON-01 — Fase 1 en la cabina (primera persona, 2D).
+   1) Verificación de carga y presupuesto: holograma delante de los monitores.
+   2) Confirmación de Control de Misión.
+   3) Cuenta atrás y despegue: el monitor central muestra la cámara exterior,
+      con combustible y energía; los monitores laterales, altitud/velocidad y estructura.
+   Modelo de vuelo (sin cambios respecto a la etapa 2):
    - Empuje constante mientras se mantienen los impulsores; el combustible baja en tiempo real.
    - Densidad del aire: rho = e^(-h/12). Presión dinámica Q = rho·v². Por encima del límite
      la estructura acumula daño: hay que modular el empuje en la atmósfera densa.
    - La gravedad frena la nave mientras no alcanza la velocidad orbital (7,8 km/s). */
 (function () {
   'use strict';
-  const A = window.AEON, W = A.W, H = A.H;
+  const A = window.AEON;
   const $ = (s) => document.querySelector(s);
   const cv = $('#launch'), c = cv.getContext('2d');
-  const CX = 800, CY = 385;
+  const VW = cv.width, VH = cv.height;           // lienzo del monitor (resolución x2)
 
   const V_ORBIT = 7.8, H_SPACE = 100;
   const BURN = 2.3;       // % de combustible por segundo de impulso
   const GRAV = 0.08, DRAG = 0.04, Q_LIMIT = 0.8, STRESS_RATE = 25;
 
-  // el marco de cabina es el mismo que el del vuelo interplanetario
-  $('#launch-frame').innerHTML = $('#cockpit-frame').outerHTML.replace('id="cockpit-frame"', '').replace(/id="dash"/, 'id="dash2"').replace('url(#dash)', 'url(#dash2)');
-
-  let st = null, cfg = null, running = false, last = 0, firing = false, held = false;
+  let st = null, cfg = null, mode = 'off', last = 0, firing = false, held = false, raf = 0;
   const stars = [], clouds = [], streaks = [];
-  for (let i = 0; i < 260; i++) stars.push({ x: Math.random() * W, y: Math.random() * 720, r: Math.random() * 1.4 + 0.3 });
-  for (let i = 0; i < 14; i++) clouds.push({ x: 150 + Math.random() * 1300, alt: 1.5 + Math.random() * 11, w: 180 + Math.random() * 320 });
-  for (let i = 0; i < 70; i++) streaks.push({ x: Math.random() * W, y: Math.random() * 720, l: 20 + Math.random() * 60 });
+  for (let i = 0; i < 90; i++) stars.push({ x: Math.random() * VW, y: Math.random() * VH, r: Math.random() * 1.3 + 0.4 });
+  for (let i = 0; i < 12; i++) clouds.push({ x: Math.random() * VW, alt: 1.2 + Math.random() * 11, w: 70 + Math.random() * 120 });
+  for (let i = 0; i < 26; i++) streaks.push({ x: Math.random() * VW, y: Math.random() * VH, l: 8 + Math.random() * 22 });
 
-  A.startLaunch = function (config) {
-    cfg = config;
-    st = { h: 0, v: 0, fuel: 100, stress: 0, t: -10, maxH: 0, out: 0, done: false };
-    held = false; lastTick = 99;
-    const cnt = $('#l-count'); cnt.style.fontSize = ''; cnt.style.top = ''; cnt.textContent = '';
-    $('#launch-end').classList.add('hidden'); $('#launch-end').classList.remove('flex');
-    msg('Secuencia de lanzamiento iniciada.');
-    A.show('launch'); running = true; last = performance.now(); requestAnimationFrame(loop);
+  const fresh = () => ({ h: 0, v: 0, q: 0, fuel: 100, energy: 100, stress: 0, t: -10, maxH: 0, out: 0, done: false });
+
+  // ---------- Holograma del parabrisas ----------
+  const holo = $('#holo'), hBody = $('#holo-body'), hFoot = $('#holo-foot');
+  const btn = (id, label, extra) => '<div class="neon-wrap"><button id="' + id + '" class="neon-btn neon-btn--sm"' + (extra || '') + '>' + label + '</button></div>';
+  const click = (id, fn) => { $(id).onclick = () => { A.beep(440, 0.1); fn(); }; };
+  function showHolo(who, sub) {
+    $('#holo-who').textContent = who; $('#holo-sub').textContent = sub;
+    hBody.scrollTop = 0; holo.classList.remove('hidden'); holo.classList.add('flex');
+  }
+  function hideHolo() { holo.classList.add('hidden'); holo.classList.remove('flex'); }
+
+  function pageCheck() {
+    const k = cfg, done = { mass: false, cost: false };
+    showHolo('FASE 1 — PREPARACIÓN Y DESPEGUE', 'Segmento de lanzamiento · Verificación y puesta en órbita');
+    hBody.innerHTML =
+      '<div class="quote"><div class="who">INSTRUCTOR</div>Cadete, la configuración de tu nave ya ha sido seleccionada desde el menú principal. ' +
+      'Ahora debemos verificar que el vehículo y su carga cumplen los requisitos necesarios para iniciar la expedición. Evalúa dos factores:</div>' +
+      '<div class="mb-2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">' +
+      '<div class="seg"><b>CAPACIDAD DE CARGA</b>Comprueba que la masa total de la nave no supere la capacidad máxima del vehículo de lanzamiento seleccionado.' +
+      '<div class="mt-1 mb-1 text-sky-200">Vehículo: ' + k.launcher.name + ' · Módulos: ' + (k.mods.map((m) => m.name).join(', ') || 'ninguno') + '</div>' +
+      btn('v-mass', '[ Verificar capacidad de carga ]') + '<div id="r-mass" class="mt-2"></div></div>' +
+      '<div class="seg"><b>COSTE DE LANZAMIENTO</b>Verifica que los servicios de lanzamiento y puesta en órbita se encuentren dentro del presupuesto disponible.' +
+      '<div class="mt-1 mb-1 text-sky-200">Presupuesto del programa: ' + k.budget + ' M$</div>' +
+      btn('v-cost', '[ Comprobar presupuesto ]') + '<div id="r-cost" class="mt-2"></div></div></div>' +
+      '<div class="quote"><div class="who">INSTRUCTOR — CONSEJO DE VUELO</div>La selección del vehículo ya está hecha. Tu responsabilidad ahora es comprobar que todo está preparado para el despegue. ' +
+      'Una misión segura comienza con una verificación rigurosa.</div>';
+    hFoot.innerHTML = btn('b-back', 'Atrás') + '<div id="fix"></div>' + btn('b-go', '[ Autorizar lanzamiento ]', ' disabled');
+    const refresh = () => {
+      if (!(done.mass && done.cost)) return;
+      if (k.massOk && k.costOk) $('#b-go').disabled = false;
+      else {
+        $('#fix').innerHTML = btn('b-fix', 'Reconfigurar nave');
+        click('#b-fix', () => { stopLoop(); A.show('menu'); A.actions.custom(); });
+      }
+    };
+    click('#v-mass', () => {
+      done.mass = true;
+      $('#r-mass').innerHTML = k.massOk
+        ? '<div class="ok">✓ Masa total ' + k.mass + ' t de ' + k.cap + ' t admitidas. Margen: ' + (k.cap - k.mass) + ' t.</div>'
+        : '<div class="alert"><b>ALERTA:</b> Capacidad de carga del lanzador superada (' + k.mass + ' t de ' + k.cap + ' t).</div>';
+      refresh();
+    });
+    click('#v-cost', () => {
+      done.cost = true;
+      $('#r-cost').innerHTML = k.costOk
+        ? '<div class="ok">✓ Coste ' + k.cost + ' M$ de ' + k.budget + ' M$. Margen: ' + (k.budget - k.cost) + ' M$.</div>'
+        : '<div class="alert"><b>ALERTA:</b> Presupuesto superado (' + k.cost + ' M$ de ' + k.budget + ' M$).</div>';
+      refresh();
+    });
+    click('#b-back', () => { stopLoop(); A.show('brief'); A.mission.telemetry(); });
+    click('#b-go', pageConfirm);
+  }
+
+  function pageConfirm() {
+    showHolo('CONTROL DE MISIÓN', 'Confirmación de lanzamiento');
+    hBody.innerHTML =
+      '<div class="ok">✓ Vehículo de lanzamiento confirmado. &nbsp; ✓ Carga útil verificada. &nbsp; ✓ Trayectoria inicial calculada.</div>' +
+      '<p>Todos los sistemas se encuentran dentro de los parámetros establecidos.</p>' +
+      '<p class="motto">Cadete, tienes autorización para iniciar la secuencia de lanzamiento.</p>' +
+      '<div class="quote"><div class="who">CÓMO PILOTAR EL DESPEGUE</div>Mantén <b>ESPACIO</b> (o la pantalla <b>IMPULSORES</b> a tu derecha) para encender los cohetes. ' +
+      'El monitor central muestra la cámara exterior con tu <b>combustible</b> y tu <b>energía</b>. En la atmósfera densa vigila la <b>presión dinámica</b> (monitor derecho): ' +
+      'si supera el 100 % la estructura se daña, así que suelta el impulso un momento. Pero no esperes demasiado: sin empuje la gravedad te frena y el combustible no sobra. ' +
+      'Objetivo: <b>7,8 km/s</b> por encima de <b>100 km</b> (monitor izquierdo).</div>';
+    hFoot.innerHTML = btn('b-back', 'Atrás') + btn('b-go', 'Iniciar secuencia de lanzamiento');
+    click('#b-back', pageCheck);
+    click('#b-go', () => A.startLaunch(cfg));
+  }
+
+  // ---------- Entradas ----------
+  A.startCockpit = function (config) {
+    cfg = config; st = fresh(); mode = 'check'; held = false; firing = false;
+    resetOverlay(); setFire('BLOQUEADO', false);
+    A.show('launch'); pageCheck(); startLoop();
   };
 
-  function msg(t) { $('#l-msg').textContent = t; }
+  A.startLaunch = function (config) {
+    cfg = config || cfg; st = fresh(); mode = 'launch'; held = false; lastTick = 99;
+    resetOverlay(); hideHolo(); setFire('EN ESPERA', false);
+    msg('Secuencia de lanzamiento iniciada.');
+    A.show('launch'); startLoop();
+  };
+
+  function resetOverlay() {
+    const cnt = $('#l-count'); cnt.style.fontSize = ''; cnt.style.top = ''; cnt.textContent = '';
+    $('#launch-end').classList.add('hidden'); $('#launch-end').classList.remove('flex');
+    $('#cockpit').style.transform = ''; $('#heat').style.opacity = 0;
+    $('#l-clock').textContent = 'T - 10';
+    msg('');
+  }
+  function setFire(txt, ready) { $('#l-fire-txt').textContent = txt; $('#l-fire').classList.toggle('ready', !!ready); }
+  function msg(t) {
+    $('#l-msg').textContent = t;
+    $('#l-msg-box').classList.toggle('hidden', !t); $('#l-msg-box').classList.toggle('flex', !!t);
+  }
 
   function end(ok, title, text) {
-    st.done = true; running = false; held = false;
+    st.done = true; mode = 'end'; held = false; firing = false;
+    $('#cockpit').style.transform = '';
+    setFire(ok ? 'APAGADO' : 'FALLO', false);
     $('#le-title').textContent = title; $('#le-text').innerHTML = text;
     const b = (id, l) => '<div class="neon-wrap"><button id="' + id + '" class="neon-btn neon-btn--sm">' + l + '</button></div>';
     $('#le-btns').innerHTML = ok ? b('le-menu', 'Menú principal') + b('le-next', 'Segmento espacial →')
                                  : b('le-menu', 'Menú principal') + b('le-retry', 'Repetir lanzamiento');
-    $('#le-menu').onclick = () => A.show('menu');
-    if (ok) $('#le-next').onclick = () => A.startFlight(null);
+    $('#le-menu').onclick = () => { stopLoop(); A.show('menu'); };
+    if (ok) $('#le-next').onclick = () => { stopLoop(); A.startFlight(null); };
     else $('#le-retry').onclick = () => A.startLaunch(cfg);
     $('#launch-end').classList.remove('hidden'); $('#launch-end').classList.add('flex');
     A.beep(ok ? 880 : 160, 0.5);
   }
 
+  // ---------- Simulación ----------
   let lastTick = 99;
   function update(dt) {
     st.t += dt;
@@ -59,7 +147,7 @@
       cnt.textContent = n; $('#l-clock').textContent = 'T - ' + String(n).padStart(2, '0');
       firing = false; return;
     }
-    if (st.t < 2.5 && st.h < 0.5) { cnt.textContent = '¡DESPEGUE AUTORIZADO!'; cnt.style.fontSize = '64px'; cnt.style.top = '300px'; }
+    if (st.t < 2.5 && st.h < 0.5) { cnt.textContent = '¡DESPEGUE AUTORIZADO!'; cnt.style.fontSize = '54px'; cnt.style.top = '290px'; }
     else cnt.textContent = '';
     if (lastTick !== 0) { lastTick = 0; A.beep(990, 0.4); msg('Mantén ESPACIO para encender los impulsores.'); }
     $('#l-clock').textContent = 'T + ' + String(Math.floor(st.t)).padStart(3, '0') + ' s';
@@ -73,9 +161,13 @@
     if (st.h <= 0) { st.h = 0; if (st.v < 0) st.v = 0; }
     st.maxH = Math.max(st.maxH, st.h);
     if (firing) st.fuel = Math.max(0, st.fuel - BURN * dt);
+    // energía: aviónica y bombas de los motores (informativo en esta fase)
+    const solar = cfg.mods.some((m) => m.id === 'solar');
+    st.energy = Math.max(0, st.energy - ((firing ? 0.3 : 0.12) * (solar ? 0.6 : 1)) * dt);
     st.q = q;
     if (q > 1) st.stress += (q - 1) * STRESS_RATE * dt;
     else if (q < 0.8) st.stress = Math.max(0, st.stress - 2 * dt);
+    setFire(st.fuel <= 0 ? 'SIN COMBUST.' : firing ? 'ENCENDIDOS' : 'LISTO', st.fuel > 0 && !firing);
 
     if (q > 1) msg('⚠ Presión dinámica excesiva: reduce el impulso.');
     else if (st.fuel <= 0) msg('Combustible agotado.');
@@ -88,7 +180,7 @@
     if (st.v >= V_ORBIT && st.h >= H_SPACE) return end(true, 'LANZAMIENTO EXITOSO',
       '<b>Inserción orbital completada.</b><br>La nave ha alcanzado la órbita terrestre prevista. El vehículo de lanzamiento ha cumplido su función.<br><br>' +
       'Cadete, hemos superado el primer segmento.<br>Ahora comienza tu responsabilidad como operador de la nave.<br>' +
-      '<span class="text-sky-300 text-lg">Combustible restante: ' + st.fuel.toFixed(0) + ' % · Integridad: ' + (100 - st.stress).toFixed(0) + ' %</span>');
+      '<span class="text-sky-300 text-lg">Combustible: ' + st.fuel.toFixed(0) + ' % · Energía: ' + st.energy.toFixed(0) + ' % · Integridad: ' + (100 - st.stress).toFixed(0) + ' %</span>');
     if (st.maxH > 1 && st.h <= 0) return end(false, 'MISIÓN ABORTADA', 'La nave perdió velocidad y regresó a la superficie. Sin empuje, la gravedad siempre gana.');
     if (st.fuel <= 0) {
       st.out += dt;
@@ -97,60 +189,94 @@
     }
   }
 
+  // ---------- Monitor central: cámara exterior que sigue al cohete ----------
   const mix = (a, b, t) => Math.round(a + (b - a) * t);
-  function draw(dt) {
+  function drawView(dt, now) {
     const h = st.h, rho = Math.exp(-h / 12), sky = Math.min(1, h / 70);
-    c.save();
-    if (firing) c.translate((Math.random() - 0.5) * 5 * (0.4 + rho), (Math.random() - 0.5) * 5 * (0.4 + rho));
-    // cielo: de azul diurno a negro espacial
-    const g = c.createLinearGradient(0, 60, 0, 720);
+    const RX = VW / 2, RY = 104;                     // posición del cohete en pantalla
+    const g = c.createLinearGradient(0, 0, 0, VH);
     g.addColorStop(0, 'rgb(' + mix(40, 1, sky) + ',' + mix(120, 3, sky) + ',' + mix(230, 10, sky) + ')');
     g.addColorStop(1, 'rgb(' + mix(150, 2, sky) + ',' + mix(205, 8, sky) + ',' + mix(255, 24, sky) + ')');
-    c.fillStyle = g; c.fillRect(-10, -10, W + 20, H + 20);
-    // estrellas
+    c.fillStyle = g; c.fillRect(0, 0, VW, VH);
     const sa = Math.max(0, Math.min(1, (h - 25) / 45));
-    if (sa > 0) for (const s of stars) { c.fillStyle = 'rgba(225,238,255,' + sa * (0.4 + s.r / 2.4) + ')'; c.beginPath(); c.arc(s.x, s.y, s.r, 0, 7); c.fill(); }
-    // nubes que quedan atrás
-    for (const cl of clouds) {
-      const y = CY + (h - cl.alt) * 190;
-      if (y < -80 || y > 800) continue;
-      c.fillStyle = 'rgba(255,255,255,.85)';
-      c.beginPath(); c.ellipse(cl.x, y, cl.w / 2, cl.w / 9, 0, 0, 7); c.ellipse(cl.x + cl.w / 5, y - cl.w / 14, cl.w / 3, cl.w / 10, 0, 0, 7); c.fill();
+    if (sa > 0) for (const s of stars) { c.fillStyle = 'rgba(225,238,255,' + sa * (0.4 + s.r / 2.4) + ')'; c.fillRect(s.x, s.y, s.r, s.r); }
+    // curvatura de la Tierra
+    if (h > 40) {
+      const up = Math.min(1, (h - 40) / 90), ey = VH + 30 - up * 70;
+      const eg = c.createLinearGradient(0, ey - 10, 0, VH);
+      eg.addColorStop(0, '#7cc4ff'); eg.addColorStop(0.15, '#1a62c0'); eg.addColorStop(1, '#062258');
+      c.fillStyle = eg; c.beginPath(); c.arc(RX, ey + 900, 900, 0, 7); c.fill();
     }
-    // estelas de velocidad en el aire
+    // nubes
+    for (const cl of clouds) {
+      const y = RY + (h - cl.alt) * 70;
+      if (y < -30 || y > VH + 30) continue;
+      c.fillStyle = 'rgba(255,255,255,.85)';
+      c.beginPath(); c.ellipse(cl.x, y, cl.w / 2, cl.w / 8, 0, 0, 7); c.ellipse(cl.x + cl.w / 5, y - cl.w / 12, cl.w / 3, cl.w / 9, 0, 0, 7); c.fill();
+    }
+    // suelo y torre de lanzamiento
+    const gy = RY + 66 + h * 160;
+    if (gy < VH + 10) {
+      c.fillStyle = '#2f4a2a'; c.fillRect(0, gy, VW, VH);
+      c.fillStyle = '#6b6f75'; c.fillRect(RX - 60, gy - 4, 120, 6);
+      c.fillStyle = '#9a3b2a'; c.fillRect(RX - 34, gy - 120, 8, 116);
+      c.strokeStyle = '#9a3b2a'; c.lineWidth = 2;
+      for (let y = gy - 116; y < gy - 6; y += 12) { c.beginPath(); c.moveTo(RX - 34, y); c.lineTo(RX - 26, y + 12); c.stroke(); }
+      c.fillRect(RX - 34, gy - 92, 22, 3);
+    }
+    // estelas de aire
     const al = Math.min(0.5, rho * st.v * 0.5);
     if (al > 0.01) {
-      c.strokeStyle = 'rgba(255,255,255,' + al + ')'; c.lineWidth = 1.5;
+      c.strokeStyle = 'rgba(255,255,255,' + al + ')'; c.lineWidth = 1.2;
       for (const s of streaks) {
-        s.y += st.v * 900 * dt; if (s.y > 720) { s.y = 60; s.x = Math.random() * W; }
+        s.y += st.v * 300 * dt; if (s.y > VH) { s.y = -s.l; s.x = Math.random() * VW; }
         c.beginPath(); c.moveTo(s.x, s.y); c.lineTo(s.x, s.y + s.l * Math.min(2, st.v)); c.stroke();
       }
     }
-    // curvatura de la Tierra al ganar altura
-    if (h > 55) {
-      const up = Math.min(1, (h - 55) / 90), ey = 760 - up * 130;
-      c.save(); c.shadowColor = 'rgba(90,180,255,.9)'; c.shadowBlur = 40;
-      const eg = c.createLinearGradient(0, ey, 0, ey + 200);
-      eg.addColorStop(0, '#5fb4ff'); eg.addColorStop(0.15, '#1259b8'); eg.addColorStop(1, '#041a44');
-      c.fillStyle = eg; c.beginPath(); c.arc(CX, ey + 2600, 2600, 0, 7); c.fill(); c.restore();
+    // llama: más ancha cuanto menos aire hay
+    if (firing) {
+      const len = 34 + Math.random() * 14 + (1 - rho) * 20, wid = 6 + (1 - rho) * 14;
+      const fg = c.createLinearGradient(0, RY + 50, 0, RY + 50 + len);
+      fg.addColorStop(0, 'rgba(255,255,230,1)'); fg.addColorStop(0.3, 'rgba(255,180,60,.95)'); fg.addColorStop(1, 'rgba(255,80,20,0)');
+      c.fillStyle = fg; c.beginPath();
+      c.moveTo(RX - 6, RY + 50); c.quadraticCurveTo(RX - wid, RY + 50 + len * 0.5, RX, RY + 50 + len);
+      c.quadraticCurveTo(RX + wid, RY + 50 + len * 0.5, RX + 6, RY + 50); c.fill();
+      if (h < 0.6) { c.fillStyle = 'rgba(235,235,235,.55)'; for (let i = 0; i < 6; i++) { c.beginPath(); c.arc(RX + (Math.random() - 0.5) * 120, gy - 6 - Math.random() * 14, 10 + Math.random() * 12, 0, 7); c.fill(); } }
+    } else if (mode === 'launch' && st.t > -3 && st.t < 0) {
+      c.fillStyle = 'rgba(235,235,235,.45)';                       // vapor previo a la ignición
+      for (let i = 0; i < 4; i++) { c.beginPath(); c.arc(RX + (Math.random() - 0.5) * 70, gy - 8, 8 + Math.random() * 8, 0, 7); c.fill(); }
     }
-    // resplandor por rozamiento
+    // plasma en la punta con presión dinámica alta
     if (st.q > 0.6) {
-      const a = Math.min(0.55, (st.q - 0.6) * 0.5);
-      const pg = c.createRadialGradient(CX, 760, 80, CX, 760, 760);
-      pg.addColorStop(0, 'rgba(255,150,60,' + a + ')'); pg.addColorStop(1, 'rgba(255,60,20,0)');
-      c.fillStyle = pg; c.fillRect(0, 0, W, H);
+      const pg = c.createRadialGradient(RX, RY - 46, 2, RX, RY - 46, 26);
+      pg.addColorStop(0, 'rgba(255,170,80,' + Math.min(0.9, st.q - 0.5) + ')'); pg.addColorStop(1, 'rgba(255,80,20,0)');
+      c.fillStyle = pg; c.beginPath(); c.arc(RX, RY - 46, 26, 0, 7); c.fill();
     }
-    c.restore();
+    // cohete
+    c.fillStyle = '#e9eef4'; c.fillRect(RX - 7, RY - 30, 14, 80);
+    c.fillStyle = '#c9d2dd'; c.fillRect(RX + 2, RY - 30, 5, 80);
+    c.fillStyle = '#e9eef4'; c.beginPath(); c.moveTo(RX - 7, RY - 30); c.quadraticCurveTo(RX, RY - 56, RX + 7, RY - 30); c.fill();
+    c.fillStyle = (A.settings.accent || '#19b4ff');
+    c.fillRect(RX - 7, RY - 4, 14, 4);
+    c.fillStyle = '#20262f';
+    c.beginPath(); c.moveTo(RX - 7, RY + 34); c.lineTo(RX - 15, RY + 50); c.lineTo(RX - 7, RY + 46); c.fill();
+    c.beginPath(); c.moveTo(RX + 7, RY + 34); c.lineTo(RX + 15, RY + 50); c.lineTo(RX + 7, RY + 46); c.fill();
+    c.fillRect(RX - 5, RY + 50, 10, 3);
+    // marco de cámara y piloto de grabación
+    c.strokeStyle = 'rgba(127,220,255,.5)'; c.lineWidth = 1;
+    c.strokeRect(6, 22, VW - 12, VH - 28);
+    if (Math.floor(now / 500) % 2 && mode === 'launch' && st.t >= 0) { c.fillStyle = '#ff3c3c'; c.beginPath(); c.arc(VW - 16, 34, 4, 0, 7); c.fill(); }
+  }
 
-    // instrumentos
+  function drawPanels() {
     const q = (st.q || 0) * 100;
-    $('#l-alt').textContent = h.toFixed(h < 10 ? 1 : 0);
+    $('#l-alt').textContent = st.h.toFixed(st.h < 10 ? 1 : 0);
     $('#l-vel').textContent = st.v.toFixed(1);
     $('#l-q').textContent = q.toFixed(0);
     $('#l-hull').textContent = Math.max(0, 100 - st.stress).toFixed(0);
-    $('#l-fuel').textContent = st.fuel.toFixed(0);
-    $('#lb-alt').style.width = Math.min(100, h / H_SPACE * 100) + '%';
+    $('#l-fuel').textContent = st.fuel.toFixed(0) + '%';
+    $('#l-energy').textContent = st.energy.toFixed(0) + '%';
+    $('#lb-alt').style.width = Math.min(100, st.h / H_SPACE * 100) + '%';
     $('#lb-vel').style.width = Math.min(100, st.v / V_ORBIT * 100) + '%';
     $('#lb-q').style.width = Math.min(100, q / 1.5) + '%';
     $('#lb-q').classList.toggle('danger', q > 100);
@@ -158,26 +284,37 @@
     $('#lb-hull').classList.toggle('danger', st.stress > 50);
     $('#lb-fuel').style.width = st.fuel + '%';
     $('#lb-fuel').classList.toggle('danger', st.fuel < 15);
+    $('#lb-energy').style.width = st.energy + '%';
+    $('#lb-energy').classList.toggle('danger', st.energy < 20);
     $('#l-fire').classList.toggle('is-held', firing);
+    // vibración de la cabina y resplandor por rozamiento
+    const rho = Math.exp(-st.h / 12);
+    $('#cockpit').style.transform = firing
+      ? 'translate(' + ((Math.random() - 0.5) * 4 * (0.4 + rho)).toFixed(1) + 'px,' + ((Math.random() - 0.5) * 4 * (0.4 + rho)).toFixed(1) + 'px)' : '';
+    $('#heat').style.opacity = st.q > 0.6 ? Math.min(0.35, (st.q - 0.6) * 0.4) : 0;
   }
 
   function loop(now) {
-    if (!running) return;
+    raf = 0;
+    if (mode === 'off' || $('#screen-launch').classList.contains('hidden')) { mode = 'off'; return; }
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    update(dt); if (st) draw(dt);
-    if (running) requestAnimationFrame(loop);
+    if (mode === 'launch') update(dt);
+    if (mode !== 'end' || dt) { drawView(dt, now); drawPanels(); }
+    if (mode !== 'off') raf = requestAnimationFrame(loop);
   }
+  function startLoop() { last = performance.now(); if (!raf) raf = requestAnimationFrame(loop); }
+  function stopLoop() { mode = 'off'; held = false; firing = false; }
 
   // ---------- Controles ----------
   const isFireKey = (e) => e.code === 'Space' || e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp';
   window.addEventListener('keydown', (e) => {
-    if (!running) return;
+    if (mode !== 'launch') return;
     if (isFireKey(e)) { held = true; e.preventDefault(); }
-    if (e.key === 'Escape') { running = false; A.show('menu'); }
+    if (e.key === 'Escape') { stopLoop(); A.show('menu'); }
   });
   window.addEventListener('keyup', (e) => { if (isFireKey(e)) held = false; });
   const fb = $('#l-fire');
-  fb.addEventListener('pointerdown', (e) => { e.preventDefault(); held = true; });
+  fb.addEventListener('pointerdown', (e) => { e.preventDefault(); if (mode === 'launch') held = true; });
   ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => fb.addEventListener(t, () => { held = false; }));
   fb.addEventListener('keydown', (e) => { if (e.code === 'Space') e.preventDefault(); });
 })();
