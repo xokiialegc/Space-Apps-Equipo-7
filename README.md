@@ -21,6 +21,14 @@ python3 -m http.server 8000
 
 Resultados posibles: graduación (A), fallo de lanzamiento (B), pérdida de capacidad operativa (C), descenso no completado (D) y aterrizaje sin objetivo científico cumplido.
 
+## Gráficos
+
+Todo se dibuja en 2D sobre canvas, sin imágenes externas (`js/graficos.js`):
+
+- **Nave, exterior e interior.** La nave se construye a partir del diseño: cambia de tamaño con la nave, el propelente, el lander y el escudo elegidos. La vista interior muestra en corte los tanques, las baterías, la bodega de instrumentos, los depósitos de oxígeno y la tripulación, con niveles que reflejan la telemetría real.
+- **Consolas por módulo.** Durante el viaje, cada módulo se puede seleccionar para abrir su consola. Las anomalías aparecen sobre el módulo afectado y se resuelven desde su consola.
+- **Escenas.** Despegue, entrada con plasma, paracaídas, retropropulsión, superficie de Marte con los instrumentos desplegados y una escena para cada tipo de fallo.
+
 ## Modelo
 
 `js/sim.js` contiene todas las reglas, sin dependencias del navegador:
@@ -39,6 +47,7 @@ Los valores de componentes y constantes están al principio del archivo para aju
 index.html        Página única
 css/styles.css    Estilos
 js/sim.js         Modelo de misión
+js/graficos.js    Escenas 2D en canvas
 js/app.js         Pantallas e interacción
 tests/            Pruebas del modelo
 ```

@@ -7,7 +7,7 @@
   const hud = $('#hud');
   const sinAnimacion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const E = { cfg: Sim.configPorDefecto(), m: null, timer: null };
+  const E = { cfg: Sim.configPorDefecto(), m: null, timer: null, vista: {}, pendiente: null };
 
   /* ---------- utilidades ---------- */
   const n = (v, dec = 1) => Number(v).toLocaleString('es-ES', { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -20,7 +20,9 @@
 
   function mostrar(html, conHud = true) {
     clearInterval(E.timer);
+    clearTimeout(E.tq);
     cancelAnimationFrame(E.raf);
+    E.pendiente = null;
     hud.hidden = !conHud;
     pantalla.innerHTML = html;
     pantalla.style.animation = 'none';
@@ -62,6 +64,71 @@
       item('Potencia', `${n(pot)} kW`, (pot / 24) * 100, pot < K.POT_ESENCIAL ? 'mal' : pot < d.demanda ? 'av' : '');
   }
 
+  /* ---------- visor 2D de la nave ---------- */
+  const MODULOS = { motor: 'Propulsión', tanques: 'Tanques de propelente', energia: 'Energía', ciencia: 'Bodega científica', habitat: 'Soporte vital', puente: 'Puente y comunicaciones', lander: 'Lander', escudo: 'Escudo térmico' };
+  const visor = (descripcion, extra = '') => `<div class="visor"><canvas id="lienzo" role="img" aria-label="${descripcion}"></canvas>${extra}</div>`;
+  const lienzo = (H, pintar) => Gfx.escena($('#lienzo'), H, pintar);
+
+  function estadoNave() {
+    const m = E.m; const d = m ? m.d : Sim.evaluar(E.cfg);
+    return {
+      d, danados: m ? m.danados : [], potMax: d.potencia, demanda: d.demanda,
+      propNivel: m ? (m.propInicial ? m.prop / m.propInicial : 0) : E.cfg.propelente / 110,
+      o2: m ? Sim.oxigeno(m) : 100, potencia: m ? m.potencia : d.potencia, escudo: m ? m.escudo : 100,
+    };
+  }
+  /** Monta la escena de la nave. `v`: H, cy, escala, fondo, interactivo, ruta, apagada. */
+  function montarNave(v) {
+    E.vista = { modo: 'exterior', sel: null, alerta: null, quemando: false, hover: null, ...v };
+    const c = $('#lienzo');
+    lienzo(v.H, (g, t, H) => {
+      Gfx.espacio(g, t, H, E.vista.fondo);
+      E.mods = Gfx.nave(g, t, { cfg: E.cfg, est: estadoNave(), ...E.vista });
+      if (E.vista.ruta && E.m) Gfx.ruta(g, H, E.m.dia, K.DIAS_VIAJE, K.DIAS_EVENTO);
+    });
+    if (v.interactivo) {
+      c.addEventListener('mousemove', (e) => { E.vista.hover = Gfx.moduloEn(c, e, E.mods, E.vista); c.style.cursor = E.vista.hover ? 'pointer' : 'default'; });
+      c.addEventListener('mouseleave', () => { E.vista.hover = null; });
+      c.addEventListener('click', (e) => { const id = Gfx.moduloEn(c, e, E.mods, E.vista); if (id) modulo(id); });
+    }
+    pintarBarra();
+  }
+  function pintarBarra() {
+    const b = $('#barra'); if (!b) return;
+    const V = E.vista;
+    const chip = (accion, texto, cls) => `<button class="chip ${cls}" data-accion="${accion}">${texto}</button>`;
+    b.innerHTML = chip('vista:exterior', 'Exterior', V.modo === 'exterior' ? 'activo' : '') + chip('vista:interior', 'Interior', V.modo === 'interior' ? 'activo' : '')
+      + (V.interactivo ? '<span class="sep"></span>' + Object.entries(MODULOS).map(([id, nombre]) => chip(`modulo:${id}`, (V.alerta === id ? '⚠ ' : '') + nombre, `${V.sel === id ? 'activo' : ''} ${V.alerta === id ? 'alerta' : ''}`)).join('') : '');
+  }
+  function vista(modo) { E.vista.modo = modo; pintarBarra(); }
+  function modulo(id) { E.vista.sel = id; E.vista.modo = 'interior'; pintarBarra(); pintarConsola(); }
+  function quemar(ms) { E.vista.quemando = true; clearTimeout(E.tq); E.tq = setTimeout(() => { E.vista.quemando = false; }, ms); }
+
+  /** Lecturas de cada módulo de la nave durante el vuelo. */
+  function lecturas(id) {
+    const m = E.m; const d = m.d; const o2 = Sim.oxigeno(m); const ev = E.pendiente ? E.pendiente.n : -1;
+    const ok = (cond, av) => (cond ? 'v-ok' : av ? 'v-av' : 'v-mal');
+    return {
+      motor: () => [['Delta-v disponible', `${n(Sim.dvRestante(m), 2)} km/s`, ok(Sim.dvRestante(m) >= Sim.dvRetro(m), true)], ['Delta-v utilizado', `${n(m.dvUsado, 2)} km/s`], ['Frenado previsto en el descenso', `${n(Sim.dvRetro(m), 2)} km/s`], ['Trayectoria', ev === 2 ? 'DESVIACIÓN ELEVADA' : m.empinada ? 'DESVIADA' : 'NOMINAL', ok(ev !== 2 && !m.empinada)]],
+      tanques: () => [['Propelente', `${n(m.prop)} t de ${n(m.propInicial, 0)} t`], ['Nivel', `${n(Sim.combustiblePct(m))} %`, ok(Sim.combustiblePct(m) > 12, true)], ['Masa actual de la nave', `${n(Sim.masaActual(m))} t`]],
+      energia: () => [['Potencia generada', `${n(m.potencia)} kW`, ok(m.potencia >= d.demanda, m.potencia >= K.POT_ESENCIAL)], ['Sistemas esenciales', `${n(K.POT_ESENCIAL)} kW`], ['Disponible para ciencia', `${n(Math.max(0, m.potencia - K.POT_ESENCIAL))} kW`], ['Demanda de los instrumentos', `${n(d.demanda - K.POT_ESENCIAL)} kW`], ['Actividad solar', ev === 1 ? 'ELEVADA' : 'NORMAL', ok(ev !== 1)]],
+      ciencia: () => { const act = Sim.ciencia(m).activos; return d.instrumentos.length ? d.instrumentos.map((i) => [i.nombre, m.danados.includes(i.id) ? 'DAÑADO' : act.includes(i) ? 'LISTO' : 'SIN POTENCIA', m.danados.includes(i.id) ? 'v-mal' : act.includes(i) ? 'v-ok' : 'v-av']) : [['Bodega', 'VACÍA', 'v-av']]; },
+      habitat: () => [['Reservas de oxígeno', `${n(o2, 0)} %`, ok(o2 >= 15, o2 >= K.O2_MIN)], ['Autonomía restante', `${n((d.nave.dias * o2) / 100, 0)} días`], ['Días hasta Marte', `${n(K.DIAS_VIAJE - m.dia, 0)}`], ['Mínimo operativo', `${K.O2_MIN} %`], ['Tripulación', '4 — estable']],
+      puente: () => [['Día de misión', `${n(m.dia, 0)} de ${K.DIAS_VIAJE}`], ['Señal de comunicación', ev === 0 ? '42 %' : '98 %', ok(ev !== 0)], ['Telemetría', ev === 0 ? 'PARCIAL' : 'COMPLETA', ok(ev !== 0, true)], ['Navegación', 'OPERATIVA']],
+      lander: () => [['Modelo', d.lander.nombre], ['Carga científica', `${d.instrumentos.length} de ${d.lander.plazas} plazas`], ['Masa', `${d.lander.masa} t`], ['Estado', 'ACOPLADO']],
+      escudo: () => [['Modelo', d.escudo.nombre], ['Resistencia térmica', `${d.escudo.resistencia}`], ['Integridad', `${m.escudo} %`, ok(m.escudo >= 15, m.escudo > 0)]],
+    }[id]();
+  }
+  function pintarConsola() {
+    const c = $('#consola'); if (!c || !E.m) return;
+    const id = E.vista.sel; const P = E.pendiente;
+    if (!id) { c.innerHTML = '<div class="panel"><h2>Consolas de la nave</h2><p>Selecciona un módulo sobre la nave, o con los botones, para abrir su consola y supervisar sus recursos.</p></div>'; return; }
+    const decision = P && P.modulo === id
+      ? `<p class="alerta-titulo">&lt; ANOMALÍA EN ESTE MÓDULO &gt;</p><p class="etq">Decisión del cadete</p>${P.opciones.map(([k, t], i) => `<button class="opcion" data-accion="decidir:${k}"><b>${'AB'[i]}.</b>${t}</button>`).join('')}`
+      : P ? `<p class="etq">Sin anomalías aquí. La alerta está en: ${MODULOS[P.modulo]}.</p>` : '';
+    c.innerHTML = `<div class="panel"><h2>Consola — ${MODULOS[id]}</h2>${datos(lecturas(id))}${decision}</div>`;
+  }
+
   /* ---------- 1. Inicio ---------- */
   function inicio() {
     E.m = null;
@@ -69,6 +136,7 @@
       <div class="panel">
         <p class="etq">Instructor Jefe — Control de Misión</p>
         <h1>Programa de Simulación Orbital</h1>
+        ${visor('Nave interplanetaria en órbita terrestre')}
         <p><strong>Bienvenido, cadete.</strong></p>
         <p>Has sido seleccionado para participar en el Programa de Simulación Orbital, un entrenamiento diseñado para preparar a la próxima generación de exploradores espaciales.</p>
         <p>Tu misión: diseñar, ejecutar y evaluar una expedición desde una estación espacial en órbita terrestre hasta la superficie de Marte.</p>
@@ -87,6 +155,7 @@
         <p class="centro">¿Estás preparado, cadete?</p>
         <div class="acciones centro">${boton('manual', 'Iniciar entrenamiento')}</div>
       </div>`, false);
+    montarNave({ H: 300, cy: 135, escala: 0.8, fondo: 'tierra' });
   }
 
   /* ---------- 2. Manual de telemetría ---------- */
@@ -127,6 +196,7 @@
       ${instructor(`<p>Debes seleccionar y equilibrar los componentes de la expedición. Cada módulo consume masa, presupuesto y, en algunos casos, energía.</p><p>Presupuesto del programa: <strong>${K.PRESUPUESTO} M</strong>. Delta-v nominal de la misión: <strong>${n(K.DV_NOMINAL)} km/s</strong> (salida ${n(K.DV.tmi)} + correcciones ${n(K.DV.corr)} + descenso ${n(K.DV.retro)}), más el margen que consideres prudente.</p>`)}
       <form class="hangar" id="diseno">
         <div>
+          <div class="visor-fijo">${visor('Vista previa de la nave según el diseño actual')}<div id="barra" class="chips"></div></div>
           <section class="panel"><h2>Identificación</h2>
             <label class="etq" for="nombre">Nombre de la misión</label><br>
             <input type="text" id="nombre" name="nombre" maxlength="24" value="${esc(c.nombre)}"></section>
@@ -153,6 +223,7 @@
         <aside class="panel"><h2>Telemetría de diseño</h2><div id="resumen"></div>
           <div class="acciones">${boton('confirmarDiseno', 'Confirmar diseño')}</div></aside>
       </form>`);
+    montarNave({ H: 250, cy: 123, escala: 0.72, fondo: 'espacio' });
     $('#diseno').addEventListener('input', leerDiseno);
     $('#diseno').addEventListener('submit', (e) => e.preventDefault());
     leerDiseno();
@@ -208,6 +279,7 @@
     mostrar(`
       <p class="etq">Fase 1 — Preparación y despegue</p>
       <h1>Segmento de lanzamiento</h1>
+      ${visor('Vehículo de lanzamiento en la plataforma')}
       ${instructor(`<p>Cadete, la configuración de tu nave ya ha sido seleccionada. Ahora debemos verificar que el vehículo y su carga cumplen los requisitos necesarios para iniciar la expedición.</p>
         <p><strong>CAPACIDAD DE CARGA:</strong> comprueba que la masa total de la nave no supere la capacidad máxima del vehículo de lanzamiento seleccionado.</p>
         <p><strong>COSTE DE LANZAMIENTO:</strong> verifica que los servicios de lanzamiento y puesta en órbita se encuentren dentro del presupuesto disponible.</p>`)}
@@ -221,6 +293,8 @@
         <ul class="datos" id="verificacion"></ul>
         <div class="acciones">${boton('autorizar', 'Autorizar lanzamiento', 'principal', 'disabled id="btnAutorizar"')}${boton('hangar', 'Volver al hangar', 'sec')}</div>
       </div>`);
+    E.lanz = { p: null };
+    lienzo(380, (g, t, H) => Gfx.lanzamiento(g, t, H, { cfg: E.cfg, p: E.lanz.p }));
   }
   function verificar(cual) {
     const d = E.m.d;
@@ -239,19 +313,24 @@
     if (!Sim.lanzamiento(E.m).ok) return resultadoB();
     mostrar(`
       ${control('<p>Vehículo de lanzamiento confirmado. Carga útil verificada. Trayectoria inicial calculada.</p><p>Todos los sistemas se encuentran dentro de los parámetros establecidos.</p><p>Cadete, tienes autorización para iniciar la secuencia de lanzamiento.</p>')}
-      <div class="cuenta" id="cuenta">T-10</div>
-      <div class="acciones centro">${boton('enOrbita', 'Saltar cuenta atrás', 'sec')}</div>`);
+      ${visor('Despegue del vehículo de lanzamiento', '<div class="cuenta" id="cuenta">T-10</div>')}
+      <div class="acciones centro">${boton('enOrbita', 'Saltar secuencia', 'sec')}</div>`);
+    E.lanz = { p: null };
+    lienzo(420, (g, t, H) => Gfx.lanzamiento(g, t, H, { cfg: E.cfg, p: E.lanz.p }));
     let t = 10;
     E.timer = setInterval(() => {
       t -= 1;
       $('#cuenta').textContent = t > 0 ? `T-${t}` : '¡DESPEGUE!';
-      if (t < 0) enOrbita();
+      if (t > 0) return;
+      clearInterval(E.timer);
+      animar(3600, (p) => { E.lanz.p = p; if (p > 0.35) $('#cuenta').textContent = ''; }, enOrbita);
     }, sinAnimacion ? 60 : 450);
   }
   function enOrbita() {
     const d = E.m.d;
     mostrar(`
       <p class="alerta-titulo ok">&lt; LANZAMIENTO EXITOSO &gt;</p>
+      ${visor('La nave en órbita terrestre')}<div id="barra" class="chips"></div>
       ${control('<p>Inserción orbital completada.</p><p>La nave ha alcanzado la órbita terrestre prevista. El vehículo de lanzamiento ha cumplido su función.</p><p>Cadete, hemos superado el primer segmento. Ahora comienza tu responsabilidad como operador de la nave.</p>', 'ok')}
       <div class="panel"><h2>Segmento espacial — configuración registrada</h2>
         ${instructor('<p>Una nave demasiado pesada puede no despegar. Una nave mal equipada puede no aterrizar. Y una nave sin instrumentos adecuados puede llegar a Marte sin cumplir su objetivo científico.</p>')}
@@ -267,12 +346,13 @@
         ${control('<p>La misión está lista para iniciar la transferencia interplanetaria.</p>')}
         <div class="acciones centro">${boton('iniciarViaje', 'Iniciar viaje a Marte')}</div>
       </div>`);
+    montarNave({ H: 330, cy: 150, escala: 0.85, fondo: 'tierra' });
   }
 
   /* ---------- 5. Viaje interplanetario ---------- */
   const EVENTOS = [
     {
-      alerta: 'ALERTA DE TELEMETRÍA', titulo: 'Evento crítico 01 — Pérdida parcial de comunicaciones', quien: 'Estación terrestre — Comunicación',
+      modulo: 'puente', alerta: 'ALERTA DE TELEMETRÍA', titulo: 'Evento crítico 01 — Pérdida parcial de comunicaciones', quien: 'Estación terrestre — Comunicación',
       texto: '<p>Atención, Control de Misión. Estamos detectando una degradación en la señal de comunicación con la nave.</p><p>La recepción de telemetría es intermitente. Algunos paquetes de datos no están llegando correctamente.</p>',
       estado: () => [['Señal de comunicación', '42 %', 'v-mal'], ['Telemetría', 'Parcial', 'v-av'], ['Navegación', 'Sin anomalías confirmadas'], ['Estado de la nave', 'Operativo']],
       orden: 'Cadete, debemos recuperar la recepción de datos antes de perder visibilidad sobre los sistemas de la nave.',
@@ -283,7 +363,7 @@
       coste: () => `Respaldo activado con retraso. Una deriva no detectada exige una corrección tardía: −${n(K.DV.tardia, 2)} km/s de delta-v.`,
     },
     {
-      alerta: 'ALERTA DE RADIACIÓN', titulo: 'Evento crítico 02 — Tormenta solar', quien: 'Centro de Control de Misión',
+      modulo: 'energia', alerta: 'ALERTA DE RADIACIÓN', titulo: 'Evento crítico 02 — Tormenta solar', quien: 'Centro de Control de Misión',
       texto: '<p>Atención, cadete. Los instrumentos de monitoreo espacial han detectado un incremento de actividad solar.</p><p>La radiación puede afectar los componentes electrónicos y aumentar la exposición de la tripulación.</p>',
       estado: (m) => [['Actividad solar', 'Elevada', 'v-mal'], ['Exposición a radiación', 'En aumento', 'v-av'], ['Sistemas electrónicos', 'Operativos'], ['Potencia eléctrica', `${n(m.potencia)} kW`]],
       orden: 'Debemos proteger los sistemas sensibles y conservar la energía disponible.',
@@ -294,7 +374,7 @@
       coste: (r) => `Daños por radiación: −4 kW de potencia, −10 % de reservas de soporte vital${r.danado ? ` e instrumento inutilizado: ${r.danado.nombre}` : ''}.`,
     },
     {
-      alerta: 'ALERTA DE NAVEGACIÓN', titulo: 'Evento crítico 03 — Desviación de trayectoria', quien: 'Centro de Control de Misión',
+      modulo: 'motor', alerta: 'ALERTA DE NAVEGACIÓN', titulo: 'Evento crítico 03 — Desviación de trayectoria', quien: 'Centro de Control de Misión',
       texto: '<p>Cadete, hemos detectado una desviación respecto a la trayectoria interplanetaria prevista.</p><p>Los datos de navegación indican que la nave podría llegar a Marte fuera de los parámetros establecidos.</p>',
       estado: (m) => [['Desviación de trayectoria', 'Elevada', 'v-mal'], ['Propelente disponible', `${n(Sim.dvRestante(m), 2)} km/s`], ['Navegación', 'Operativa'], ['Tiempo estimado de llegada', `${K.DIAS_VIAJE - m.dia} días`]],
       orden: 'Debemos evaluar la trayectoria y determinar si es necesaria una corrección. Recuerda que cada maniobra consume propelente. No podemos desperdiciar nuestras reservas.',
@@ -306,30 +386,16 @@
     },
   ];
 
-  // Trayectoria Tierra → Marte (Bézier cuadrática) sobre un lienzo de 800×200.
-  const P = [[70, 160], [400, -40], [730, 70]];
-  const punto = (t) => [0, 1].map((k) => (1 - t) ** 2 * P[0][k] + 2 * (1 - t) * t * P[1][k] + t ** 2 * P[2][k]);
-  function mapa() {
-    const marcas = K.DIAS_EVENTO.map((d) => { const [x, y] = punto(d / K.DIAS_VIAJE); return `<circle cx="${x}" cy="${y}" r="4" fill="none" stroke="#ffb547"/>`; }).join('');
-    return `<div class="panel"><svg class="mapa" viewBox="0 0 800 200" role="img" aria-label="Trayectoria de la Tierra a Marte">
-      <path d="M${P[0]} Q${P[1]} ${P[2]}" fill="none" stroke="#24365c" stroke-width="2" stroke-dasharray="6 6"/>${marcas}
-      <circle cx="${P[0][0]}" cy="${P[0][1]}" r="16" fill="#3b82f6"/><text x="${P[0][0]}" y="195" fill="#8296b8" font-size="12" text-anchor="middle">TIERRA</text>
-      <circle cx="${P[2][0]}" cy="${P[2][1]}" r="12" fill="#e2603a"/><text x="${P[2][0]}" y="105" fill="#8296b8" font-size="12" text-anchor="middle">MARTE</text>
-      <circle id="nave" r="5" fill="#fff" stroke="#4fd8ff" stroke-width="2"/></svg>
-      <p class="etq centro" id="diaTxt"></p></div><div id="bitacora"></div>`;
-  }
-  function situarNave(dia) {
-    const [x, y] = punto(dia / K.DIAS_VIAJE);
-    $('#nave').setAttribute('cx', x); $('#nave').setAttribute('cy', y);
-    $('#diaTxt').textContent = `Día ${Math.round(dia)} de ${K.DIAS_VIAJE} · ${n((dia / K.DIAS_VIAJE) * 480, 0)} millones de km recorridos`;
-  }
-  const bitacora = (html) => { $('#bitacora').innerHTML = html; pintarHud(); };
+  const bitacora = (html) => { $('#bitacora').innerHTML = html; pintarHud(); pintarConsola(); };
 
   function iniciarViaje() {
     if (!Sim.tmi(E.m)) return resultadoC(['La nave agotó el propelente durante la inyección transmarciana']);
     E.evento = 0;
-    mostrar(`<p class="etq">Fase 2 — El viaje interplanetario</p><h1>Segmento terrestre en acción</h1>${mapa()}`);
-    situarNave(0);
+    mostrar(`<p class="etq">Fase 2 — El viaje interplanetario</p><h1>Segmento terrestre en acción</h1>
+      ${visor('La nave en trayectoria interplanetaria; selecciona un módulo para abrir su consola')}<div id="barra" class="chips"></div>
+      <div class="dos"><div id="bitacora"></div><div id="consola"></div></div>`);
+    montarNave({ H: 400, cy: 170, fondo: 'espacio', interactivo: true, ruta: true });
+    quemar(2600);
     bitacora(`
       ${instructor(`<p>Cadete, la nave ha abandonado la órbita terrestre y se encuentra en trayectoria interplanetaria. La inyección ha consumido ${n(K.DV.tmi)} km/s de delta-v.</p>
         <p>Desde el Centro de Control de Misión, las estaciones terrestres reciben telemetría, verifican las comunicaciones y supervisan el comportamiento de la nave. Durante el viaje, pueden aparecer anomalías que exijan decisiones inmediatas.</p>
@@ -342,7 +408,7 @@
     const desde = E.m.dia;
     const hasta = E.evento < 3 ? K.DIAS_EVENTO[E.evento] : K.DIAS_VIAJE;
     bitacora('<p class="etq centro">Navegando… recibiendo telemetría</p>');
-    animar(1600, (t) => { E.m.dia = desde + (hasta - desde) * t; situarNave(E.m.dia); pintarHud(); }, () => (E.evento < 3 ? plantearEvento() : finViaje()));
+    animar(1800, (t) => { E.m.dia = desde + (hasta - desde) * t; pintarHud(); }, () => (E.evento < 3 ? plantearEvento() : finViaje()));
   }
 
   function plantearEvento() {
@@ -350,20 +416,28 @@
     // El orden de las opciones se baraja: hay que leer la telemetría, no memorizar la letra.
     const opciones = [['bien', ev.bien], ['mal', ev.mal]];
     if (Math.random() < 0.5) opciones.reverse();
+    E.pendiente = { n: E.evento, modulo: ev.modulo, opciones };
+    E.vista.alerta = ev.modulo;
+    pintarBarra();
     bitacora(`<div class="panel">
       <p class="alerta-titulo">&lt; ${ev.alerta} &gt;</p><h2>${ev.titulo}</h2>
       ${msg(ev.quien, ev.texto)}
       <p class="etq">Telemetría actual</p>${datos(ev.estado(E.m))}
       ${control(`<p>${ev.orden}</p>`)}
-      <p class="etq">Decisión del cadete</p>
-      ${opciones.map(([k, t], i) => `<button class="opcion" data-accion="decidir:${k}"><b>${'AB'[i]}.</b>${t}</button>`).join('')}
+      ${instructor(`<p>Localiza el módulo en alerta sobre la nave y abre su consola para responder.</p>`)}
+      <div class="acciones">${boton(`modulo:${ev.modulo}`, `Ir a la consola de ${MODULOS[ev.modulo]}`, '')}</div>
     </div>`);
   }
 
   function decidir(cual) {
     const ev = EVENTOS[E.evento];
     const correcta = cual === 'bien';
+    const antes = E.m.dvUsado;
     const r = Sim.decidir(E.m, E.evento + 1, correcta);
+    E.pendiente = null;
+    E.vista.alerta = null;
+    if (E.m.dvUsado > antes) quemar(1800);
+    pintarBarra();
     const [res, ctrl] = correcta ? ev.resBien : ev.resMal;
     E.evento += 1;
     bitacora(`<div class="panel">
@@ -376,6 +450,7 @@
 
   function finViaje() {
     const estado = Sim.llegada(E.m);
+    E.vista.fondo = 'marte';
     pintarHud();
     if (!estado.ok) return resultadoC(estado.fallos);
     bitacora(`<div class="panel"><h2>Final del viaje interplanetario</h2>
@@ -389,6 +464,7 @@
   function edl(paso = 0, html) {
     const cabecera = `<p class="etq">Fase 3 — Descenso en Marte</p><h1>Maniobra de aterrizaje (EDL)</h1>
       <p class="alerta-titulo">&lt; ALERTA: FASE DE DESCENSO INICIADA &gt;</p>
+      ${visor('Vehículo de descenso sobre Marte')}
       <ol class="pasos">${PASOS.map((p, i) => `<li class="${i < paso ? 'hecho' : i === paso ? 'actual' : ''}">Paso 0${i + 1}<br>${p}</li>`).join('')}</ol>`;
     const cuerpo = html || [
       `${instructor('<p>Cadete, estamos entrando en la fase de mayor exigencia térmica y dinámica de la misión. El vehículo debe atravesar la atmósfera marciana, reducir su velocidad y alcanzar una zona de aterrizaje segura. Cada sistema debe responder correctamente.</p>', 'Instructor — Cabina')}
@@ -412,19 +488,23 @@
        <div class="acciones centro" id="zonaContacto">${boton('edlContacto', 'Confirmar parámetros de descenso')}</div></div>`,
     ][paso];
     mostrar(cabecera + cuerpo);
+    E.edl = { fase: paso, p: 0 };
+    lienzo(400, (g, t, H) => Gfx.edl(g, t, H, { cfg: E.cfg, ...E.edl }));
   }
   const edlEntrada = () => (Sim.entrada(E.m) ? edl(1) : resultadoD('NO ACTIVADOS'));
   function edlFrenado() {
     $('[data-accion="edlFrenado"]').disabled = true;
-    animar(1500, (t) => { $('#lectura').textContent = `${n(5.8 - 5.4 * t, 2)} km/s`; }, () => edl(2));
+    animar(2600, (t) => { E.edl.p = t; $('#lectura').textContent = `${n(5.8 - 5.4 * t, 2)} km/s`; }, () => edl(2));
   }
   const edlRetro = () => (Sim.retro(E.m) ? edl(3) : resultadoD('PROPELENTE AGOTADO'));
   function edlContacto() {
     $('[data-accion="edlContacto"]').disabled = true;
-    animar(2400, (t) => {
+    animar(3200, (t) => {
+      E.edl.p = t;
       $('#alt').textContent = `${n(1200 * (1 - t) ** 2, 0)} m`;
       $('#vel').textContent = `${n(75 - 74.2 * t)} m/s`;
     }, () => {
+      E.edl.fase = 4;
       $('#zonaContacto').innerHTML = `<div>${control('<p>Contacto con la superficie confirmado.</p><p class="lema">¡ATERRIZAJE COMPLETADO!</p>', 'ok')}${boton('reporteFinal', 'Recibir datos científicos')}</div>`;
     });
   }
@@ -447,6 +527,7 @@
         <div class="acciones centro">${boton('hangar', 'Reintentar misión')}</div>`;
     mostrar(`
       <p class="etq">Fase 3 — Segmento de usuario</p><h1>Análisis de datos y evaluación científica</h1>
+      ${visor('El lander en la superficie de Marte con los instrumentos desplegados')}
       ${msg('Centro de Control de Misión — Tierra', '<p>La nave ha alcanzado Marte. Los instrumentos científicos han comenzado a transmitir los primeros datos de la expedición.</p><p>Ahora, los científicos e investigadores en Tierra analizarán los resultados para determinar si se cumplieron los objetivos de la misión. El éxito no se mide únicamente por llegar al destino: también debemos evaluar la cantidad, calidad y utilidad de la información obtenida.</p>')}
       <div class="panel"><h2>Reporte final de misión</h2>
         ${datos([['Nombre de misión', esc(m.cfg.nombre)], ['Destino', 'Marte'], ['Estado', r.graduado ? 'COMPLETADA' : 'ATERRIZAJE SIN OBJETIVO CIENTÍFICO', r.graduado ? 'v-ok' : 'v-av']])}
@@ -466,17 +547,20 @@
           ['Calificación final', `${r.calificacion} (${r.nota}/100)`, r.nota >= 70 ? 'v-ok' : r.nota >= 50 ? 'v-av' : 'v-mal'],
         ])}
       </div>${veredicto}`);
+    lienzo(360, (g, t, H) => Gfx.superficie(g, t, H, { activos: r.ciencia.activos }));
   }
 
   /* ---------- 8. Resultados de fallo ---------- */
-  function fallo(titulo, intro, informe, leccionInstructor, leccion) {
+  function fallo(titulo, intro, informe, leccionInstructor, leccion, descripcion, pintar) {
     mostrar(`
       <p class="alerta-titulo">&lt; MISIÓN INTERRUMPIDA &gt;</p><h1>${titulo}</h1>
+      ${visor(descripcion)}
       ${msg('Centro de Control de Misión', intro, 'mal')}
       <div class="panel"><h2>Informe de fallo</h2>${datos(informe)}</div>
       ${instructor(leccionInstructor)}
       <div class="panel"><h3>Lección aprendida</h3><p>${leccion}</p></div>
       <div class="acciones centro">${boton('hangar', 'Reintentar misión')}</div>`);
+    pintar();
   }
   function resultadoB() {
     const d = E.m.d;
@@ -486,7 +570,9 @@
         ['Masa total', `${n(d.masaTotal)} t`, d.capOk ? '' : 'v-mal'], ['Capacidad del lanzador', `${d.lanzador.capacidad} t`],
         ['Presupuesto', `${n(d.coste, 0)} M de ${K.PRESUPUESTO} M disponibles`, d.presOk ? '' : 'v-mal']],
       '<p>El error comenzó durante la planificación.</p><p>Un vehículo de lanzamiento debe seleccionarse considerando la masa total de la carga y los requisitos orbitales. Una misión no puede comenzar correctamente si sus capacidades no han sido verificadas.</p>',
-      'Comprueba la capacidad del lanzador y optimiza la masa antes de autorizar el despegue.');
+      'Comprueba la capacidad del lanzador y optimiza la masa antes de autorizar el despegue.',
+      'El vehículo permanece en la plataforma con el lanzamiento abortado',
+      () => lienzo(340, (g, t, H) => Gfx.lanzamiento(g, t, H, { cfg: E.cfg, abortado: true })));
   }
   function resultadoC(fallos) {
     const m = E.m;
@@ -496,7 +582,9 @@
         ['Propelente restante', `${n(Sim.combustiblePct(m))} %`], ['Reservas de oxígeno', `${n(Sim.oxigeno(m), 0)} %`],
         ['Potencia eléctrica', `${n(m.potencia)} kW (mínimo ${K.POT_ESENCIAL} kW)`], ['Integridad de sistemas', fallos.join(' · ').toUpperCase(), 'v-mal']],
       '<p>Durante un viaje interplanetario, cada recurso debe calcularse para toda la duración prevista.</p><p>Una nave puede tener una trayectoria correcta y aun así fracasar si no dispone de energía, propelente o soporte vital suficiente.</p>',
-      'Equilibra la masa, el consumo energético y las reservas de soporte vital. Conserva siempre márgenes para situaciones imprevistas.');
+      'Equilibra la masa, el consumo energético y las reservas de soporte vital. Conserva siempre márgenes para situaciones imprevistas.',
+      'La nave a la deriva, sin sistemas operativos',
+      () => montarNave({ H: 320, cy: 150, escala: 0.8, fondo: 'espacio', apagada: true }));
   }
   function resultadoD(propulsores) {
     const m = E.m;
@@ -506,7 +594,9 @@
         ['Integridad del escudo térmico', `${m.escudo} %`, m.escudo <= 0 ? 'v-mal' : ''], ['Propelente disponible', `${n(Sim.combustiblePct(m))} %`],
         ['Estado de retropropulsores', propulsores], ['Estado de aterrizaje', 'NO CONFIRMADO', 'v-mal']],
       '<p>La llegada a Marte exige una planificación completa de la fase de descenso.</p><p>No basta con alcanzar el planeta. La nave debe estar preparada para atravesar su atmósfera y completar el aterrizaje dentro de los parámetros establecidos.</p>',
-      'Verifica la integridad del escudo térmico, la capacidad de propulsión y las reservas necesarias antes de iniciar el descenso.');
+      'Verifica la integridad del escudo térmico, la capacidad de propulsión y las reservas necesarias antes de iniciar el descenso.',
+      'El vehículo de descenso no supera la entrada en Marte',
+      () => lienzo(340, (g, t, H) => Gfx.edl(g, t, H, { cfg: E.cfg, fase: m.escudo <= 0 ? 0 : 3, fallo: true })));
   }
 
   /* ---------- 9. Cierre ---------- */
@@ -525,7 +615,7 @@
 
   /* ---------- acciones y arranque ---------- */
   const ACCIONES = {
-    manual, hangar, confirmarDiseno: lanzamiento, verificar, autorizar, enOrbita, iniciarViaje, avanzar, decidir,
+    manual, hangar, vista, modulo, confirmarDiseno: lanzamiento, verificar, autorizar, enOrbita, iniciarViaje, avanzar, decidir,
     edl: () => edl(0), edlEntrada, edlFrenado, edlRetro, edlContacto, reporteFinal, cierre,
     reiniciar: () => { E.cfg = Sim.configPorDefecto(); inicio(); },
   };
