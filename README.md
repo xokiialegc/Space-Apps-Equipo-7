@@ -43,7 +43,7 @@ js/menu.js      Fondo espacial, botones, ajustes, personalización, guardado
 js/mission.js   Configuración de misión, briefing, telemetría y verificación de lanzamiento
 js/sky.js       Vista animada por las ventanas: cielo → espacio
 js/launch.js    Fase 1 en la cabina: verificación (holograma), cuenta atrás y despegue
-js/ship.js      Interior de la nave: configuración (3.2) y viaje con eventos (Fase 2)
+js/ship.js      Interior de la nave (casco con tuberías, cables y paneles), configuración (3.2) y viaje (Fase 2)
 js/edl.js       Fase 3: descenso en Marte, reporte final y resultados
 docs/PROCESO.md Bitácora del proceso de desarrollo
 ```

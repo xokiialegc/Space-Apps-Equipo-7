@@ -210,3 +210,37 @@ Partida completa automatizada en Chrome sin interfaz: configuración → viaje (
 resueltos, alertas atendidas) → descenso → reporte (calificación «Notable») → graduación →
 mensaje final → menú. Sin errores de JavaScript. La dificultad con jugadores reales no está
 afinada: los ritmos de consumo son una primera estimación.
+
+## Etapa 6 · Mejora de diseño del interior de la nave (14-11-2026)
+
+### Pedido
+[Issue #2 — «Mejora de diseño de la nave»](https://github.com/xokiialegc/Space-Apps-Equipo-7/issues/2):
+rediseñar el interior de la nave en 2D manteniendo exactamente la composición, la perspectiva y
+los elementos ya colocados; añadir detalles estructurales limpios, tuberías metálicas
+industriales, bandejas y mazos de cables ordenados por paredes y techo, y paneles técnicos
+sutiles; arte 2D plano o semiplano con iluminación ambiental técnica y limpia, sin alterar los
+objetos principales.
+
+### Qué se construyó
+Una capa de detalle (`detailLayer` en `js/ship.js`) que se dibuja sobre el casco de las seis
+salas y por debajo de las puertas y del equipo de cada sala:
+- **Techo**: dos bandejas portacables con mazos de seis cables y bridas, dos conductos metálicos
+  con abrazaderas, dos tubos finos y juntas de panel.
+- **Paredes laterales**: tubería gruesa con bridas en las costillas, tubería fina con
+  abrazaderas y un mazo de cables sobre las puertas; a cada lado de la puerta, paneles técnicos
+  con rejilla, testigo de estado y registro de mantenimiento, y un conducto bajo junto al suelo.
+- **Mamparo del fondo**: las tuberías y el mazo de cables de las paredes continúan de lado a
+  lado; juntas de panel y un zócalo de seis paneles técnicos.
+- **Suelo**: placas del pasillo y guías de luz junto a las paredes.
+- **Iluminación**: baño ambiental frío desde el techo y regletas en las aristas del techo.
+
+### Decisiones
+- El issue no adjunta imagen: se tomó como «imagen base» el interior que ya dibuja el juego. No
+  se movió ni se cambió ninguna sala, puerta, luz de techo, equipo, consola ni indicador.
+- El metal es gris azulado neutro; el color propio de cada sala solo aparece en un cable, los
+  testigos y las guías del suelo, para que las salas sigan distinguiéndose.
+- La capa es estática: se pinta una vez por sala en un lienzo aparte y luego se reutiliza, así
+  que no cuesta rendimiento.
+
+### Pruebas
+Las seis salas renderizadas en Chrome sin interfaz, sin errores de JavaScript del juego.

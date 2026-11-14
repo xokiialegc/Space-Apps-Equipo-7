@@ -313,6 +313,94 @@
   const dust = []; for (let i = 0; i < 40; i++) dust.push([Math.random() * W, Math.random() * H, Math.random() * 6.28]);
   const wstars = []; for (let i = 0; i < 90; i++) wstars.push([Math.random(), Math.random(), Math.random() * 1.6 + 0.4]);
 
+  // ---------- Detalle estructural del casco (issue #2) ----------
+  // Tuberías metálicas, bandejas y mazos de cables y paneles técnicos sobre paredes y techo.
+  // No cambia la composición ni la perspectiva: usa la misma caja de la sala (f = profundidad
+  // 0..1, v = altura 0..1 en la pared, u = ancho 0..1 en techo y suelo) y se dibuja por debajo
+  // de las puertas y del equipo de cada sala. Es estático, así que se pinta una vez por sala.
+  const LAYERS = {};
+  function detailLayer(r, col) {
+    if (LAYERS[r.id]) return LAYERS[r.id];
+    const cvs = document.createElement('canvas'); cvs.width = W; cvs.height = H;
+    const g = cvs.getContext('2d');
+    const wall = (s) => (f, v) => [s > 0 ? 380 * f : W - 380 * f, 190 * f + (H - 440 * f) * v];
+    const ceil = (f, u) => [380 * f + (W - 760 * f) * u, 190 * f];
+    const floor = (f, u) => [380 * f + (W - 760 * f) * u, H - 250 * f];
+    const quad = (P, f0, f1, a0, a1, fill) => { g.fillStyle = fill; g.beginPath(); [P(f0, a0), P(f1, a0), P(f1, a1), P(f0, a1)].forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.closePath(); g.fill(); };
+    const line = (P, f0, a0, f1, a1, stroke, w) => { const a = P(f0, a0), b = P(f1, a1); g.strokeStyle = stroke; g.lineWidth = w; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); };
+    const METAL = ['#27303d', '#56637a', '#a9b6c8', '#6b788c', '#1c232e'];                               // sombra → brillo → sombra
+    const CABLES = ['#2b3442', col(1, 0.95), '#c9a23a', '#8d99ab', '#1a2029', '#b9c4d2'];
+    // tubería en perspectiva: cinco bandas planas que simulan el brillo del metal
+    const pipe = (P, f0, f1, a0, a1) => { const d = (a1 - a0) / 5; METAL.forEach((m, i) => quad(P, f0, f1, a0 + d * i, a0 + d * (i + 1) + d * 0.08, m)); };
+    // abrazadera o brida que rodea una tubería
+    const clamp2 = (P, f, a0, a1, wf) => { const m = (a1 - a0) * 0.18; quad(P, f - wf, f + wf, a0 - m, a1 + m, '#141a23'); quad(P, f - wf * 0.45, f + wf * 0.45, a0 - m, a1 + m, '#7d8a9d'); };
+    // bandeja portacables con su mazo ordenado y bridas
+    const tray = (P, f0, f1, a0, a1, n) => {
+      quad(P, f0, f1, a0, a1, '#0b1018');
+      const d = (a1 - a0) / (n + 1);
+      for (let i = 0; i < n; i++) quad(P, f0, f1, a0 + d * (i + 0.6), a0 + d * (i + 1.25), CABLES[i % CABLES.length]);
+      line(P, f0, a0, f1, a0, '#6f7c8f', 2); line(P, f0, a1, f1, a1, '#3c4656', 2);
+      for (let f = f0 + 0.06; f < f1 - 0.02; f += 0.115) { line(P, f, a0, f, a1, '#05080d', 5); line(P, f, a0, f, a1, '#93a0b3', 1.5); }
+    };
+
+    // --- techo: juntas de panel, bandejas de cables y conductos ---
+    [0.27, 0.73].forEach((u) => line(ceil, 0, u, 1, u, 'rgba(0,0,0,.35)', 2));
+    [0.16, 0.8].forEach((f) => line(ceil, f, 0.02, f, 0.98, 'rgba(255,255,255,.05)', 2));
+    [[0.05, 0.15], [0.85, 0.95]].forEach((u) => tray(ceil, 0, 1, u[0], u[1], 6));
+    [[0.18, 0.215], [0.785, 0.82]].forEach((u) => { pipe(ceil, 0, 1, u[0], u[1]); [0.3, 0.6, 0.86].forEach((f) => clamp2(ceil, f, u[0], u[1], 0.012)); });
+    [[0.235, 0.25], [0.75, 0.765]].forEach((u) => pipe(ceil, 0, 1, u[0], u[1]));
+
+    // --- paredes laterales: tuberías altas, mazo de cables y paneles técnicos ---
+    [1, -1].forEach((s) => {
+      const P = wall(s);
+      pipe(P, 0, 1, 0.035, 0.078); pipe(P, 0, 1, 0.096, 0.121);
+      [0.3, 0.6].forEach((f) => clamp2(P, f, 0.035, 0.078, 0.016));                                      // bridas en las costillas
+      [0.12, 0.45, 0.78, 0.93].forEach((f) => clamp2(P, f, 0.096, 0.121, 0.008));
+      tray(P, 0, 1, 0.138, 0.178, 4);
+      [[0.035, 0.235], [0.765, 0.965]].forEach((seg) => {                                                // paneles a ambos lados de la puerta
+        const [a, b] = seg, m = (b - a);
+        quad(P, a, b, 0.25, 0.6, 'rgba(255,255,255,.035)');
+        [[a, 0.25, b, 0.25], [a, 0.6, b, 0.6], [a, 0.25, a, 0.6], [b, 0.25, b, 0.6]].forEach((l) => line(P, l[0], l[1], l[2], l[3], 'rgba(0,0,0,.45)', 2));
+        line(P, a, 0.252, b, 0.252, 'rgba(255,255,255,.10)', 1);
+        for (let i = 0; i < 5; i++) line(P, a + m * 0.14, 0.3 + i * 0.022, a + m * 0.6, 0.3 + i * 0.022, 'rgba(0,0,0,.5)', 2);    // rejilla de ventilación
+        quad(P, a + m * 0.7, a + m * 0.88, 0.295, 0.33, col(1, 0.75));                                   // testigo de estado
+        quad(P, a + m * 0.14, a + m * 0.88, 0.46, 0.55, 'rgba(0,0,0,.28)');                              // registro de mantenimiento
+        [[0.2, 0.48], [0.82, 0.48], [0.2, 0.53], [0.82, 0.53]].forEach((b2) => { const p = P(a + m * b2[0], b2[1]); g.fillStyle = '#8693a6'; g.fillRect(p[0] - 1.5, p[1] - 1.5, 3, 3); });
+        quad(P, a, b, 0.66, 0.9, 'rgba(255,255,255,.025)');
+        [[a, 0.66, b, 0.66], [a, 0.9, b, 0.9], [a, 0.66, a, 0.9], [b, 0.66, b, 0.9]].forEach((l) => line(P, l[0], l[1], l[2], l[3], 'rgba(0,0,0,.4)', 2));
+        pipe(P, a, b, 0.925, 0.955); clamp2(P, a + m * 0.5, 0.925, 0.955, 0.008);                         // conducto bajo junto al suelo
+      });
+    });
+
+    // --- mamparo del fondo: continúan tuberías y cables, y juntas de panel sutiles ---
+    for (let x = 520; x < 1220; x += 140) { g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(x, 197, 2, 446); g.fillStyle = 'rgba(255,255,255,.04)'; g.fillRect(x + 2, 197, 1, 446); }
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(380, 288, 840, 2); g.fillRect(380, 586, 840, 2);
+    const hpipe = (y0, y1) => { const lg2 = g.createLinearGradient(0, y0, 0, y1); METAL.forEach((m, i) => lg2.addColorStop(i / 4, m)); g.fillStyle = lg2; g.fillRect(380, y0, 840, y1 - y0); };
+    hpipe(206, 226); hpipe(234, 246);
+    for (let x = 450; x < 1220; x += 140) { g.fillStyle = '#141a23'; g.fillRect(x - 9, 202, 18, 28); g.fillStyle = '#7d8a9d'; g.fillRect(x - 4, 202, 8, 28); }
+    for (let x = 415; x < 1220; x += 105) { g.fillStyle = '#141a23'; g.fillRect(x - 4, 232, 8, 16); }
+    g.fillStyle = '#0b1018'; g.fillRect(380, 254, 840, 18);
+    for (let i = 0; i < 4; i++) { g.fillStyle = CABLES[i]; g.fillRect(380, 256 + i * 4, 840, 2.6); }
+    g.fillStyle = '#6f7c8f'; g.fillRect(380, 253, 840, 1.5); g.fillStyle = '#3c4656'; g.fillRect(380, 272, 840, 1.5);
+    for (let x = 430; x < 1220; x += 96) { g.fillStyle = '#05080d'; g.fillRect(x - 2.5, 253, 5, 20); g.fillStyle = '#93a0b3'; g.fillRect(x - 0.75, 253, 1.5, 20); }
+    for (let x = 396; x < 1200; x += 140) {                                                              // zócalo de paneles técnicos
+      g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x, 598, 108, 34);
+      g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = 1; g.strokeRect(x + 0.5, 598.5, 108, 34);
+      for (let i = 0; i < 4; i++) { g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(x + 10, 605 + i * 6, 52, 2.5); }
+      g.fillStyle = col(1, 0.8); g.fillRect(x + 74, 606, 22, 5); g.fillStyle = '#8693a6'; g.fillRect(x + 74, 618, 9, 5); g.fillRect(x + 87, 618, 9, 5);
+    }
+
+    // --- suelo: placas del pasillo y guías de luz junto a las paredes ---
+    [0.36, 0.64].forEach((u) => line(floor, 0, u, 1, u, 'rgba(255,255,255,.05)', 2));
+    [0.035, 0.965].forEach((u) => { line(floor, 0, u, 1, u, col(1, 0.22), 7); line(floor, 0, u, 1, u, col(1.2, 0.8), 2); });
+
+    // --- iluminación ambiental técnica: baño limpio desde el techo y regletas en las aristas ---
+    const amb = g.createLinearGradient(0, 0, 0, H); amb.addColorStop(0, 'rgba(190,220,255,.07)'); amb.addColorStop(0.5, 'rgba(190,220,255,.02)'); amb.addColorStop(1, 'rgba(0,0,0,.10)');
+    g.fillStyle = amb; g.fillRect(0, 0, W, H);
+    [[0, 0, 380, 190], [W, 0, 1220, 190]].forEach((l) => { g.strokeStyle = 'rgba(200,228,255,.30)'; g.lineWidth = 2; g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(l[2], l[3]); g.stroke(); });
+    return (LAYERS[r.id] = cvs);
+  }
+
   function shell(r, t) {
     const [R, G, B] = r.hue, col = (k, a) => 'rgba(' + (R * k | 0) + ',' + (G * k | 0) + ',' + (B * k | 0) + ',' + (a == null ? 1 : a) + ')';
     c.fillStyle = '#05080d'; c.fillRect(0, 0, W, H);
@@ -330,6 +418,7 @@
     poly([[500, 60], [1100, 60], [1040, 110], [560, 110]], col(1.1, 0.85 * pulse));                       // luz de techo
     const lg = c.createRadialGradient(800, 90, 20, 800, 300, 700); lg.addColorStop(0, col(1, 0.22)); lg.addColorStop(1, col(1, 0));
     c.fillStyle = lg; c.fillRect(0, 0, W, H);
+    c.drawImage(detailLayer(r, col), 0, 0);                                                              // tuberías, cables y paneles (issue #2)
     c.fillStyle = col(1, 0.9); c.fillRect(380, 190, 840, 7); c.fillRect(380, 643, 840, 7);
     // puertas laterales
     [[0.26, 0.74, 1], [0.26, 0.74, -1]].forEach((d) => {
