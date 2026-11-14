@@ -263,12 +263,14 @@
       <div id="sh-res" class="text-[16px] tracking-[.2em] text-sky-200/90 uppercase"></div>
     </div>
     <div id="alerts" class="absolute right-6 top-5 w-[430px]"></div>
-    <button id="nav-l" class="navdoor absolute" style="left:36px;top:420px"></button>
-    <button id="nav-r" class="navdoor absolute text-right" style="right:36px;top:420px"></button>
-    <div id="console" class="holo absolute" style="left:872px;top:214px;width:470px"></div>
+    <button id="nav-l" class="navdoor absolute" style="left:24px;top:752px"></button>
+    <button id="nav-r" class="navdoor absolute text-right" style="right:24px;top:752px"></button>
+    <div id="console" class="holo absolute" style="left:872px;top:214px;width:470px;display:none"></div>
+    <!-- indicador de acción por proximidad (tecla E / Espacio, ratón o táctil) -->
+    <button id="sh-act" class="actp absolute" style="display:none"></button>
     <div class="absolute left-0 right-0 bottom-0 px-6 pb-4 flex items-end justify-between gap-4 pointer-events-none">
       <div id="sh-stats" class="flex gap-2 pointer-events-auto"></div>
-      <div id="sh-map" class="flex gap-1 pointer-events-auto"></div>
+      <div id="sh-map" class="pointer-events-auto"></div>
     </div>
     <div id="ship-holo" class="absolute inset-0 hidden items-center justify-center bg-black/45">
       <div class="holo flex flex-col" style="width:980px;max-height:800px">

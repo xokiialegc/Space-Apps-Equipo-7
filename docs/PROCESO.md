@@ -210,3 +210,57 @@ Partida completa automatizada en Chrome sin interfaz: configuración → viaje (
 resueltos, alertas atendidas) → descenso → reporte (calificación «Notable») → graduación →
 mensaje final → menú. Sin errores de JavaScript. La dificultad con jugadores reales no está
 afinada: los ritmos de consumo son una primera estimación.
+
+## Etapa 6 · Movimiento libre por el interior de la nave (14-11-2026)
+
+### Pedido
+Issue #1: que el personaje se mueva de forma libre y fluida entre habitaciones, sin saltos de
+cámara. Mapa continuo en vista lateral con salas conectadas por puertas, control directo con A/D
+o las flechas al levantarse del asiento del piloto (E), cámara que sigue al personaje e
+interacción por proximidad (E o Espacio cuando aparece el indicador), sin romper el vuelo ni las
+fases que ya funcionaban.
+
+### Qué se construyó
+1. **Mapa lateral continuo** (`js/ship.js`): la nave en corte, de proa a popa, 6 300 px de
+   mundo. Morro con parabrisas, tablero y asiento del piloto; seis salas con sus mamparos y
+   puertas correderas que se abren al acercarse; popa con el bloque de motores, encendidos
+   durante el viaje. El equipo de cada sala es el mismo dibujo de la etapa 5, ahora sobre la
+   pared del fondo. Orden nuevo, de izquierda a derecha: Puente, Soporte vital, Laboratorio,
+   Hangar, Energía y Propulsión.
+2. **Cadete**: astronauta dibujado por código con animación de caminar, espera, trabajo y
+   sentado. Se empieza sentado a los mandos; `E` lo levanta. Velocidad de 470 px/s con arranque
+   y frenada suaves.
+3. **Cámara**: sigue al cadete con suavizado y un pequeño adelanto en el sentido de la marcha; se
+   desplaza para dejar sitio cuando hay una consola abierta.
+4. **Interacción por proximidad**: siete puestos (asiento del piloto y una consola por sala). A
+   menos de 125 px aparece el indicador con la acción disponible. En la configuración, `E` abre
+   la consola del componente y alejarse la cierra. En el viaje, hay que mantener `E` junto al
+   panel averiado, y los eventos críticos se atienden en su puesto: comunicaciones en la consola
+   del puente, tormenta solar en la sala de energía y desviación de trayectoria en el asiento
+   del piloto. Al llegar a Marte hay que volver al asiento para pilotar el descenso.
+5. **Alarmas en el mapa**: cada módulo tiene su baliza y sus luces; con una avería activa la
+   sala entera parpadea en rojo y se ve desde las salas vecinas. Sobre cada consola flota su
+   lectura en tiempo real.
+6. **Alertas y minimapa**: el minimapa es proporcional a la nave y marca la posición del cadete;
+   pulsarlo, o pulsar una alerta, lo lleva andando hasta el puesto. Cualquier tecla de
+   movimiento cancela ese paseo.
+
+### Decisiones
+- **Base**: el issue describe un único `index.html`; se trabajó sobre AEON-01 y se mantuvo la
+  estructura de archivos, por decisión del equipo.
+- **Una sola cubierta**: no hay escaleras ni gravedad cero; el issue lo dejaba como opcional.
+- **Eventos críticos con tecla**: ya no se abren solos al entrar en la sala.
+- **Fuga de propelente**: pierde 0,013 km/s por segundo en lugar de 0,022, porque ahora hay que
+  cruzar la nave andando para sellarla (hasta unos 12 s de proa a popa).
+- **Sin cambios** en el menú, el briefing, el despegue, el descenso y el reporte final, ni en el
+  resto de consumos y reglas del viaje.
+
+### Pruebas
+Automatizadas en Chrome sin interfaz, manejando el juego solo con teclado, ratón y lo que se ve
+en pantalla: configuración completa (levantarse, cruzar la nave, abrir consolas, diseño rechazado
+y corregido, confirmar), viaje completo a velocidad real y acelerada (alertas, reparaciones, los
+tres eventos, una respuesta incorrecta y su reintento, vuelta al asiento y paso al descenso),
+fallo por recursos agotados, botones táctiles, Esc y Continuar. Sin errores de JavaScript. El
+despegue y el descenso no se volvieron a jugar enteros: su código no se tocó. No se probó con
+jugadores reales ni en un móvil físico.
+
