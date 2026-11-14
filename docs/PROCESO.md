@@ -157,3 +157,56 @@ Física, controles, monitores y condiciones de éxito y fallo de la Fase 1.
 ### Pruebas
 Recorrido completo con piloto automático, con capturas en plataforma, atravesando nubes,
 cielo oscureciéndose y en órbita con la Tierra visible. Sin errores de JavaScript.
+
+## Etapa 5 · Segmento espacial, viaje, descenso y evaluación final (14-11-2026)
+
+### Pedido
+Secciones 3.2 a 7 del guion: configuración de la nave interplanetaria, Fase 2 con tres eventos
+críticos, Fase 3 de descenso en Marte, reporte final, resultados A-D y mensaje final. Con estas
+condiciones: interior de la nave en primera persona y 2D, cada recurso en una parte distinta de
+la nave, panel de alertas para ir directo a reponer lo que esté crítico, el jugador se mueve por
+la nave, sin fases de solo texto (los textos van encima de la vista) y, en el descenso, de
+nuevo piloto en la misma cabina con los datos en los monitores y control manual.
+
+### Qué se construyó
+1. **Interior de la nave** (`js/ship.js`): seis salas dibujadas en perspectiva con canvas, cada
+   una con su equipo animado y su color: Puente (nave principal, navegación, comunicaciones),
+   Soporte vital (oxígeno), Sala de energía (potencia), Propulsión (delta-v), Hangar (lander y
+   escudo térmico) y Laboratorio (instrumentos). Se recorre con A/D, las puertas o el minimapa.
+2. **3.2 Configuración**: en cada sala se elige el nivel de su componente. Indicadores de masa,
+   presupuesto, delta-v, oxígeno, potencia, escudo e instrumentos siempre visibles. En el Puente,
+   *Verificar y confirmar diseño* muestra el consejo de configuración como lista de comprobación
+   y la confirmación de Control de Misión con los valores reales → `[INICIAR VIAJE A MARTE]`.
+3. **Fase 2 · Viaje**: 210 días en 150 s. El oxígeno, la energía y la señal bajan con el tiempo;
+   hay una fuga de propelente, impactos de micrometeoritos en el escudo y un fallo de instrumento.
+   Cada cosa se repone en su sala manteniendo E (regenerar oxígeno gasta energía; reparar escudo
+   e instrumentos gasta repuestos). El **panel de alertas** lista lo crítico y cada alerta lleva
+   andando hasta la sala. Los tres **eventos críticos** aparecen como diálogo sobre la vista al
+   llegar a la sala indicada; la decisión incorrecta penaliza y la anomalía sigue activa.
+4. **Fase 3 · Descenso** (`js/edl.js`), en la misma cabina: paso 1 mantener el ángulo de entrada
+   en el corredor para cuidar el escudo; paso 2 abrir el paracaídas en la ventana de altitud;
+   pasos 3-4 retropropulsores hasta tocar suelo a menos de 4 m/s. Monitores con altitud,
+   velocidad, temperatura, escudo, combustible y energía; por las ventanas, plasma, cielo
+   marciano, superficie y polvo.
+5. **Reporte final y cierres**: resumen de telemetría, evaluación de los cuatro segmentos,
+   eficiencia y calificación; Resultado A (graduación), B (lanzamiento), C (viaje), D (descenso),
+   y mensaje final con `[VOLVER AL INICIO]`. Todos como paneles sobre la vista del jugador.
+
+### Decisiones
+- **Configuración unificada**: los módulos que antes estaban en Personalizar se sustituyen por
+  los componentes del guion, que se eligen a bordo. Personalizar conserva el lanzador. La
+  verificación de la Fase 1 usa la misma configuración (por defecto, una equilibrada que cumple).
+- **Valores inventados** (masas, costes, kW, delta-v, días) en la cabecera de `js/mission.js`.
+- **Presupuesto de delta-v**: 3,6 km/s para salir de la órbita, 0,3 por corrección y el resto
+  es el propelente del descenso.
+- **Eventos**: la opción correcta es siempre la A, como en el guion.
+- **Resultado no previsto en el guion**: si se aterriza pero con menos del 50 % de objetivos
+  científicos o de eficiencia, se muestra «Misión parcial» sin graduación.
+- Se eliminó el prototipo de crucero de la etapa 1 (`js/game.js`), sustituido por todo lo anterior.
+- **Continuar** retoma desde el inicio de la fase alcanzada (configuración, viaje o descenso).
+
+### Pruebas
+Partida completa automatizada en Chrome sin interfaz: configuración → viaje (tres eventos
+resueltos, alertas atendidas) → descenso → reporte (calificación «Notable») → graduación →
+mensaje final → menú. Sin errores de JavaScript. La dificultad con jugadores reales no está
+afinada: los ritmos de consumo son una primera estimación.

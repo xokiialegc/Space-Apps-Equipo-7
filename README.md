@@ -15,17 +15,23 @@ Abre `index.html` en un navegador (o publica la carpeta en GitHub Pages / cualqu
 | Menú | Ratón o táctil |
 | Briefing | Ratón o táctil |
 | Despegue (Fase 1) | Mantener `Espacio` (o `W` / `↑` / pantalla IMPULSORES) para encender los impulsores · `Esc` abortar |
-| Segmento espacial | `W` / `↑` acelerar · `S` / `↓` frenar · `Esc` guardar y volver al menú |
+| Interior de la nave | `A` / `D` (o puertas y minimapa) moverse entre salas · mantener `E` para reponer el recurso de la sala · `Esc` menú |
+| Descenso en Marte | `A` / `D` ángulo de entrada · `P` paracaídas · mantener `Espacio` retropropulsores |
 
 ## Flujo del juego
 
-1. **Menú principal** — en *Personalizar* se elige el vehículo de lanzamiento y los módulos de carga.
+1. **Menú principal** — en *Personalizar* se elige el vehículo de lanzamiento, el color y el nombre.
 2. **Nueva partida** — briefing del Instructor Jefe y Manual rápido de telemetría.
-3. **Fase 1 · Segmento de lanzamiento** — verificar capacidad de carga y presupuesto, autorizar,
-   cuenta atrás y despegue en primera persona: hay que alcanzar 7,8 km/s por encima de 100 km
-   sin romper la nave (presión dinámica) ni quedarse sin combustible.
-4. **Segmento espacial (prototipo)** — crucero hasta Marte; solo se gasta combustible al
-   cambiar de velocidad, así que hay que reservar para frenar al llegar.
+3. **Fase 1 · Lanzamiento** — en la cabina: verificar carga y presupuesto, cuenta atrás y despegue
+   hasta 7,8 km/s por encima de 100 km.
+4. **3.2 · Segmento espacial** — recorrer el interior de la nave (seis salas) y configurar nave
+   principal, tanques, soporte vital, energía, lander, escudo térmico e instrumentos.
+5. **Fase 2 · Viaje interplanetario** — 210 días comprimidos: vigilar oxígeno, energía, delta-v,
+   escudo, comunicaciones e instrumentos, cada uno en su sala; el panel de alertas lleva directo a
+   la sala afectada. Tres eventos críticos de Control de Misión con decisión A/B.
+6. **Fase 3 · Descenso en Marte** — de vuelta en la cabina: entrada atmosférica, paracaídas,
+   retropropulsores y aterrizaje.
+7. **Reporte final** — evaluación de los cuatro segmentos, eficiencia, calificación y cierre.
 
 ## Estructura
 
@@ -37,7 +43,8 @@ js/menu.js      Fondo espacial, botones, ajustes, personalización, guardado
 js/mission.js   Configuración de misión, briefing, telemetría y verificación de lanzamiento
 js/sky.js       Vista animada por las ventanas: cielo → espacio
 js/launch.js    Fase 1 en la cabina: verificación (holograma), cuenta atrás y despegue
-js/game.js      Segmento espacial: crucero a Marte (prototipo)
+js/ship.js      Interior de la nave: configuración (3.2) y viaje con eventos (Fase 2)
+js/edl.js       Fase 3: descenso en Marte, reporte final y resultados
 docs/PROCESO.md Bitácora del proceso de desarrollo
 ```
 

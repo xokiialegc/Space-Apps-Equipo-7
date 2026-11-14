@@ -193,7 +193,7 @@
       <!-- monitor central: cámara exterior del despegue + combustible y energía -->
       <div class="mon absolute" style="left:693px;top:483px;width:221px;height:121px">
         <canvas id="launch" width="442" height="184" class="block" style="width:221px;height:92px"></canvas>
-        <div class="absolute left-[6px] top-[3px] mon-lbl">CÁM. EXTERIOR · AEON-01</div>
+        <div id="cam-lbl" class="absolute left-[6px] top-[3px] mon-lbl">CÁM. EXTERIOR · AEON-01</div>
         <div class="absolute left-0 right-0 bottom-0 h-[29px] px-[6px] grid grid-cols-2 gap-[8px] items-center border-t border-sky-400/40">
           <div><div class="flex justify-between mon-lbl mon-tight"><span>COMBUSTIBLE</span><b id="l-fuel" class="mon-val">100%</b></div><div class="mbar"><i id="lb-fuel"></i></div></div>
           <div><div class="flex justify-between mon-lbl mon-tight"><span>ENERGÍA</span><b id="l-energy" class="mon-val">100%</b></div><div class="mbar"><i id="lb-energy"></i></div></div>
@@ -202,31 +202,36 @@
 
       <!-- monitor izquierdo: altitud y velocidad -->
       <div class="mon absolute px-[8px] py-[5px]" style="left:492px;top:508px;width:158px;height:84px">
-        <div class="mon-lbl">FASE 1 · ASCENSO</div>
-        <div class="flex justify-between items-baseline mt-[3px]"><span class="mon-lbl">ALTITUD</span><span><b id="l-alt" class="mon-big">0</b> <small class="mon-lbl">km</small></span></div>
+        <div id="ml-t" class="mon-lbl">FASE 1 · ASCENSO</div>
+        <div class="flex justify-between items-baseline mt-[3px]"><span id="ml-a" class="mon-lbl">ALTITUD</span><span><b id="l-alt" class="mon-big">0</b> <small id="ml-au" class="mon-lbl">km</small></span></div>
         <div class="mbar"><i id="lb-alt"></i></div>
-        <div class="flex justify-between items-baseline mt-[3px]"><span class="mon-lbl">VELOCIDAD</span><span><b id="l-vel" class="mon-big">0.0</b> <small class="mon-lbl">/7.8 km/s</small></span></div>
+        <div class="flex justify-between items-baseline mt-[3px]"><span id="ml-b" class="mon-lbl">VELOCIDAD</span><span><b id="l-vel" class="mon-big">0.0</b> <small id="ml-bu" class="mon-lbl">/7.8 km/s</small></span></div>
         <div class="mbar"><i id="lb-vel"></i></div>
       </div>
 
       <!-- monitor derecho: presión dinámica e integridad -->
       <div class="mon absolute px-[8px] py-[5px]" style="left:962px;top:510px;width:164px;height:84px">
-        <div class="mon-lbl">ESTRUCTURA</div>
-        <div class="flex justify-between items-baseline mt-[3px]"><span class="mon-lbl">PRESIÓN DIN.</span><span><b id="l-q" class="mon-big">0</b> <small class="mon-lbl">%</small></span></div>
+        <div id="mr-t" class="mon-lbl">ESTRUCTURA</div>
+        <div class="flex justify-between items-baseline mt-[3px]"><span id="mr-a" class="mon-lbl">PRESIÓN DIN.</span><span><b id="l-q" class="mon-big">0</b> <small id="mr-au" class="mon-lbl">%</small></span></div>
         <div class="mbar"><i id="lb-q"></i></div>
-        <div class="flex justify-between items-baseline mt-[3px]"><span class="mon-lbl">INTEGRIDAD</span><span><b id="l-hull" class="mon-big">100</b> <small class="mon-lbl">%</small></span></div>
+        <div class="flex justify-between items-baseline mt-[3px]"><span id="mr-b" class="mon-lbl">INTEGRIDAD</span><span><b id="l-hull" class="mon-big">100</b> <small class="mon-lbl">%</small></span></div>
         <div class="mbar"><i id="lb-hull"></i></div>
       </div>
 
       <!-- pantalla lateral: encendido de impulsores -->
       <button id="l-fire" class="mon fire absolute flex flex-col items-center justify-center" style="left:1158px;top:604px;width:116px;height:54px">
-        <span class="mon-lbl">IMPULSORES</span><span id="l-fire-txt" class="font-display text-[13px] tracking-[.12em]">BLOQUEADO</span>
+        <span id="l-fire-lbl" class="mon-lbl">IMPULSORES</span><span id="l-fire-txt" class="font-display text-[13px] tracking-[.12em]">BLOQUEADO</span>
       </button>
 
       <!-- hologramas del parabrisas -->
       <div id="l-count" class="absolute left-0 right-0 top-[230px] text-center font-display font-black text-[120px] title-metal pointer-events-none"></div>
       <div id="l-msg-box" class="holo absolute hidden items-center justify-center text-center" style="left:560px;top:388px;width:480px;height:40px">
         <span id="l-msg" class="text-[18px] tracking-wide"></span>
+      </div>
+      <div id="edl-card" class="holo absolute hidden" style="left:400px;top:150px;width:800px">
+        <div id="edl-step" class="font-display text-[16px] tracking-[.18em] text-sky-200"></div>
+        <div id="edl-txt" class="text-[17px] leading-snug mt-1"></div>
+        <div id="edl-ui" class="mt-2"></div>
       </div>
       <div id="holo" class="holo absolute flex flex-col" style="left:230px;top:12px;width:1140px;height:468px">
         <div class="flex items-baseline gap-4 whitespace-nowrap">
@@ -249,49 +254,28 @@
     </div>
   </section>
 
-  <!-- ============ VUELO EN PRIMERA PERSONA ============ -->
-  <section id="screen-flight" class="absolute inset-0 hidden">
-    <canvas id="flight" width="1600" height="900" class="absolute inset-0"></canvas>
-    <!-- marco de cabina -->
-    <svg id="cockpit-frame" class="absolute inset-0 pointer-events-none" viewBox="0 0 1600 900">
-      <defs><linearGradient id="dash" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16202e"/><stop offset="1" stop-color="#05080e"/></linearGradient></defs>
-      <path d="M0 0H1600V900H0Z M90 70 L1510 70 L1560 640 L1180 700 L420 700 L40 640Z" fill="url(#dash)" fill-rule="evenodd"/>
-      <path d="M90 70 L1510 70 L1560 640 L1180 700 L420 700 L40 640Z" fill="none" stroke="#19b4ff" stroke-width="2.500" opacity=".8"/>
-      <path d="M560 70 L500 700 M1040 70 L1100 700" stroke="#0b111a" stroke-width="26"/>
-      <path d="M560 70 L500 700 M1040 70 L1100 700" stroke="#19b4ff" stroke-width="1" opacity=".35"/>
-      <g stroke="#19b4ff" stroke-width="1.500" fill="none" opacity=".75">
-        <circle cx="800" cy="385" r="46"/><path d="M800 325v28M800 417v28M740 385h28M832 385h28"/>
-      </g>
-    </svg>
-    <!-- HUD -->
-    <div class="absolute top-[18px] left-0 right-0 flex justify-center gap-10 font-display text-[13px] tracking-[.3em] text-sky-300">
-      <span>SEGMENTO ESPACIAL · TRAYECTORIA TIERRA → MARTE</span><span id="hud-day">DÍA 000</span>
+  <!-- ============ INTERIOR DE LA NAVE (SEGMENTO ESPACIAL · VIAJE) ============ -->
+  <section id="screen-ship" class="absolute inset-0 hidden bg-black">
+    <canvas id="ship" width="1600" height="900" class="absolute inset-0"></canvas>
+    <div class="absolute left-6 top-5">
+      <div id="sh-phase" class="font-display text-[13px] tracking-[.3em] text-sky-300"></div>
+      <div id="sh-room" class="font-display text-[26px] tracking-[.14em] text-white drop-shadow-[0_0_10px_rgba(25,180,255,.9)]"></div>
+      <div id="sh-res" class="text-[16px] tracking-[.2em] text-sky-200/90 uppercase"></div>
     </div>
-    <div class="absolute left-0 right-0 bottom-0 h-[200px] px-12 pb-6 pt-8 flex items-end justify-between gap-6">
-      <div class="gauge"><label>Distancia a Marte</label><b id="hud-dist">225.0</b><small>millones de km</small>
-        <div class="bar"><i id="bar-dist"></i></div></div>
-      <div class="gauge"><label>Velocidad</label><b id="hud-vel">0.0</b><small>km/s</small>
-        <div class="bar"><i id="bar-vel"></i></div></div>
-      <div class="flex flex-col items-center gap-3">
-        <div class="flex gap-3">
-          <div class="neon-wrap"><button id="btn-brake" class="neon-btn neon-btn--sm">▼ Frenar (S)</button></div>
-          <div class="neon-wrap"><button id="btn-thrust" class="neon-btn neon-btn--sm">▲ Impulso (W)</button></div>
-        </div>
-        <div id="hud-msg" class="text-[17px] tracking-wider text-sky-100 h-6 text-center w-[520px]"></div>
-      </div>
-      <div class="gauge"><label>Combustible</label><b id="hud-fuel">100</b><small>%</small>
-        <div class="bar"><i id="bar-fuel"></i></div></div>
-      <div class="neon-wrap"><button id="btn-menu" class="neon-btn neon-btn--sm">Guardar y salir</button></div>
+    <div id="alerts" class="absolute right-6 top-5 w-[430px]"></div>
+    <button id="nav-l" class="navdoor absolute" style="left:36px;top:420px"></button>
+    <button id="nav-r" class="navdoor absolute text-right" style="right:36px;top:420px"></button>
+    <div id="console" class="holo absolute" style="left:872px;top:214px;width:470px"></div>
+    <div class="absolute left-0 right-0 bottom-0 px-6 pb-4 flex items-end justify-between gap-4 pointer-events-none">
+      <div id="sh-stats" class="flex gap-2 pointer-events-auto"></div>
+      <div id="sh-map" class="flex gap-1 pointer-events-auto"></div>
     </div>
-    <!-- fin de misión -->
-    <div id="flight-end" class="absolute inset-0 hidden items-center justify-center bg-black/70">
-      <div class="panel w-[620px] text-center">
-        <h2 id="end-title" class="font-display text-3xl tracking-[.2em] text-sky-200"></h2>
-        <p id="end-text" class="mt-4 text-xl text-sky-100/90"></p>
-        <div class="mt-7 flex justify-center gap-4">
-          <div class="neon-wrap"><button id="end-retry" class="neon-btn neon-btn--sm">Reintentar</button></div>
-          <div class="neon-wrap"><button id="end-menu" class="neon-btn neon-btn--sm">Menú principal</button></div>
-        </div>
+    <div id="ship-holo" class="absolute inset-0 hidden items-center justify-center bg-black/45">
+      <div class="holo flex flex-col" style="width:980px;max-height:800px">
+        <div id="sd-who" class="font-display text-[17px] tracking-[.2em] text-sky-200"></div>
+        <div class="h-px bg-gradient-to-r from-neon to-transparent my-2"></div>
+        <div id="sd-body" class="brief brief--holo overflow-y-auto pr-2" style="font-size:18px"></div>
+        <div id="sd-btns" class="pt-3 flex flex-wrap items-center justify-end gap-3"></div>
       </div>
     </div>
   </section>
@@ -302,6 +286,14 @@
     <p class="text-2xl text-sky-200/80 tracking-widest">Sesión finalizada. Ya puedes cerrar esta pestaña.</p>
     <div class="neon-wrap"><button id="exit-back" class="neon-btn neon-btn--sm">Volver al menú</button></div>
   </section>
+
+  <!-- ============ INFORME SUPERPUESTO ============ -->
+  <div id="report" class="absolute inset-0 hidden items-center justify-center bg-black/55" style="z-index:40">
+    <div class="holo flex flex-col" style="width:1060px;max-height:840px">
+      <div id="rep-body" class="brief brief--holo overflow-y-auto pr-2" style="font-size:18px"></div>
+      <div id="rep-btns" class="pt-3 flex items-center justify-end gap-3"></div>
+    </div>
+  </div>
 
   <!-- ============ PANEL MODAL ============ -->
   <div id="modal" class="absolute inset-0 hidden items-center justify-center bg-black/60 backdrop-blur-[2px]">
@@ -320,6 +312,7 @@
 <script src="js/mission.js"></script>
 <script src="js/sky.js"></script>
 <script src="js/launch.js"></script>
-<script src="js/game.js"></script>
+<script src="js/ship.js"></script>
+<script src="js/edl.js"></script>
 </body>
 </html>

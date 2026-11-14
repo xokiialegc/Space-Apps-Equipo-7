@@ -5,33 +5,62 @@
   const A = window.AEON;
   const $ = (s) => document.querySelector(s);
 
-  // ---------- Configuración de la misión (se elige en Personalizar) ----------
+  // ---------- Configuración de la misión ----------
+  // El lanzador se elige en Personalizar; los sistemas, a bordo (Segmento Espacial).
   const LAUNCHERS = [
     { id: 'ares-m', name: 'ARES-M', cap: 70, cost: 900 },
     { id: 'ares-h', name: 'ARES-H', cap: 100, cost: 1400 },
     { id: 'titan-x', name: 'TITAN-X', cap: 130, cost: 2100 }
   ];
-  const MODULES = [
-    { id: 'lab', name: 'Laboratorio científico', mass: 12, cost: 350 },
-    { id: 'rover', name: 'Rover de superficie', mass: 9, cost: 300 },
-    { id: 'shield', name: 'Escudo térmico reforzado', mass: 7, cost: 200 },
-    { id: 'solar', name: 'Paneles solares extra', mass: 5, cost: 150 }
+  const COMP = {
+    hull:   [{ n: 'Compacta', mass: 30, cost: 480, spares: 3 }, { n: 'Equilibrada', mass: 38, cost: 600, spares: 5 }, { n: 'Extendida', mass: 48, cost: 760, spares: 7 }],
+    prop:   [{ n: 'Tanques S', mass: 14, cost: 240, dv: 4.5 }, { n: 'Tanques M', mass: 20, cost: 300, dv: 6.0 }, { n: 'Tanques L', mass: 27, cost: 380, dv: 7.5 }],
+    life:   [{ n: '240 días', mass: 6, cost: 140, days: 240 }, { n: '300 días', mass: 9, cost: 180, days: 300 }, { n: '360 días', mass: 12, cost: 240, days: 360 }],
+    power:  [{ n: '12 kW', mass: 4, cost: 140, kw: 12 }, { n: '18 kW', mass: 6, cost: 200, kw: 18 }, { n: '24 kW', mass: 9, cost: 290, kw: 24 }],
+    lander: [{ n: 'Ligero', mass: 8, cost: 240, cap: 2 }, { n: 'Estándar', mass: 11, cost: 300, cap: 3 }, { n: 'Pesado', mass: 15, cost: 400, cap: 4 }],
+    shield: [{ n: 'Básico', mass: 3, cost: 90, f: 0.75 }, { n: 'Estándar', mass: 5, cost: 150, f: 1 }, { n: 'Reforzado', mass: 8, cost: 230, f: 1.4 }]
+  };
+  const INSTR = [
+    { id: 'espec', name: 'Espectrómetro de suelo', mass: 3, cost: 110, kw: 2.5 },
+    { id: 'meteo', name: 'Estación meteorológica', mass: 2, cost: 70, kw: 1.5 },
+    { id: 'perf', name: 'Perforadora de muestras', mass: 4, cost: 130, kw: 3 },
+    { id: 'cam', name: 'Cámara panorámica', mass: 2, cost: 80, kw: 2 }
   ];
-  const BASE = { mass: 62, cost: 1200 };   // nave, combustible y soporte vital
-  const BUDGET = 3500;                     // millones de $
+  const BUDGET = 3500;        // millones de $
+  const ESSENTIAL_KW = 9;     // navegación, comunicaciones, control térmico y soporte vital
+  const DV_NEEDED = 4.5;      // salida de órbita + correcciones + descenso
+  const DEF_SHIP = { hull: 1, prop: 1, life: 1, power: 1, lander: 1, shield: 1, instr: ['espec', 'meteo'] };
 
-  function calc() {
+  function ship() {
     const s = A.settings;
-    const l = LAUNCHERS.find((x) => x.id === s.launcher) || LAUNCHERS[1];
-    const mods = MODULES.filter((m) => (s.modules || []).includes(m.id));
-    const mass = BASE.mass + mods.reduce((t, m) => t + m.mass, 0);
-    const cost = BASE.cost + l.cost + mods.reduce((t, m) => t + m.cost, 0);
+    if (!s.ship || !Array.isArray(s.ship.instr)) s.ship = JSON.parse(JSON.stringify(DEF_SHIP));
+    return s.ship;
+  }
+  function calc() {
+    const sh = ship();
+    const l = LAUNCHERS.find((x) => x.id === A.settings.launcher) || LAUNCHERS[1];
+    const pick = {}; let mass = 0, cost = l.cost;
+    Object.keys(COMP).forEach((k) => { pick[k] = COMP[k][sh[k]] || COMP[k][1]; mass += pick[k].mass; cost += pick[k].cost; });
+    const instr = INSTR.filter((i) => sh.instr.includes(i.id));
+    instr.forEach((i) => { mass += i.mass; cost += i.cost; });
+    const demand = ESSENTIAL_KW + instr.reduce((t, i) => t + i.kw, 0);
     return {
-      launcher: l, mods, mass, cap: l.cap, cost, budget: BUDGET,
+      launcher: l, pick, instr, mass, cap: l.cap, cost, budget: BUDGET, budgetPct: Math.round(cost / BUDGET * 100),
       massOk: mass <= l.cap, costOk: cost <= BUDGET,
+      dv: pick.prop.dv, dvOk: pick.prop.dv >= DV_NEEDED, days: pick.life.days, kw: pick.power.kw, demand, powerOk: pick.power.kw >= demand,
+      shieldF: pick.shield.f, landerCap: pick.lander.cap, capOk: instr.length <= pick.lander.cap, spares: pick.hull.spares,
       // cuanto más margen de carga, más empuje sobra en el despegue
       thrust: 0.285 + 0.09 * Math.max(0, 1 - mass / l.cap)
     };
+  }
+
+  // Panel superpuesto a la vista del jugador (informes y resultados)
+  function report(html, buttons) {
+    const el = $('#report');
+    $('#rep-body').innerHTML = html; $('#rep-body').scrollTop = 0;
+    $('#rep-btns').innerHTML = buttons.map((b, i) => '<div class="neon-wrap"><button data-i="' + i + '" class="neon-btn neon-btn--sm">' + b.l + '</button></div>').join('');
+    $('#rep-btns').querySelectorAll('button').forEach((b) => b.onclick = () => { A.beep(440, 0.1); el.classList.add('hidden'); el.classList.remove('flex'); buttons[+b.dataset.i].fn(); });
+    el.classList.remove('hidden'); el.classList.add('flex');
   }
 
   // ---------- Textos ----------
@@ -119,9 +148,10 @@
     click('#b-back', pageIntro); click('#b-next', () => A.startCockpit(calc()));
   }
 
-  A.mission = { LAUNCHERS, MODULES, BUDGET, calc, telemetry: pageTelemetry };
+  A.mission = { LAUNCHERS, COMP, INSTR, BUDGET, ESSENTIAL_KW, DV_NEEDED, ship, calc, report, telemetry: pageTelemetry };
   A.startBriefing = function () {
     try { $('#brief-bg').getContext('2d').drawImage(A.bg, 0, 0); } catch (e) { /* fondo opcional */ }
+    A.run = { tries: 0 };
     A.audio(); A.show('brief'); pageIntro();
   };
 })();

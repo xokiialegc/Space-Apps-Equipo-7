@@ -129,3 +129,35 @@ body.no-anim #shuttle, body.no-anim #flames { animation: none; }
 .brief--holo .seg .ok, .brief--holo .seg .alert { margin: 0; }
 .brief--holo .motto { font-size: 18px; }
 .mon-tight { letter-spacing: .04em; font-size: 8px; }
+
+/* Interior de la nave */
+.navdoor { width: 190px; padding: 10px 14px; cursor: pointer; font-family: Orbitron, sans-serif; font-size: 14px; letter-spacing: .1em; color: #dff3ff; text-align: left;
+  background: rgba(4,20,45,.72); border: 1px solid rgba(110,210,255,.8); box-shadow: 0 0 16px rgba(25,180,255,.45); }
+.navdoor:hover { background: rgba(25,120,220,.55); }
+.navdoor small { display: block; font-size: 10px; letter-spacing: .2em; color: #7fdcff; }
+.navdoor.alarm { border-color: #ff5a3c; box-shadow: 0 0 18px rgba(255,70,40,.8); }
+.stat { min-width: 122px; padding: 6px 10px; background: rgba(3,12,28,.82); border: 1px solid rgba(25,180,255,.5); font-family: Orbitron, sans-serif; }
+.stat label { display: block; font-size: 9.5px; letter-spacing: .16em; color: #6fc8f5; }
+.stat b { font-size: 17px; color: #fff; }
+.stat.bad { border-color: #ff5a3c; } .stat.bad b { color: #ff8f7a; }
+.mapb { padding: 6px 9px; cursor: pointer; font-family: Orbitron, sans-serif; font-size: 10px; letter-spacing: .08em; color: #bfe9ff; background: rgba(3,12,28,.82); border: 1px solid rgba(25,180,255,.4); }
+.mapb.on { background: rgba(25,180,255,.35); color: #fff; border-color: #7fdcff; }
+.mapb.alarm { border-color: #ff5a3c; color: #ffb4a3; animation: blink .7s steps(2) infinite; }
+.alrt { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-bottom: 6px; padding: 8px 12px; cursor: pointer; text-align: left;
+  font-size: 16px; line-height: 1.2; color: #ffd9d0; background: rgba(70,10,5,.85); border: 1px solid #ff5a3c; box-shadow: 0 0 14px rgba(255,70,40,.55); animation: blink 1s steps(2) infinite; }
+.alrt b { font-family: Orbitron, sans-serif; font-size: 11px; letter-spacing: .12em; color: #fff; white-space: nowrap; }
+.alrt-h { font-family: Orbitron, sans-serif; font-size: 12px; letter-spacing: .25em; color: #ff9a8a; margin-bottom: 4px; text-align: right; }
+@keyframes blink { 0% { opacity: 1; } 100% { opacity: .72; } }
+#console h4 { font-family: Orbitron, sans-serif; font-size: 16px; letter-spacing: .14em; color: #bfe9ff; }
+#console p { font-size: 15.5px; line-height: 1.3; margin: 4px 0 6px; }
+#console .quote { font-size: 14.5px; line-height: 1.3; padding: 5px 10px; margin-bottom: 8px; border-left: 3px solid var(--neon); background: rgba(25,180,255,.1); }
+#console .opt { font-size: 14.5px; padding: 6px 8px; }
+#console .serv { width: 100%; height: 46px; cursor: pointer; font-family: Orbitron, sans-serif; font-size: 14px; letter-spacing: .12em; color: #fff;
+  background: rgba(25,120,220,.45); border: 1px solid #7fdcff; }
+#console .serv.is-held { background: rgba(60,255,158,.35); border-color: #3cff9e; }
+#console .serv[disabled] { opacity: .4; cursor: not-allowed; }
+.kv { display: flex; justify-content: space-between; font-size: 16px; padding: 1px 0; }
+.kv b { font-family: Orbitron, sans-serif; font-size: 14px; }
+.corr { position: relative; height: 22px; background: rgba(255,60,40,.35); border: 1px solid rgba(110,210,255,.8); }
+.corr i { position: absolute; top: 0; bottom: 0; background: rgba(60,255,158,.55); }
+.corr u { position: absolute; top: -5px; bottom: -5px; width: 4px; margin-left: -2px; background: #fff; box-shadow: 0 0 8px #fff; }

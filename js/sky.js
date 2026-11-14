@@ -198,5 +198,50 @@
     }
   }
 
-  window.AEON.sky = { draw };
+  // ---------- Marte: entrada, descenso y aterrizaje ----------
+  const dunes = []; for (let i = 0; i < 60; i++) dunes.push(rnd(0, 1));
+  const rocks = []; for (let i = 0; i < 40; i++) rocks.push([rnd(-200, W + 200), rnd(0, 1), rnd(4, 16)]);
+  const dustP = [];
+  function drawMars(e, dt, now) {
+    const h = e.h, sp = clamp((h - 25) / 60, 0, 1), tsec = now / 1000;
+    const g = c.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, 'rgb(' + mix(150, 0, sp) + ',' + mix(105, 2, sp) + ',' + mix(80, 8, sp) + ')');
+    g.addColorStop(1, 'rgb(' + mix(232, 20, sp) + ',' + mix(180, 8, sp) + ',' + mix(130, 6, sp) + ')');
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    if (sp > 0) for (const s of stars) { c.fillStyle = 'rgba(230,240,255,' + sp * (0.3 + 0.4 * Math.abs(Math.sin(tsec * s.s + s.p))) + ')'; c.fillRect(s.x, s.y, s.r, s.r); }
+    if (h > 12) {                                    // limbo del planeta
+      const ey = 250 + sp * 210, R = 2400;
+      c.save(); c.shadowColor = 'rgba(255,170,110,.8)'; c.shadowBlur = 50;
+      const mg = c.createLinearGradient(0, ey, 0, ey + 400); mg.addColorStop(0, '#e9a26c'); mg.addColorStop(0.2, '#b9562c'); mg.addColorStop(1, '#5a2110');
+      c.fillStyle = mg; c.beginPath(); c.arc(CX, ey + R, R, 0, 7); c.fill(); c.restore();
+      c.save(); c.beginPath(); c.arc(CX, ey + R, R, 0, 7); c.clip(); c.fillStyle = 'rgba(70,25,10,.3)';
+      rocks.forEach((r, i) => { c.beginPath(); c.ellipse((r[0] + tsec * 40 * (1 + r[1])) % (W + 400) - 200, ey + 60 + r[1] * 420, 40 + r[2] * 6, 8 + r[2], 0, 0, 7); c.fill(); });
+      c.restore();
+    } else {                                         // superficie cercana
+      const hy = 330 + (1 - clamp(h / 12, 0, 1)) * 150;
+      c.fillStyle = '#a34e28'; c.beginPath(); c.moveTo(0, H);
+      for (let i = 0; i <= 60; i++) c.lineTo(i * W / 59, hy - dunes[i % 60] * 46 - Math.sin(i * 0.4) * 14);
+      c.lineTo(W, H); c.fill();
+      const fg = c.createLinearGradient(0, hy, 0, H); fg.addColorStop(0, 'rgba(200,110,60,.6)'); fg.addColorStop(1, '#6e2c14'); c.fillStyle = fg; c.fillRect(0, hy + 10, W, H);
+      const near = 1 - clamp(h / 3, 0, 1);
+      rocks.forEach((r) => { const y = hy + 30 + r[1] * (H - hy), k = (0.3 + r[1]) * (0.5 + near * 1.6); c.fillStyle = 'rgba(60,22,10,.8)'; c.beginPath(); c.ellipse(r[0], y, r[2] * k * 1.6, r[2] * k * 0.7, 0, 0, 7); c.fill(); });
+    }
+    if (e.heat > 0.05) {                             // plasma de entrada
+      const a = clamp(e.heat, 0, 1), pg = c.createRadialGradient(CX, Y0, 120, CX, Y0, 950);
+      pg.addColorStop(0, 'rgba(255,230,170,' + a * 0.35 + ')'); pg.addColorStop(0.5, 'rgba(255,120,40,' + a * 0.6 + ')'); pg.addColorStop(1, 'rgba(255,60,20,' + a * 0.85 + ')');
+      c.fillStyle = pg; c.fillRect(0, 0, W, H);
+      c.lineWidth = 3;
+      for (let i = 0; i < 26 * a; i++) { const x = rnd(0, W), y = rnd(0, H), d = Math.atan2(y - Y0, x - CX); c.strokeStyle = 'rgba(255,' + mix(160, 240, Math.random()) + ',120,' + a * 0.8 + ')'; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(d) * rnd(40, 150), y + Math.sin(d) * rnd(40, 150)); c.stroke(); }
+    }
+    if (e.stage >= 2 && h < 12 && !e.landed) {       // aire pasando
+      c.strokeStyle = 'rgba(255,235,215,.35)'; c.lineWidth = 2;
+      for (const s of streaks) { s.y -= (200 + e.v * 3) * s.sp * dt; if (s.y < -160) { s.y = H + rnd(0, 100); s.x = rnd(0, W); } c.beginPath(); c.moveTo(s.x, s.y); c.lineTo(s.x, s.y + s.l * 0.6); c.stroke(); }
+    }
+    if ((e.firing && h < 0.12) || e.landed) {        // polvo levantado por los retropropulsores
+      if (e.firing || dustP.length < 8) for (let i = 0; i < 3; i++) dustP.push({ x: rnd(0, W), y: rnd(420, 620), r: rnd(40, 110), a: 0.5, vx: rnd(-60, 60) });
+    }
+    for (let i = dustP.length - 1; i >= 0; i--) { const p = dustP[i]; p.x += p.vx * dt; p.y -= 30 * dt; p.r += 40 * dt; p.a -= 0.22 * dt; if (p.a <= 0) { dustP.splice(i, 1); continue; } c.fillStyle = 'rgba(214,150,100,' + p.a + ')'; c.beginPath(); c.arc(p.x, p.y, p.r, 0, 7); c.fill(); }
+  }
+
+  window.AEON.sky = { draw, drawMars };
 })();

@@ -11,7 +11,7 @@
     del(k) { try { localStorage.removeItem(k); } catch (e) { /* nada */ } }
   };
   const settings = Object.assign(
-    { music: 40, sfx: 70, anim: true, accent: '#19b4ff', shipName: 'AEON-01', launcher: 'ares-h', modules: ['lab', 'shield'] },
+    { music: 40, sfx: 70, anim: true, accent: '#19b4ff', shipName: 'AEON-01', launcher: 'ares-h', ship: null },
     store.get('aeon01.settings', {})
   );
   const saveSettings = () => store.set('aeon01.settings', settings);
@@ -137,7 +137,7 @@
   requestAnimationFrame(drawMenu);
 
   // ---------- Pantallas ----------
-  const screens = { menu: $('#screen-menu'), brief: $('#screen-brief'), launch: $('#screen-launch'), flight: $('#screen-flight'), exit: $('#screen-exit') };
+  const screens = { menu: $('#screen-menu'), brief: $('#screen-brief'), launch: $('#screen-launch'), ship: $('#screen-ship'), exit: $('#screen-exit') };
   function show(name) {
     for (const k in screens) {
       screens[k].classList.toggle('hidden', k !== name);
@@ -180,7 +180,7 @@
     },
     continue() {
       const save = store.get('aeon01.save', null);
-      if (save) AEON.startFlight(save);
+      if (save && save.phase) AEON.resume(save);
       else openModal('Continuar', '<p>No hay ninguna misión guardada todavía. Inicia una <b>Nueva partida</b> y tu progreso se guardará automáticamente.</p>');
     },
     settings() {
@@ -214,8 +214,7 @@
         '<div class="h-px bg-sky-400/30 my-2"></div>' +
         '<p class="font-display text-sm tracking-[.2em] text-sky-300 mt-3">VEHÍCULO DE LANZAMIENTO</p><div class="flex gap-2 mt-2">' +
         M.LAUNCHERS.map((l) => '<button class="opt' + (l.id === settings.launcher ? ' on' : '') + '" data-l="' + l.id + '"><b>' + l.name + '</b><br>' + l.cap + ' t · ' + l.cost + ' M$</button>').join('') + '</div>' +
-        '<p class="font-display text-sm tracking-[.2em] text-sky-300 mt-4">MÓDULOS Y CARGA</p><div class="grid grid-cols-2 gap-2 mt-2">' +
-        M.MODULES.map((m) => '<button class="opt' + (settings.modules.includes(m.id) ? ' on' : '') + '" data-m="' + m.id + '"><b>' + m.name + '</b><br>+' + m.mass + ' t · +' + m.cost + ' M$</button>').join('') + '</div>' +
+        '<p class="text-base text-sky-200/80 mt-3">Los sistemas de la nave (tanques, soporte vital, energía, lander, escudo e instrumentos) se configuran a bordo, en el Segmento Espacial.</p>' +
         '<div id="c-sum" class="mt-4 text-lg"></div>');
       const sum = () => {
         const k = M.calc();
@@ -227,16 +226,6 @@
         settings.launcher = b.dataset.l; saveSettings(); beep(520, 0.08); sum();
         mBody.querySelectorAll('[data-l]').forEach((x) => x.classList.toggle('on', x === b));
       });
-      mBody.querySelectorAll('[data-m]').forEach((b) => b.onclick = () => {
-        const i = settings.modules.indexOf(b.dataset.m);
-        if (i < 0) settings.modules.push(b.dataset.m); else settings.modules.splice(i, 1);
-        b.classList.toggle('on', i < 0); saveSettings(); beep(520, 0.08); sum();
-      });
-      mBody.querySelectorAll('.swatch').forEach((b) => b.onclick = () => {
-        settings.accent = b.dataset.c; applyShip(); saveSettings(); beep(520, 0.08);
-        mBody.querySelectorAll('.swatch').forEach((x) => x.classList.toggle('on', x === b));
-      });
-      $('#c-name').oninput = (e) => { settings.shipName = e.target.value.toUpperCase().slice(0, 10); applyShip(); saveSettings(); };
     },
     credits() {
       openModal('Créditos',
@@ -262,5 +251,5 @@
   $('#exit-back').addEventListener('click', () => show('menu'));
 
   // API compartida con el módulo de vuelo
-  window.AEON = { W, H, store, settings, show, beep, audio, bg, actions, startFlight() {}, startBriefing() {} };
+  window.AEON = { W, H, store, settings, saveSettings, show, beep, audio, bg, actions, run: { tries: 0 }, startBriefing() {} };
 })();
