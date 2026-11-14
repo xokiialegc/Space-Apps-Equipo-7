@@ -1,0 +1,68 @@
+/* AEON-01 — estilos propios (complementan a Tailwind) */
+:root { --neon: #19b4ff; --ship-accent: #19b4ff; }
+html, body { height: 100%; margin: 0; }
+#stage { transform-origin: center center; }
+
+/* Título metálico */
+.title-metal {
+  background: linear-gradient(180deg, #ffffff 0%, #dfe9f5 28%, #7f93ad 50%, #f2f7fc 56%, #9fb4cc 78%, #3d5a80 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 14px rgba(25,180,255,.75)) drop-shadow(0 3px 0 rgba(0,20,60,.9));
+}
+
+/* Botones neón con esquinas recortadas */
+.neon-wrap { filter: drop-shadow(0 0 7px rgba(25,180,255,.7)); transition: filter .2s, transform .2s; }
+.neon-wrap:hover { filter: drop-shadow(0 0 14px rgba(60,200,255,1)); transform: translateX(8px); }
+.neon-btn {
+  --cut: 16px;
+  position: relative; display: flex; align-items: center; gap: 16px;
+  width: 340px; height: 62px; padding: 0 22px; cursor: pointer;
+  font-family: Orbitron, sans-serif; font-weight: 500; font-size: 17px;
+  letter-spacing: .16em; text-transform: uppercase; color: #eaf6ff; white-space: nowrap;
+  background: linear-gradient(90deg, #7fdcff, #19b4ff 45%, #1560d8);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+}
+.neon-btn::before {
+  content: ""; position: absolute; inset: 1.5px; z-index: -1;
+  background: linear-gradient(90deg, rgba(5,20,48,.95), rgba(3,10,24,.82));
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+  transition: background .2s;
+}
+.neon-btn:hover::before, .neon-btn.is-held::before { background: linear-gradient(90deg, rgba(14,70,150,.95), rgba(6,28,70,.85)); }
+.neon-btn:focus-visible { outline: none; }
+.neon-wrap:focus-within { filter: drop-shadow(0 0 14px rgba(60,200,255,1)); }
+.neon-btn--sm { width: auto; min-width: 190px; height: 50px; font-size: 14px; justify-content: center; --cut: 12px; }
+.neon-btn[disabled] { opacity: .45; cursor: not-allowed; }
+.neon-btn { isolation: isolate; }
+.ico { width: 26px; height: 26px; fill: none; stroke: #7fdcff; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* Paneles */
+.panel {
+  background: linear-gradient(160deg, rgba(6,22,52,.96), rgba(2,8,20,.96));
+  border: 1px solid rgba(25,180,255,.7); padding: 28px 32px;
+  box-shadow: 0 0 30px rgba(25,180,255,.35), inset 0 0 40px rgba(25,180,255,.07);
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
+}
+.row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 10px 0; }
+input[type=range] { accent-color: var(--neon); width: 280px; }
+.swatch { width: 44px; height: 44px; border: 2px solid rgba(255,255,255,.25); cursor: pointer; }
+.swatch.on { border-color: #fff; box-shadow: 0 0 12px currentColor; }
+.txt-in { background: rgba(0,0,0,.5); border: 1px solid rgba(25,180,255,.6); color: #fff; padding: 6px 12px; width: 280px;
+  font-family: Orbitron, sans-serif; letter-spacing: .15em; text-transform: uppercase; }
+.txt-in:focus { outline: 2px solid var(--neon); }
+
+/* Nave */
+.accent-fill { fill: var(--ship-accent); }
+#shuttle { animation: floaty 7s ease-in-out infinite; filter: drop-shadow(0 0 26px rgba(25,150,255,.35)); }
+#flames { animation: flick .12s steps(2) infinite; transform-origin: 760px 226px; }
+@keyframes floaty { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-14px) rotate(.6deg); } }
+@keyframes flick { 0% { opacity: .85; } 100% { opacity: 1; } }
+body.no-anim #shuttle, body.no-anim #flames { animation: none; }
+
+/* Indicadores de cabina */
+.gauge { width: 230px; font-family: Orbitron, sans-serif; color: #bfe9ff; }
+.gauge label { display: block; font-size: 11px; letter-spacing: .25em; text-transform: uppercase; color: #6fc8f5; }
+.gauge b { font-size: 34px; font-weight: 700; color: #fff; text-shadow: 0 0 10px rgba(25,180,255,.9); }
+.gauge small { font-size: 12px; margin-left: 8px; letter-spacing: .1em; }
+.bar { height: 6px; background: rgba(25,180,255,.18); margin-top: 6px; }
+.bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #1560d8, #7fdcff); box-shadow: 0 0 8px #19b4ff; }

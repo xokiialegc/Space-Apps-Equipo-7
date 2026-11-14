@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AEON-01 · Space Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      fontFamily: { display: ['Orbitron', 'sans-serif'], body: ['Rajdhani', 'sans-serif'] },
+      colors: { neon: '#19b4ff', deep: '#030a18' }
+    } }
+  };
+</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-black overflow-hidden font-body text-white select-none">
+
+<!-- Escenario 16:9 (1600x900) que se escala a la ventana -->
+<div id="stage" class="absolute top-1/2 left-1/2 overflow-hidden bg-black" style="width:1600px;height:900px">
+
+  <!-- ============ MENÚ PRINCIPAL ============ -->
+  <section id="screen-menu" class="absolute inset-0">
+    <canvas id="space" width="1600" height="900" class="absolute inset-0"></canvas>
+
+    <!-- Transbordador -->
+    <div id="shuttle" class="absolute" style="left:560px;top:250px;width:980px">
+      <svg viewBox="0 0 900 430" xmlns="http://www.w3.org/2000/svg" class="w-full">
+        <defs>
+          <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#e6edf5"/><stop offset="1" stop-color="#9fb0c4"/>
+          </linearGradient>
+          <linearGradient id="wingG" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#f4f8fc"/><stop offset="1" stop-color="#8d9db2"/>
+          </linearGradient>
+          <linearGradient id="tailG" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#aebccd"/>
+          </linearGradient>
+          <linearGradient id="nozzle" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#55606e"/><stop offset="1" stop-color="#151a22"/>
+          </linearGradient>
+          <radialGradient id="flame" cx="0" cy=".5" r="1">
+            <stop offset="0" stop-color="#e8fbff"/><stop offset=".35" stop-color="#38c6ff" stop-opacity=".85"/><stop offset="1" stop-color="#1e6bff" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <g transform="rotate(-9 450 215)">
+          <!-- resplandor de motores -->
+          <g id="flames">
+            <ellipse cx="835" cy="188" rx="75" ry="15" fill="url(#flame)"/>
+            <ellipse cx="840" cy="226" rx="85" ry="17" fill="url(#flame)"/>
+            <ellipse cx="835" cy="262" rx="75" ry="15" fill="url(#flame)"/>
+          </g>
+          <!-- ala lejana -->
+          <polygon points="360,170 610,158 740,128 752,140 640,172" fill="#7c8a9c"/>
+          <!-- deriva vertical -->
+          <polygon points="590,162 688,32 752,32 738,162" fill="url(#tailG)" stroke="#5c6878" stroke-width="1.5"/>
+          <polygon points="688,32 700,32 606,162 590,162" fill="#1a1f28"/>
+          <line x1="716" y1="36" x2="704" y2="160" stroke="#8793a3" stroke-width="1.5"/>
+          <rect class="accent-fill" x="664" y="92" width="62" height="7" transform="skewX(-6)" />
+          <!-- toberas -->
+          <polygon points="748,172 790,164 790,212 748,204" fill="url(#nozzle)"/>
+          <polygon points="752,208 800,198 800,254 752,244" fill="url(#nozzle)"/>
+          <polygon points="748,248 790,240 790,284 748,278" fill="url(#nozzle)"/>
+          <!-- fuselaje -->
+          <path d="M70 236 C88 190 168 164 262 160 L728 160 L752 250 L728 286 L204 286 C132 286 86 266 70 236Z" fill="url(#hull)" stroke="#6d7a8c" stroke-width="1.5"/>
+          <!-- panza térmica -->
+          <path d="M70 236 C86 266 132 286 204 286 L728 286 L740 268 L212 268 C150 266 100 253 70 236Z" fill="#12161d"/>
+          <!-- morro -->
+          <path d="M70 236 C76 220 90 206 108 196 C100 214 98 232 104 250 C90 247 78 243 70 236Z" fill="#1a1f28"/>
+          <!-- ventanas de cabina -->
+          <g fill="#0b1626" stroke="#3aa6e8" stroke-width="1.2">
+            <polygon points="150,196 176,180 196,180 176,200"/>
+            <polygon points="184,200 204,180 228,178 212,200"/>
+            <polygon points="220,200 236,178 262,176 252,200"/>
+            <rect x="268" y="178" width="22" height="16" rx="3"/>
+          </g>
+          <!-- bodega de carga -->
+          <path d="M300 163 L640 163" stroke="#8c99aa" stroke-width="2"/>
+          <path d="M300 176 L640 176" stroke="#b6c1cf" stroke-width="1.2"/>
+          <g stroke="#b6c1cf" stroke-width="1"><line x1="385" y1="163" x2="385" y2="176"/><line x1="470" y1="163" x2="470" y2="176"/><line x1="555" y1="163" x2="555" y2="176"/></g>
+          <!-- franja de color (personalizable) -->
+          <path class="accent-fill" d="M118 252 L736 252 L738 259 L138 259Z"/>
+          <!-- góndola OMS -->
+          <path d="M636 160 C640 138 676 132 728 140 L748 172 L748 196 L650 196Z" fill="#dfe6ee" stroke="#6d7a8c" stroke-width="1.2"/>
+          <!-- bandera -->
+          <g transform="translate(318 196)">
+            <rect width="52" height="30" fill="#fff"/>
+            <g fill="#c8102e"><rect width="52" height="2.4" y="0"/><rect width="52" height="2.4" y="4.6"/><rect width="52" height="2.4" y="9.2"/><rect width="52" height="2.4" y="13.8"/><rect width="52" height="2.4" y="18.4"/><rect width="52" height="2.4" y="23"/><rect width="52" height="2.4" y="27.6"/></g>
+            <rect width="22" height="16.2" fill="#0a3161"/>
+            <g fill="#fff"><circle cx="4" cy="3.5" r=".9"/><circle cx="9" cy="3.5" r=".9"/><circle cx="14" cy="3.5" r=".9"/><circle cx="19" cy="3.5" r=".9"/><circle cx="6.5" cy="8" r=".9"/><circle cx="11.5" cy="8" r=".9"/><circle cx="16.5" cy="8" r=".9"/><circle cx="4" cy="12.5" r=".9"/><circle cx="9" cy="12.5" r=".9"/><circle cx="14" cy="12.5" r=".9"/><circle cx="19" cy="12.5" r=".9"/></g>
+          </g>
+          <!-- emblema de misión + nombre -->
+          <g transform="translate(410 211)">
+            <circle r="16" fill="#0a2a66" stroke="#fff" stroke-width="1.5"/>
+            <ellipse rx="21" ry="6" fill="none" stroke="#ff5a3c" stroke-width="2" transform="rotate(-28)"/>
+            <circle cx="5" cy="-4" r="3.2" fill="#ff7a4a"/>
+          </g>
+          <text id="ship-name" x="446" y="220" font-family="Orbitron, sans-serif" font-weight="700" font-size="22" fill="#1b2430" letter-spacing="3">AEON-01</text>
+          <!-- ala cercana -->
+          <polygon points="300,278 580,286 812,356 806,372 640,360 430,306" fill="url(#wingG)" stroke="#5c6878" stroke-width="1.5"/>
+          <polygon points="300,278 430,306 640,360 806,372 800,378 630,368 420,314" fill="#12161d"/>
+          <line x1="690" y1="322" x2="700" y2="364" stroke="#8793a3" stroke-width="1.2"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Cabecera -->
+    <div class="absolute left-10 top-8 flex items-center gap-3">
+      <svg width="74" height="74" viewBox="-40 -40 80 80">
+        <circle r="30" fill="#0a2a66" stroke="#dbe9ff" stroke-width="2"/>
+        <ellipse rx="38" ry="11" fill="none" stroke="#ff5a3c" stroke-width="3" transform="rotate(-28)"/>
+        <circle cx="9" cy="-8" r="6" fill="#ff7a4a"/>
+        <g fill="#fff"><circle cx="-14" cy="-10" r="1.4"/><circle cx="-6" cy="12" r="1.2"/><circle cx="14" cy="14" r="1.2"/><circle cx="-18" cy="6" r="1"/></g>
+      </svg>
+      <div class="leading-tight">
+        <div class="font-display text-[15px] tracking-[.3em] text-white">MISIÓN MARTE</div>
+        <div class="text-[13px] tracking-[.35em] text-sky-300/80">SPACE APPS · EQUIPO 7</div>
+      </div>
+    </div>
+
+    <div class="absolute top-7 left-0 right-0 text-center pointer-events-none">
+      <h1 class="title-metal font-display font-black text-[84px] leading-none tracking-[.08em]">AEON-01</h1>
+      <div class="mt-2 flex items-center justify-center gap-4">
+        <span class="h-px w-24 bg-gradient-to-r from-transparent to-neon"></span>
+        <span class="font-display text-[17px] tracking-[.62em] text-sky-200 pl-[.62em]">SPACE SIMULATOR</span>
+        <span class="h-px w-24 bg-gradient-to-l from-transparent to-neon"></span>
+      </div>
+    </div>
+
+    <div class="absolute right-10 top-9 font-display text-sm tracking-[.25em] text-sky-300/90 border border-sky-400/40 px-3 py-1">v1.0.0</div>
+
+    <!-- Botones -->
+    <nav class="absolute left-10 top-[230px] flex flex-col gap-[18px]">
+      <div class="neon-wrap"><button class="neon-btn" data-action="new">
+        <svg viewBox="0 0 24 24" class="ico"><path d="M12 2c3 2.5 4.5 6 4.5 10v4l2.5 3h-4l-1 3h-4l-1-3H5l2.5-3v-4C7.500 8 9 4.500 12 2z"/><circle cx="12" cy="10" r="1.800"/></svg>
+        <span>Nueva partida</span></button></div>
+      <div class="neon-wrap"><button class="neon-btn" data-action="continue">
+        <svg viewBox="0 0 24 24" class="ico"><path d="M7 4l13 8-13 8z"/></svg>
+        <span>Continuar</span></button></div>
+      <div class="neon-wrap"><button class="neon-btn" data-action="settings">
+        <svg viewBox="0 0 24 24" class="ico"><circle cx="12" cy="12" r="3.200"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.900 4.900l2.100 2.100M17 17l2.100 2.100M4.900 19.100L7 17M17 7l2.100-2.100"/></svg>
+        <span>Ajustes</span></button></div>
+      <div class="neon-wrap"><button class="neon-btn" data-action="custom">
+        <svg viewBox="0 0 24 24" class="ico"><path d="M4 20c0-3 2-4 4-4s3 1.500 3 3-2 3-7 1z"/><path d="M10 15L20 4l1.500 1.500L12 17"/></svg>
+        <span>Personalizar</span></button></div>
+      <div class="neon-wrap"><button class="neon-btn" data-action="credits">
+        <svg viewBox="0 0 24 24" class="ico"><circle cx="9" cy="8" r="3.200"/><path d="M3 20c0-4 3-6 6-6s6 2 6 6"/><circle cx="17.500" cy="9" r="2.400"/><path d="M16.500 14c3 0 5 2 5 5"/></svg>
+        <span>Créditos</span></button></div>
+    </nav>
+
+    <div class="absolute left-10 bottom-9 neon-wrap"><button class="neon-btn neon-btn--sm" data-action="exit">
+      <svg viewBox="0 0 24 24" class="ico"><path d="M12 3v9"/><path d="M6.500 6.500a8 8 0 1 0 11 0"/></svg>
+      <span>Salir</span></button></div>
+
+    <div class="absolute right-10 bottom-10 font-display text-[15px] tracking-[.42em] text-white/90 drop-shadow-[0_0_10px_rgba(25,180,255,.9)]">EXPLORE · DISCOVER · GO FURTHER</div>
+  </section>
+
+  <!-- ============ VUELO EN PRIMERA PERSONA ============ -->
+  <section id="screen-flight" class="absolute inset-0 hidden">
+    <canvas id="flight" width="1600" height="900" class="absolute inset-0"></canvas>
+    <!-- marco de cabina -->
+    <svg class="absolute inset-0 pointer-events-none" viewBox="0 0 1600 900">
+      <defs><linearGradient id="dash" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16202e"/><stop offset="1" stop-color="#05080e"/></linearGradient></defs>
+      <path d="M0 0H1600V900H0Z M90 70 L1510 70 L1560 640 L1180 700 L420 700 L40 640Z" fill="url(#dash)" fill-rule="evenodd"/>
+      <path d="M90 70 L1510 70 L1560 640 L1180 700 L420 700 L40 640Z" fill="none" stroke="#19b4ff" stroke-width="2.500" opacity=".8"/>
+      <path d="M560 70 L500 700 M1040 70 L1100 700" stroke="#0b111a" stroke-width="26"/>
+      <path d="M560 70 L500 700 M1040 70 L1100 700" stroke="#19b4ff" stroke-width="1" opacity=".35"/>
+      <g stroke="#19b4ff" stroke-width="1.500" fill="none" opacity=".75">
+        <circle cx="800" cy="385" r="46"/><path d="M800 325v28M800 417v28M740 385h28M832 385h28"/>
+      </g>
+    </svg>
+    <!-- HUD -->
+    <div class="absolute top-[18px] left-0 right-0 flex justify-center gap-10 font-display text-[13px] tracking-[.3em] text-sky-300">
+      <span>AEON-01 · TRAYECTORIA TIERRA → MARTE</span><span id="hud-day">DÍA 000</span>
+    </div>
+    <div class="absolute left-0 right-0 bottom-0 h-[200px] px-12 pb-6 pt-8 flex items-end justify-between gap-6">
+      <div class="gauge"><label>Distancia a Marte</label><b id="hud-dist">225.0</b><small>millones de km</small>
+        <div class="bar"><i id="bar-dist"></i></div></div>
+      <div class="gauge"><label>Velocidad</label><b id="hud-vel">0.0</b><small>km/s</small>
+        <div class="bar"><i id="bar-vel"></i></div></div>
+      <div class="flex flex-col items-center gap-3">
+        <div class="flex gap-3">
+          <div class="neon-wrap"><button id="btn-brake" class="neon-btn neon-btn--sm">▼ Frenar (S)</button></div>
+          <div class="neon-wrap"><button id="btn-thrust" class="neon-btn neon-btn--sm">▲ Impulso (W)</button></div>
+        </div>
+        <div id="hud-msg" class="text-[17px] tracking-wider text-sky-100 h-6 text-center w-[520px]"></div>
+      </div>
+      <div class="gauge"><label>Combustible</label><b id="hud-fuel">100</b><small>%</small>
+        <div class="bar"><i id="bar-fuel"></i></div></div>
+      <div class="neon-wrap"><button id="btn-menu" class="neon-btn neon-btn--sm">Guardar y salir</button></div>
+    </div>
+    <!-- fin de misión -->
+    <div id="flight-end" class="absolute inset-0 hidden items-center justify-center bg-black/70">
+      <div class="panel w-[620px] text-center">
+        <h2 id="end-title" class="font-display text-3xl tracking-[.2em] text-sky-200"></h2>
+        <p id="end-text" class="mt-4 text-xl text-sky-100/90"></p>
+        <div class="mt-7 flex justify-center gap-4">
+          <div class="neon-wrap"><button id="end-retry" class="neon-btn neon-btn--sm">Reintentar</button></div>
+          <div class="neon-wrap"><button id="end-menu" class="neon-btn neon-btn--sm">Menú principal</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PANTALLA DE SALIDA ============ -->
+  <section id="screen-exit" class="absolute inset-0 hidden flex-col items-center justify-center bg-black gap-6">
+    <div class="title-metal font-display font-black text-6xl tracking-[.08em]">AEON-01</div>
+    <p class="text-2xl text-sky-200/80 tracking-widest">Sesión finalizada. Ya puedes cerrar esta pestaña.</p>
+    <div class="neon-wrap"><button id="exit-back" class="neon-btn neon-btn--sm">Volver al menú</button></div>
+  </section>
+
+  <!-- ============ PANEL MODAL ============ -->
+  <div id="modal" class="absolute inset-0 hidden items-center justify-center bg-black/60 backdrop-blur-[2px]">
+    <div class="panel w-[680px]">
+      <div class="flex items-center justify-between">
+        <h2 id="modal-title" class="font-display text-2xl tracking-[.25em] text-sky-200"></h2>
+        <button id="modal-close" class="font-display text-sky-300 hover:text-white text-xl px-2" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="h-px bg-gradient-to-r from-neon to-transparent my-4"></div>
+      <div id="modal-body" class="text-xl text-sky-50/90"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/menu.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
