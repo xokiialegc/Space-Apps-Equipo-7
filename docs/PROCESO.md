@@ -48,3 +48,48 @@ aceleración, llegada a Marte y pantalla de fin de misión, sin errores de JavaS
   que es el núcleo del reto.
 - Eventos durante el viaje (tormentas solares, averías, comunicaciones).
 - Nombres reales del equipo en Créditos.
+
+## Etapa 2 · Briefing, telemetría y Fase 1: despegue (14-11-2026)
+
+### Pedido
+Al pulsar *Nueva partida*: mensaje del **Instructor Jefe — Control de Misión**, **Manual rápido
+de telemetría** (delta-v/combustible, masa total, escudo térmico, soporte vital, potencia
+eléctrica) y **Fase 1 — Preparación y despegue**: verificación de capacidad de carga y
+presupuesto, autorización, cuenta atrás y despegue visto desde la cabina, con un control para
+encender los impulsores y un medidor de combustible en tiempo real que exija control para
+escapar de la atmósfera.
+
+### Qué se construyó
+1. **Pantalla de briefing** (`js/mission.js`) con tres pasos: bienvenida, manual de telemetría
+   (cinco fichas con explicación, consejo del instructor y alerta) y verificación de lanzamiento.
+2. **Configuración de misión en Personalizar**: tres vehículos de lanzamiento (capacidad y
+   coste distintos) y cuatro módulos opcionales (masa y coste). Presupuesto: 3 500 M$.
+3. **Verificación**: `[Verificar capacidad de carga]` y `[Comprobar presupuesto]` calculan con la
+   configuración elegida. `[Autorizar lanzamiento]` solo se activa si ambas pasan; si no, aparece
+   la alerta y un botón para reconfigurar la nave.
+4. **Despegue en primera persona** (`js/launch.js`): la simulación arranca en la cabina con la
+   cuenta atrás T-10. Cielo que pasa de azul a negro, nubes que quedan atrás, estelas, vibración,
+   resplandor por rozamiento y la curvatura de la Tierra al ganar altura. Instrumentos: altitud,
+   velocidad, presión dinámica, integridad y combustible.
+5. **Enlace con el segmento espacial**: tras la inserción orbital se pasa al crucero a Marte.
+
+### Decisiones
+- **Los «cuatro segmentos»** venían sin enumerar en el texto; se usaron los de la arquitectura
+  clásica de una misión: lanzamiento, espacial, terrestre y usuario. Se cambian en `pageIntro()`.
+- **Vehículos, módulos, masas y costes son ficticios** y están en la cabecera de `js/mission.js`
+  para ajustarlos fácilmente.
+- **Modelo de despegue**: densidad `e^(-h/12)`, presión dinámica `rho·v²`; por encima del límite
+  la estructura acumula daño, así que a fondo todo el rato se rompe la nave; demasiado tímido,
+  la gravedad consume el combustible. El empuje disponible depende del margen de carga
+  (masa / capacidad), de modo que la configuración elegida afecta a la dificultad.
+- Los parámetros se afinaron con una simulación automática: acelerar a fondo siempre → fallo
+  estructural; modulando el empuje → órbita con entre un 10 % y un 30 % de combustible.
+
+### Pruebas
+Recorrido completo en Chrome sin interfaz con un piloto automático (soltar impulso cuando la
+presión dinámica supera el 85 %): briefing → verificación → cuenta atrás → órbita con 15 % de
+combustible e integridad 100 % → paso al segmento espacial. Sin errores de JavaScript.
+
+### Pendiente
+- Usar de verdad en vuelo los cinco indicadores del manual (escudo, soporte vital, potencia).
+- Fases siguientes: segmento espacial completo, llegada y descenso en Marte, evaluación final.

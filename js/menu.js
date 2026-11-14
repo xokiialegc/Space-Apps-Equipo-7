@@ -11,7 +11,7 @@
     del(k) { try { localStorage.removeItem(k); } catch (e) { /* nada */ } }
   };
   const settings = Object.assign(
-    { music: 40, sfx: 70, anim: true, accent: '#19b4ff', shipName: 'AEON-01' },
+    { music: 40, sfx: 70, anim: true, accent: '#19b4ff', shipName: 'AEON-01', launcher: 'ares-h', modules: ['lab', 'shield'] },
     store.get('aeon01.settings', {})
   );
   const saveSettings = () => store.set('aeon01.settings', settings);
@@ -137,7 +137,7 @@
   requestAnimationFrame(drawMenu);
 
   // ---------- Pantallas ----------
-  const screens = { menu: $('#screen-menu'), flight: $('#screen-flight'), exit: $('#screen-exit') };
+  const screens = { menu: $('#screen-menu'), brief: $('#screen-brief'), launch: $('#screen-launch'), flight: $('#screen-flight'), exit: $('#screen-exit') };
   function show(name) {
     for (const k in screens) {
       screens[k].classList.toggle('hidden', k !== name);
@@ -151,6 +151,7 @@
   function openModal(title, html) {
     mTitle.textContent = title; mBody.innerHTML = html;
     modal.classList.remove('hidden'); modal.classList.add('flex');
+    modal.firstElementChild.style.width = title === 'Personalizar' ? '860px' : '';
   }
   function closeModal() { modal.classList.add('hidden'); modal.classList.remove('flex'); }
   $('#modal-close').addEventListener('click', () => { beep(330, 0.08); closeModal(); });
@@ -174,8 +175,8 @@
         openModal('Nueva partida', '<p>Ya existe una misión guardada. Si empiezas de nuevo se sobrescribirá.</p>' +
           '<div class="mt-6 flex gap-4 justify-end">' + btn('m-no', 'Cancelar') + btn('m-yes', 'Empezar') + '</div>');
         $('#m-no').onclick = closeModal;
-        $('#m-yes').onclick = () => { closeModal(); store.del('aeon01.save'); AEON.startFlight(null); };
-      } else AEON.startFlight(null);
+        $('#m-yes').onclick = () => { closeModal(); store.del('aeon01.save'); AEON.startBriefing(); };
+      } else AEON.startBriefing();
     },
     continue() {
       const save = store.get('aeon01.save', null);
@@ -202,13 +203,35 @@
       $('#s-wipe').onclick = (e) => { store.del('aeon01.save'); e.currentTarget.textContent = 'Borrada ✓'; };
     },
     custom() {
+      const M = AEON.mission;
       const colors = ['#19b4ff', '#ff5a3c', '#ffc93c', '#3cff9e', '#c06bff', '#ffffff'];
       openModal('Personalizar',
         '<p class="text-base text-sky-200/80 mb-2">Los cambios se ven al instante en la nave del menú.</p>' +
         '<div class="row"><span>Color de la franja</span><div class="flex gap-2">' +
         colors.map((c) => '<button class="swatch' + (c === settings.accent ? ' on' : '') + '" style="background:' + c + ';color:' + c + '" data-c="' + c + '" aria-label="Color ' + c + '"></button>').join('') +
         '</div></div>' +
-        '<div class="row"><label for="c-name">Nombre de la nave</label><input id="c-name" class="txt-in" maxlength="10" value="' + esc(settings.shipName) + '"></div>');
+        '<div class="row"><label for="c-name">Nombre de la nave</label><input id="c-name" class="txt-in" maxlength="10" value="' + esc(settings.shipName) + '"></div>' +
+        '<div class="h-px bg-sky-400/30 my-2"></div>' +
+        '<p class="font-display text-sm tracking-[.2em] text-sky-300 mt-3">VEHÍCULO DE LANZAMIENTO</p><div class="flex gap-2 mt-2">' +
+        M.LAUNCHERS.map((l) => '<button class="opt' + (l.id === settings.launcher ? ' on' : '') + '" data-l="' + l.id + '"><b>' + l.name + '</b><br>' + l.cap + ' t · ' + l.cost + ' M$</button>').join('') + '</div>' +
+        '<p class="font-display text-sm tracking-[.2em] text-sky-300 mt-4">MÓDULOS Y CARGA</p><div class="grid grid-cols-2 gap-2 mt-2">' +
+        M.MODULES.map((m) => '<button class="opt' + (settings.modules.includes(m.id) ? ' on' : '') + '" data-m="' + m.id + '"><b>' + m.name + '</b><br>+' + m.mass + ' t · +' + m.cost + ' M$</button>').join('') + '</div>' +
+        '<div id="c-sum" class="mt-4 text-lg"></div>');
+      const sum = () => {
+        const k = M.calc();
+        $('#c-sum').innerHTML = 'Masa total: <b class="' + (k.massOk ? 'text-emerald-300' : 'text-red-400') + '">' + k.mass + ' / ' + k.cap + ' t</b> &nbsp;·&nbsp; Coste: <b class="' +
+          (k.costOk ? 'text-emerald-300' : 'text-red-400') + '">' + k.cost + ' / ' + k.budget + ' M$</b>';
+      };
+      sum();
+      mBody.querySelectorAll('[data-l]').forEach((b) => b.onclick = () => {
+        settings.launcher = b.dataset.l; saveSettings(); beep(520, 0.08); sum();
+        mBody.querySelectorAll('[data-l]').forEach((x) => x.classList.toggle('on', x === b));
+      });
+      mBody.querySelectorAll('[data-m]').forEach((b) => b.onclick = () => {
+        const i = settings.modules.indexOf(b.dataset.m);
+        if (i < 0) settings.modules.push(b.dataset.m); else settings.modules.splice(i, 1);
+        b.classList.toggle('on', i < 0); saveSettings(); beep(520, 0.08); sum();
+      });
       mBody.querySelectorAll('.swatch').forEach((b) => b.onclick = () => {
         settings.accent = b.dataset.c; applyShip(); saveSettings(); beep(520, 0.08);
         mBody.querySelectorAll('.swatch').forEach((x) => x.classList.toggle('on', x === b));
@@ -239,5 +262,5 @@
   $('#exit-back').addEventListener('click', () => show('menu'));
 
   // API compartida con el módulo de vuelo
-  window.AEON = { W, H, store, settings, show, beep, audio, startFlight() {} };
+  window.AEON = { W, H, store, settings, show, beep, audio, bg, actions, startFlight() {}, startBriefing() {} };
 })();

@@ -66,3 +66,30 @@ body.no-anim #shuttle, body.no-anim #flames { animation: none; }
 .gauge small { font-size: 12px; margin-left: 8px; letter-spacing: .1em; }
 .bar { height: 6px; background: rgba(25,180,255,.18); margin-top: 6px; }
 .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #1560d8, #7fdcff); box-shadow: 0 0 8px #19b4ff; }
+
+/* Briefing del instructor */
+.brief { font-size: 21px; line-height: 1.5; color: #e3f2ff; }
+.brief p { margin: 0 0 14px; }
+.brief h3 { font-family: Orbitron, sans-serif; font-size: 22px; letter-spacing: .14em; color: #bfe9ff; margin: 0 0 4px; }
+.brief .unit { color: #6fc8f5; letter-spacing: .12em; font-size: 17px; margin-bottom: 12px; }
+.brief ul { list-style: none; margin: 0 0 14px; padding: 0; }
+.brief li { padding-left: 22px; position: relative; }
+.brief li::before { content: "▸"; position: absolute; left: 0; color: var(--neon); }
+.brief .who { font-family: Orbitron, sans-serif; font-size: 15px; letter-spacing: .22em; color: #6fc8f5; margin-bottom: 4px; }
+.brief .quote { border-left: 3px solid var(--neon); padding: 8px 16px; background: rgba(25,180,255,.08); margin-bottom: 14px; }
+.brief .alert { border: 1px solid #ff5a3c; color: #ffb4a3; background: rgba(255,90,60,.1); padding: 8px 16px; font-size: 19px; }
+.brief .ok { border: 1px solid #3cff9e; color: #b6ffd9; background: rgba(60,255,158,.08); padding: 8px 16px; font-size: 19px; margin-bottom: 10px; }
+.brief .motto { font-family: Orbitron, sans-serif; font-size: 20px; letter-spacing: .08em; color: #fff; text-shadow: 0 0 12px rgba(25,180,255,.9); }
+.brief::-webkit-scrollbar { width: 8px; } .brief::-webkit-scrollbar-thumb { background: rgba(25,180,255,.5); }
+.seg { border: 1px solid rgba(25,180,255,.5); background: rgba(25,180,255,.07); padding: 10px 14px; font-size: 18px; line-height: 1.3; }
+.seg b { display: block; font-family: Orbitron, sans-serif; font-size: 15px; letter-spacing: .15em; color: #7fdcff; margin-bottom: 4px; }
+.tab { display: block; width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; font-family: Orbitron, sans-serif; font-size: 15px;
+  letter-spacing: .1em; color: #bfe9ff; border: 1px solid rgba(25,180,255,.4); background: rgba(3,10,24,.6); }
+.tab:hover { background: rgba(25,180,255,.15); }
+.tab.on { border-color: #7fdcff; background: rgba(25,180,255,.25); color: #fff; box-shadow: 0 0 12px rgba(25,180,255,.5); }
+.tab.seen::after { content: " ✓"; color: #3cff9e; }
+.opt { flex: 1; padding: 8px 10px; cursor: pointer; font-size: 17px; line-height: 1.25; color: #cfeaff; border: 1px solid rgba(25,180,255,.4); background: rgba(3,10,24,.6); text-align: left; }
+.opt b { font-family: Orbitron, sans-serif; font-size: 14px; letter-spacing: .1em; }
+.opt.on { border-color: #7fdcff; background: rgba(25,180,255,.25); color: #fff; }
+.gauge--s { width: 200px; }
+.bar i.danger { background: linear-gradient(90deg, #ff9a3c, #ff3c3c); box-shadow: 0 0 8px #ff3c3c; }
