@@ -653,3 +653,22 @@ Quitar las canciones anteriores y usar tres pistas nuevas: «Landing» para el a
 - Se recodificaron a 128 kbps con los mismos nombres de archivo (`principal`, `descenso`,
   `personalizacion`), así que el reproductor por escena de la etapa 11 no cambia.
 - Se quitó la regla de `.gitignore` que dejaba fuera los MP3.
+
+## Etapa 14 · El juego pasa a inglés (15-11-2026)
+
+### Pedido
+Cambiar el idioma del juego a inglés.
+
+### Qué se hizo
+- Se tradujo todo lo que ve el jugador: menú, ajustes, créditos, pausa y panel de partida,
+  briefing, hangar de personalización (cohetes, calcomanías), cabina de despegue, interior de la
+  nave (salas, consolas, eventos críticos, alertas, mensajes de la tripulación), cámara exterior,
+  descenso e informes finales. `index.html` declara `lang="en"`.
+- Los decimales pasan a punto (7.8 km/s) y los porcentajes van pegados al número (42%).
+- Se mantienen los nombres propios: CENTELLA, APOLLO 11, X, Vera Kalani, Iker Solano y la sede
+  Encarnación.
+- Los comentarios del código, el README y esta documentación siguen en español, para el equipo.
+
+### Pruebas
+Recorrido automático en Chrome por todas las pantallas, comprobando en cada una que el texto
+visible no contiene palabras en español. Sin errores de JavaScript.
