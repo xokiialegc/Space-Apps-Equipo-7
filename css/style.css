@@ -261,3 +261,44 @@ body.no-anim .actp { animation: none; }
 .snd-btn.off .snd-on { display: none; }
 .snd-btn.off .snd-off { display: inline; }
 .snd-btn.off .ico { stroke: #ff8f7a; }
+
+/* ===== UX: micro-copy y lectura instantánea ===== */
+/* Menú principal: botones grandes en una sola columna */
+.menu-nav { left: 48px; top: 205px; gap: 14px; }
+.menu-nav .neon-btn { width: 410px; height: 74px; font-size: 21px; gap: 20px; padding: 0 28px; }
+.menu-nav .ico { width: 30px; height: 30px; }
+.neon-btn.dim { opacity: .45; }
+/* Teclas */
+.kc { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 8px; margin: 0 2px; border-radius: 6px;
+  font: 900 14px Orbitron, sans-serif; letter-spacing: .04em; color: #061a38; background: #eaf6ff; box-shadow: 0 3px 0 #7f9cc0; vertical-align: middle; text-shadow: none; }
+/* Titular grande y líneas de control */
+.brief .ux-hero { font-family: Orbitron, sans-serif; font-size: 25px; line-height: 1.3; letter-spacing: .04em; color: #fff; text-shadow: 0 0 14px rgba(25,180,255,.9); margin: 4px 0 16px; }
+.brief--holo .ux-hero { font-size: 21px; margin-bottom: 12px; }
+.ux-ctrl { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.ux-ctrl > div { display: flex; align-items: center; gap: 12px; font-size: 20px; color: #e3f2ff; }
+.ux-ctrl .ic { width: 30px; text-align: center; font-size: 22px; color: #ff8f7a; }
+.ux-tip { font-size: 19px; color: #9fd8ff; }
+/* Tarjetas de dato: etiqueta pequeña, valor grande, estado por color */
+.ux-grid { display: grid; gap: 10px; margin-bottom: 14px; }
+.uxc { padding: 10px 14px; border: 1px solid rgba(25,180,255,.5); background: rgba(4,20,45,.55); line-height: 1.15; }
+.uxc small { display: block; font-family: Orbitron, sans-serif; font-size: 11px; letter-spacing: .2em; color: #7fdcff; text-transform: uppercase; }
+.uxc b { display: block; font-family: Orbitron, sans-serif; font-size: 22px; color: #fff; margin-top: 4px; }
+.uxc span { display: block; font-size: 16px; color: #bfe9ff; margin-top: 4px; }
+.uxc.good { border-color: #3cff9e; } .uxc.good b { color: #9dffcf; }
+.uxc.bad { border-color: #ff5a3c; background: rgba(70,10,5,.55); } .uxc.bad b { color: #ff8f7a; }
+.uxc .warn { color: #ffb4a3; font-size: 15px; }
+.uxc .num { font-family: Orbitron, sans-serif; font-size: 34px; font-weight: 900; color: #19b4ff; float: right; line-height: 1; opacity: .55; }
+.brief h3.ux-big, .brief .ux-big { font-family: Orbitron, sans-serif; font-size: 40px; font-weight: 900; letter-spacing: .1em; color: #fff; text-shadow: 0 0 18px rgba(25,180,255,.9); margin: 0 0 10px; }
+.brief .ux-big.bad { color: #ff8f7a; text-shadow: 0 0 18px rgba(255,70,40,.8); }
+.brief .ux-big.good { color: #9dffcf; text-shadow: 0 0 18px rgba(60,255,158,.7); }
+/* Mensaje de cabina en alerta */
+#l-msg-box.hot { border-color: #ff5a3c; background: rgba(90,12,6,.82); animation: blink .6s steps(2) infinite; }
+#l-msg-box.hot #l-msg { color: #fff; font-weight: 700; }
+/* Barra de tripulación compacta */
+.crewchip { min-width: 0; }
+.snd-btn.hidden { display: none; }
+#brief-foot { margin-top: 18px; }
+.brief .uxc span { font-size: 18px; } .brief .uxc .warn { font-size: 16px; }
+/* Pausa */
+#pause { background: radial-gradient(ellipse at center, rgba(3,14,34,.9), rgba(0,0,0,.94)); }
+#pause .neon-btn { width: 380px; height: 70px; font-size: 20px; }
