@@ -11,7 +11,7 @@
     del(k) { try { localStorage.removeItem(k); } catch (e) { /* nada */ } }
   };
   const settings = Object.assign(
-    { music: 40, sfx: 70, anim: true, accent: '#19b4ff', shipName: 'AEON-01', launcher: 'ares-h', ship: null, paint: '', stickers: [], stickerImg: '' },
+    { music: 40, sfx: 70, muted: false, anim: true, accent: '#19b4ff', shipName: 'AEON-01', launcher: 'ares-h', ship: null, paint: '', stickers: [], stickerImg: '' },
     store.get('aeon01.settings', {})
   );
   const saveSettings = () => store.set('aeon01.settings', settings);
@@ -24,13 +24,15 @@
   }
   window.addEventListener('resize', fit); fit();
 
-  // ---------- Sonido (WebAudio, se activa con el primer clic) ----------
-  let actx = null, musicGain = null;
+  // ---------- Sonido (WebAudio, se activa con el primer clic o tecla) ----------
+  // Todo pasa por `master`, que el botón de silencio (js/fx.js) pone a cero.
+  let actx = null, musicGain = null, master = null;
   function audio() {
-    if (actx) return actx;
+    if (actx) { if (actx.state === 'suspended' && unlocked) actx.resume().catch(() => {}); return actx; }
     try {
       actx = new (window.AudioContext || window.webkitAudioContext)();
-      musicGain = actx.createGain(); musicGain.connect(actx.destination);
+      master = actx.createGain(); master.connect(actx.destination);
+      musicGain = actx.createGain(); musicGain.connect(master);
       [55, 82.5, 110.4].forEach((f, i) => {           // zumbido ambiental
         const o = actx.createOscillator(), g = actx.createGain();
         o.type = i ? 'sine' : 'triangle'; o.frequency.value = f; g.gain.value = 0.05;
@@ -40,15 +42,23 @@
     } catch (e) { actx = null; }
     return actx;
   }
-  function applyVolume() { if (musicGain) musicGain.gain.value = settings.music / 100; }
+  function applyVolume() {
+    if (musicGain) musicGain.gain.value = settings.music / 100;
+    if (master) master.gain.setTargetAtTime(settings.muted ? 0 : 1, actx.currentTime, 0.03);
+  }
+  // El navegador solo deja sonar el audio tras un gesto del jugador: el primero lo desbloquea.
+  let unlocked = false;
+  const unlock = () => { unlocked = true; const a = audio(); if (a && a.state === 'suspended') a.resume().catch(() => {}); };
+  ['pointerdown', 'keydown'].forEach((t) => window.addEventListener(t, unlock, { capture: true, once: true }));
+  /** Pitido táctil de interfaz: ataque corto (sin chasquido) y un leve barrido de tono. */
   function beep(freq, dur) {
-    const a = audio(); if (!a || !settings.sfx) return;
+    const a = audio(); if (!a || !settings.sfx || a.state !== 'running') return;
     try {
-      const o = a.createOscillator(), g = a.createGain();
-      o.type = 'square'; o.frequency.value = freq;
-      g.gain.setValueAtTime(0.06 * settings.sfx / 100, a.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
-      o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + dur);
+      const o = a.createOscillator(), g = a.createGain(), t = a.currentTime;
+      o.type = 'triangle'; o.frequency.setValueAtTime(freq * 1.06, t); o.frequency.exponentialRampToValueAtTime(freq, t + Math.min(0.04, dur));
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.11 * settings.sfx / 100, t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
     } catch (e) { /* nada */ }
   }
 
@@ -225,5 +235,5 @@
   $('#exit-back').addEventListener('click', () => show('menu'));
 
   // API compartida con el módulo de vuelo
-  window.AEON = { W, H, store, settings, saveSettings, applyShip, show, beep, audio, bg, actions, run: { tries: 0 }, startBriefing() {} };
+  window.AEON = { W, H, store, settings, saveSettings, applyShip, applyVolume, show, beep, audio, master: () => master, bg, actions, run: { tries: 0 }, startBriefing() {} };
 })();

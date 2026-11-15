@@ -64,6 +64,7 @@ js/avatars.js   Tripulación y retratos (avatares) del cadete y de los NPC
 js/ship.js      Interior de la nave en mapa lateral (casco con tuberías, cables y paneles): movimiento libre, configuración (3.2), viaje (Fase 2) y tripulación con IA de reparación
 js/edl.js       Fase 3: descenso en Marte, reporte final y resultados
 js/exterior.js  Cámara exterior (tecla C): toma de cuerpo completo de la nave según la telemetría de cada fase
+js/fx.js        Sensación de juego: vibración y zoom de cámara, viñeta de alarma, líneas de estrés y sonido sintetizado
 docs/PROCESO.md Bitácora del proceso de desarrollo
 docs/AUDITORIA_NASA.md Auditoría de los datos del juego frente a NASA y ESA, con fuentes
 ```
@@ -92,3 +93,18 @@ Cada personaje tiene un retrato que aparece en la barra de tripulación (arriba 
 con lo que está haciendo cada uno), en los diálogos, en los mensajes de radio y como icono
 flotante sobre cada tripulante. Los retratos se dibujan por código. Para usar imágenes propias,
 guárdalas en `assets/avatars/` y escribe su ruta en `FILES`, al principio de `js/avatars.js`.
+
+## Sonido y efectos
+
+Todo el sonido se sintetiza en el navegador con Web Audio, sin archivos de audio: rugido de los
+motores (ruido marrón filtrado según el empuje y la densidad del aire), plasma de la entrada en
+Marte, detonación metálica al separar etapas, alarma intermitente con los recursos en estado
+crítico, chispas eléctricas de los paneles averiados, soldadura al reparar y pitidos de interfaz.
+El audio arranca con el primer clic o tecla. El botón del altavoz (arriba a la derecha) silencia
+o activa todo el sonido y la elección se guarda.
+
+La cámara vibra con el empuje en la atmósfera densa, tiembla con fuerza en Max-Q (con líneas de
+estrés en los bordes), da un golpe seco con zoom al separar una etapa y una sacudida con destello
+rojo en los bordes ante impactos y averías. Si el sistema tiene activado «reducir movimiento», la
+vibración se reduce.
+

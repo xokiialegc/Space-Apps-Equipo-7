@@ -506,3 +506,57 @@ sustituto mínimo de Tailwind y sin las fuentes de Google, así que el aspecto f
 verificó con la hoja de estilos real. El monitor pequeño de la cabina sigue sin mostrar las
 separaciones de etapa. No se probó con jugadores reales ni en un móvil.
 
+
+## Etapa 12 · Sensación de juego: cámara, partículas y sonido (15-11-2026)
+
+### Pedido
+Llevar el simulador a otro nivel con efectos de cámara (vibración y zoom), animaciones y
+partículas contextuales y sonido procedural con Web Audio, sincronizados con los eventos del
+juego, con un botón para silenciar y sin romper la física ni el movimiento.
+
+### Qué se construyó
+1. **`js/fx.js`**: lee la telemetría de `AEON.flight` (la misma que usa la cámara exterior) y
+   recibe los golpes con `AEON.fx.event(nombre)`. Contiene:
+   - **Cámara**: modelo de «trauma» (los golpes suman y la vibración es trauma², que se disipa)
+     más una vibración continua según el empuje y la densidad del aire. Se aplica con
+     `transform` a la cabina, al interior o a la cámara exterior, con un poco de zoom para no
+     enseñar los bordes. Max-Q añade temblor fuerte, líneas de estrés y un resplandor naranja en
+     los bordes. La separación de etapas da un golpe seco con zoom. Impactos y averías: sacudida
+     y viñeta roja; mientras dura una alarma del viaje, la viñeta late suave. Al completar una
+     reparación, la viñeta se tiñe de verde un instante.
+   - **Sonido** sintetizado: motores (ruido marrón filtrado por potencia, más un subgrave),
+     plasma de la entrada, detonación metálica de las etapas, impacto, fallo grave, paracaídas,
+     contacto con el suelo, alarma de dos tonos, chispas, soldadura, crujidos de la estructura en
+     Max-Q y acordes de éxito y de reparación.
+   - **Botón de altavoz** arriba a la derecha para silenciar o activar todo el audio.
+2. **`js/menu.js`**: todo el audio pasa por un nodo maestro que el botón pone a cero. El
+   `AudioContext` se crea o se reanuda con el primer gesto del jugador. Los pitidos de interfaz
+   tienen ahora un ataque corto y un leve barrido de tono, sin chasquido.
+3. **`js/ship.js`**: chispas y arcos eléctricos en los paneles averiados, vapor saliendo de la
+   tubería de soporte vital, chorro de gas en la fuga de propelente, soplete con chispas de
+   soldadura cuando el cadete o un NPC repara y una nube verde con un anillo al quedar resuelta la
+   avería. Las balizas giratorias rojas que ya había se mantienen.
+4. **Ganchos**: `launch.js` (éxito o fallo del despegue), `edl.js` (paracaídas, aterrizaje,
+   fallo) y `exterior.js` (separación de etapas).
+
+### Decisiones
+- El pedido decía «integrado en nuestro `index.html` autocontenido». Como en la etapa 11, el
+  juego ya está en varios archivos, así que todo va en `js/fx.js` y en `index.html` solo se
+  añaden el lienzo de efectos y el botón.
+- La física no cambia. La vibración que `launch.js` aplicaba a la cabina pasa a `js/fx.js`.
+  El descenso conserva su propia vibración y `fx.js` solo le suma los golpes.
+- La separación de etapas sigue siendo visual (según el combustible), pero ahora se nota en las
+  dos vistas: golpe de cámara, zoom y detonación también desde la cabina.
+- En el despegue el rugido baja con la altitud: en el vacío no hay aire que transmita el sonido,
+  así que lo que queda es la vibración de la estructura.
+- Con «reducir movimiento» activado en el sistema, la vibración baja al 30 %.
+
+### Pruebas
+Partida automática en Chrome: despegue con Max-Q (vibración, líneas de estrés), dos
+separaciones del Saturno V, viaje acelerado con averías (chispas, alarma, viñeta), reparación de
+la fuga a mano (soplete y confirmación verde) y un descenso con el escudo agotado (fallo grave
+con viñeta roja). Se comprobó que el audio arranca tras el primer clic y que el botón silencia y
+reactiva el nodo maestro. Sin errores de JavaScript. El sonido no se pudo escuchar en la prueba
+automática, así que el volumen y la mezcla hay que ajustarlos de oído. Como siempre, sin
+conexión y con un sustituto mínimo de Tailwind. No se probó con jugadores reales ni en un móvil.
+

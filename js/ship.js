@@ -873,6 +873,76 @@
     c.fillStyle = '#2c3749'; c.fillRect(x - 30, FLOOR - 4, 60, 8);
   }
 
+  // ---------- Partículas de averías y reparaciones (sensación de juego, ver js/fx.js) ----------
+  // Paneles averiados: chispas eléctricas y arcos. Soporte vital: vapor saliendo de la tubería.
+  // Propulsión: chorro de gas de la fuga. Quien repara (cadete o NPC) suelta chispas de soldadura
+  // con el soplete encendido, y al quedar resuelta una avería sale una nube verde de confirmación.
+  let fxp = [], fxT = 0, prevHot = null;
+  const FXK = { life: 'vapor', prop: 'jet' };                // el resto de averías dan chispas
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const addP = (p) => { if (fxp.length < 600) fxp.push(Object.assign({ age: 0, g: 0, add: true }, p)); };
+  function emitFx(t, hotSt, x1, x2) {
+    const dt = clamp(t - fxT, 0, 0.05); fxT = t;
+    const mid = cam.x + W / 2;
+    let sparkNear = 0;
+    if (mode === 'voyage') hotSt.forEach((id) => {
+      const st = station(id); if (!st || st.x < x1 - 200 || st.x > x2 + 200) return;
+      const kind = FXK[id] || 'spark', y0 = FLOOR - 122;
+      if (kind === 'spark') {
+        sparkNear = Math.max(sparkNear, 1 - Math.min(1, Math.abs(st.x - mid) / 900));
+        if (Math.random() < 0.2) {
+          const sx = st.x + rnd(-36, 36);
+          for (let i = 0; i < 6 + Math.random() * 10; i++) addP({ k: 'spark', x: sx, y: y0, vx: rnd(-280, 280), vy: rnd(-360, -40), g: 1100, life: rnd(0.35, 0.8), c: Math.random() < 0.5 ? '255,220,120' : '170,220,255' });
+          addP({ k: 'arc', x: sx, y: y0, life: 0.09, c: '190,230,255' });
+        }
+      } else if (kind === 'vapor') {
+        for (let i = 0; i < 2; i++) addP({ k: 'puff', x: st.x - 130 + rnd(-6, 6), y: CEIL + 46, vx: rnd(-40, 40), vy: rnd(60, 150), life: rnd(1.2, 2), r0: 6, r1: 46, c: '225,240,255', add: false });
+      } else {
+        for (let i = 0; i < 3; i++) addP({ k: 'puff', x: st.x + 70, y: FLOOR - 170 + rnd(-4, 4), vx: rnd(280, 460), vy: rnd(-40, 40), life: rnd(0.5, 0.9), r0: 3, r1: 30, c: '200,235,255', add: false });
+      }
+    });
+    if (sparkNear > 0.05 && A.fx) A.fx.hold('spark', sparkNear);
+    let welding = false;
+    [P].concat(NPCS).forEach((w) => {                       // soplete de quien repara
+      if (!w.work || w.x < x1 - 100 || w.x > x2 + 100) return;
+      welding = true;
+      const wx = w.x + w.face * 40, wy = FLOOR - 120 + Math.sin(t * 23) * 3;
+      addP({ k: 'glow', x: wx, y: wy, life: 0.06, c: '200,235,255' });
+      for (let i = 0; i < 3; i++) addP({ k: 'spark', x: wx, y: wy, vx: rnd(-200, 200) - w.face * 80, vy: rnd(-260, 60), g: 900, life: rnd(0.2, 0.55), c: Math.random() < 0.6 ? '255,190,90' : '255,255,220' });
+    });
+    if (welding && A.fx) A.fx.hold('weld');
+    if (prevHot) prevHot.forEach((id) => {                  // avería resuelta: confirmación verde
+      if (hotSt.has(id) || mode !== 'voyage') return;
+      const st = station(id); if (!st) return;
+      for (let i = 0; i < 40; i++) { const an = rnd(0, 6.28), sp = rnd(40, 220); addP({ k: 'ok', x: st.x + rnd(-30, 30), y: FLOOR - 120, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp - 90, g: -40, life: rnd(0.8, 1.5), c: '80,255,160' }); }
+      addP({ k: 'ring', x: st.x, y: FLOOR - 120, life: 0.7, c: '80,255,160' });
+      if (A.fx) A.fx.event('fixed');
+    });
+    prevHot = mode === 'voyage' ? new Set(hotSt) : null;
+    fxp.forEach((p) => { p.age += dt; if (p.vx != null) { p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; } });
+    fxp = fxp.filter((p) => p.age < p.life);
+  }
+  function drawFx() {
+    c.save();
+    fxp.forEach((p) => {
+      const u = p.age / p.life, a = 1 - u;
+      c.globalCompositeOperation = p.add ? 'lighter' : 'source-over';
+      if (p.k === 'spark') { c.strokeStyle = 'rgba(' + p.c + ',' + a + ')'; c.lineWidth = 2; c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(p.x - p.vx * 0.025, p.y - p.vy * 0.025); c.stroke(); }
+      else if (p.k === 'arc') {
+        c.strokeStyle = 'rgba(' + p.c + ',.95)'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(p.x - 40, p.y + 6);
+        for (let i = 1; i <= 6; i++) c.lineTo(p.x - 40 + i * 13, p.y + rnd(-14, 14));
+        c.stroke();
+        const g = c.createRadialGradient(p.x, p.y, 2, p.x, p.y, 90); g.addColorStop(0, 'rgba(170,220,255,.5)'); g.addColorStop(1, 'rgba(170,220,255,0)'); c.fillStyle = g; c.fillRect(p.x - 90, p.y - 90, 180, 180);
+      } else if (p.k === 'glow') {
+        const g = c.createRadialGradient(p.x, p.y, 1, p.x, p.y, 46 + Math.random() * 14); g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(0.2, 'rgba(150,210,255,.6)'); g.addColorStop(1, 'rgba(150,210,255,0)');
+        c.fillStyle = g; c.fillRect(p.x - 60, p.y - 60, 120, 120);
+      } else if (p.k === 'puff') { c.fillStyle = 'rgba(' + p.c + ',' + (0.4 * a) + ')'; c.beginPath(); c.arc(p.x, p.y, p.r0 + (p.r1 - p.r0) * u, 0, 7); c.fill(); }
+      else if (p.k === 'ok') { c.fillStyle = 'rgba(' + p.c + ',' + a + ')'; c.fillRect(p.x - 2.5, p.y - 2.5, 5, 5); }
+      else if (p.k === 'ring') { c.strokeStyle = 'rgba(' + p.c + ',' + a + ')'; c.lineWidth = 4; c.beginPath(); c.arc(p.x, p.y, 20 + u * 120, 0, 7); c.stroke(); }
+    });
+    c.restore();
+  }
+
   function draw(now) {
     const t = now / 1000, fly = mode !== 'config', p = fly ? clamp(S.t / T_TOTAL, 0, 1) : 0;
     const shake = fly && S.flash > 0 ? S.flash * 9 : 0;
@@ -900,6 +970,7 @@
     astronaut(t, P);
     ROOMS.forEach((r, i) => { if (i && r.x0 > x1 - 40 && r.x0 < x2 + 40) bulkhead(i, t, hot.has(r.id) || hot.has(ROOMS[i - 1].id)); });
     NPCS.forEach((n) => { if (n.x > x1 - 120 && n.x < x2 + 120) crewTag(n, t); });
+    emitFx(t, hotSt, x1, x2); drawFx();
     dust.forEach((d) => {                                     // polvo en suspensión dentro del casco
       d[0] += Math.cos(d[2]) * 0.25; d[1] = CEIL + ((d[1] + Math.sin(d[2]) * 0.2 - CEIL + (FLOOR - CEIL)) % (FLOOR - CEIL));
       const x = cx + ((((d[0] - cx) % W) + W) % W);
