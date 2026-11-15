@@ -7,7 +7,9 @@
    Modo 'voyage' (Fase 2): viaje de ~7 meses comprimido; cada recurso se repone en su módulo,
    el panel de alertas lleva andando hasta el módulo afectado y Control de Misión plantea
    tres eventos críticos.
-   Modo 'arrived': hay que volver al puesto del piloto para iniciar el descenso. */
+   Modo 'arrived': hay que volver al puesto del piloto para iniciar el descenso.
+   Tripulación (issue #5): dos NPC recorren la nave por su cuenta; durante el viaje, el que está
+   más cerca de una avería la detecta, camina hasta el módulo y la repara. */
 (function () {
   'use strict';
   const A = window.AEON, M = A.mission, W = 1600, H = 900;
@@ -65,6 +67,9 @@
     $('#ship-holo').classList.remove('hidden'); $('#ship-holo').classList.add('flex');
   }
   const q = (who, t) => '<div class="quote"><div class="who">' + who + '</div>' + t + '</div>';
+  const AV = A.avatar, CREW = A.crew;
+  /** Tarjeta de un personaje con su retrato, para los diálogos. */
+  const card = (id, t) => '<div class="crewcard">' + AV.tag(id, 64) + '<div><div class="who">' + CREW[id].name.toUpperCase() + ' · ' + CREW[id].role.toUpperCase() + '</div>' + t + '</div></div>';
   const ok = (b) => '<span class="' + (b ? 'text-emerald-300' : 'text-red-400') + '">' + (b ? '✓' : '✗') + '</span> ';
 
   // ---------- Eventos críticos de la Fase 2 ----------
@@ -100,7 +105,7 @@
   function openEvent(e, n) {
     const tel = e.tel(S).map((x) => '<li>' + x + '</li>').join('');
     dlg(e.title, '<div class="alert mb-2"><b>' + e.tag + '</b></div>' + q(e.who, e.body) + '<ul>' + tel + '</ul>' + q('CONTROL DE MISIÓN', e.cm) +
-      '<div class="who">DECISIÓN DEL CADETE</div>',
+      '<div class="who decide">' + AV.tag('player', 40) + 'DECISIÓN DEL CADETE</div>',
       [{ l: e.a, fn: () => { e.done = true; if (e.tries === 0) S.right++; e.onGood(S); result(e, true); } },
        { l: e.b, fn: () => { e.tries++; S.wrong++; e.cool = S.t + 5; e.onBad(S); result(e, false); } }]);
   }
@@ -115,6 +120,7 @@
     mode = m; serv = false; paused = false; dirty = true; conKey = alertKey = actKey = ''; keys.l = keys.r = false;
     P.x = SEAT_X; P.vx = 0; P.face = -1; P.ph = 0; P.seated = true; P.auto = null; P.work = false; P.full = '';   // se empieza sentado a los mandos
     open = m === 'config' ? 'seat' : null;
+    resetCrew();
     doors.fill(0); cam.x = camTarget();
     A.show('ship'); last = performance.now(); if (!raf) raf = requestAnimationFrame(loop);
   }
@@ -129,14 +135,15 @@
       '<p>Con la nave en órbita, comienza la configuración de los sistemas que harán posible el viaje a Marte.</p>' +
       '<p>Debes seleccionar y equilibrar los componentes de la expedición. Cada módulo consume masa, presupuesto y, en algunos casos, energía.</p>' +
       '<p>Estás en el <b>puesto del piloto</b>. Pulsa <b>E</b> para levantarte y recorre la nave con <b>A / D</b> o <b>← / →</b>: la cámara te sigue de una sala a otra.</p>' +
-      '<p>Acércate a la consola de cada sala y pulsa <b>E</b> (o <b>Espacio</b>) cuando aparezca el indicador para configurar su componente. Cuando termines, vuelve a sentarte a los mandos y confirma el diseño.</p>',
+      '<p>Acércate a la consola de cada sala y pulsa <b>E</b> (o <b>Espacio</b>) cuando aparezca el indicador para configurar su componente. Cuando termines, vuelve a sentarte a los mandos y confirma el diseño.</p>' +
+      '<div class="who">TU TRIPULACIÓN</div>' + card('vera', 'Me encargo de energía y propulsión. Me verás recorriendo la nave.') + card('iker', 'Yo vigilo soporte vital e instrumentos. Si algo falla durante el viaje, iremos a repararlo.'),
       [{ l: 'Recorrer la nave', fn: () => {} }]);
   };
 
   function startVoyage() {
     cfg = M.calc();
     const r = (a, b) => a + Math.random() * (b - a);
-    S = { t: 0, o2: 100, bat: 100, dv: cfg.dv - DV_TMI, shield: 100, comms: 100, dev: 0, corr: 0.3, leak: false, seal: 0, rep: 0, cal: 0,
+    S = { t: 0, o2: 100, bat: 100, dv: cfg.dv - DV_TMI, shield: 100, comms: 100, dev: 0, corr: 0.3, leak: false, seal: 0, rep: 0, cal: 0, nrep: 0, ncal: 0, helped: 0,
       spares: cfg.spares, instr: cfg.instr.map((i) => ({ id: i.id, name: i.name, ok: true })), right: 0, wrong: 0, crit: 0,
       hits: [r(30, 40), r(82, 92), r(122, 132)], leakAt: r(44, 56), glitchAt: r(94, 100), ev: EV.map((e) => Object.assign({}, e, { on: false, done: false, tries: 0, cool: 0 })) };
     A.store.set('aeon01.save', { phase: 'voyage', run: A.run });
@@ -147,7 +154,8 @@
       '<p>Recuerda: el Segmento Terrestre no controla físicamente la nave de forma continua. Analiza los datos recibidos, evalúa las condiciones y transmite instrucciones cuando es necesario.</p>' +
       '<p class="motto">Tu capacidad para interpretar la información será puesta a prueba.</p>' +
       '<p>A bordo: vigila los indicadores de abajo y las luces de alarma de cada módulo. Lo crítico aparece en el <b>panel de alertas</b> (arriba a la derecha): púlsalo para ir andando hasta el módulo, o camina tú con <b>A / D</b>. ' +
-      'Junto al panel averiado, mantén <b>E</b> (o <b>Espacio</b>) para repararlo. Al llegar a Marte tendrás que volver al puesto del piloto.</p>',
+      'Junto al panel averiado, mantén <b>E</b> (o <b>Espacio</b>) para repararlo. Al llegar a Marte tendrás que volver al puesto del piloto.</p>' +
+      card('vera', 'No estás solo, cadete. Cuando salte una alarma, quien esté más cerca de <b>Iker</b> y de mí irá andando a repararla. Los eventos críticos de Control de Misión son decisión tuya.'),
       [{ l: 'Iniciar transferencia', fn: () => {} }]);
   }
   function goEDL() { const voy = A.run.voy; mode = 'off'; A.startEDL(voy); }
@@ -275,9 +283,9 @@
     if (open && open !== 'seat' && (!cur || cur.id !== open)) { open = null; dirty = true; }   // alejarse cierra la consola
     ROOMS.forEach((r, i) => {                                // las puertas se abren al acercarse
       if (!i) return;
-      const near = Math.abs(P.x - r.x0) < 250, o = doors[i];
+      const near = Math.abs(P.x - r.x0) < 250 || NPCS.some((n) => Math.abs(n.x - r.x0) < 170), o = doors[i];
       doors[i] = clamp(o + (near ? 1 : -1) * dt * 4.5, 0, 1);
-      if (near && o === 0) A.beep(260, 0.05);
+      if (near && o === 0 && Math.abs(P.x - r.x0) < 900) A.beep(260, 0.05);
     });
   }
   function camTarget() {
@@ -337,6 +345,82 @@
     });
   })();
 
+  // ---------- Tripulación: NPC con movimiento libre e IA de reparación (issue #5) ----------
+  const NPC_SPEED = 250, NPC_REACT = 1.3;
+  const NPCS = ['vera', 'iker'].map((id) => ({ id, who: CREW[id], x: 0, vx: 0, face: 1, ph: 0, seated: false, work: false, st: 'idle', wait: 0, tx: 0, job: null, K: 0.86 }));
+  /** Averías que la tripulación sabe reparar: cuándo saltan, cuándo se dan por resueltas y cómo se trabaja en ellas. */
+  const JOBS = {
+    life: { txt: 'Oxígeno crítico', end: 'Oxígeno estabilizado', need: (s) => s.o2 < 25, done: (s) => s.o2 >= 60, can: (s) => s.bat > 12, work(s, dt) { s.o2 += 8 * dt; s.bat -= 1.4 * dt; } },
+    power: { txt: 'Potencia eléctrica crítica', end: 'Baterías recuperadas', need: (s) => s.bat < 20, done: (s) => s.bat >= 60, can: () => true, work(s, dt) { s.bat += 7 * dt; } },
+    bridge: { txt: 'Señal de comunicación débil', end: 'Antena reapuntada', need: (s) => s.comms < 35, done: (s) => s.comms >= 75, can: (s) => !(s.ev[0].on && !s.ev[0].done), work(s, dt) { s.comms += 9 * dt; } },   // con el evento 01 activo la antena no basta: decide el cadete
+    prop: { txt: 'Fuga de propelente', end: 'Fuga sellada', need: (s) => s.leak, done: (s) => !s.leak, can: () => true, work(s, dt) { s.seal += 0.6 * dt; if (s.seal > 2.5) { s.leak = false; A.beep(880, 0.2); } } },
+    hangar: { txt: 'Escudo térmico dañado', end: 'Losetas reparadas', need: (s) => s.shield < 60 && s.spares > 0, done: (s) => s.shield >= 60, can: (s) => s.spares > 0, work(s, dt) { s.nrep += dt; if (s.nrep > 2.4) { s.nrep = 0; s.spares--; s.shield += 12; A.beep(880, 0.1); } } },
+    lab: { txt: 'Instrumento científico en fallo', end: 'Instrumento recalibrado', need: (s) => s.instr.some((i) => !i.ok) && s.spares > 0, done: (s) => s.instr.every((i) => i.ok), can: (s) => s.spares > 0, work(s, dt) { s.ncal += dt; if (s.ncal > 4) { s.ncal = 0; s.spares--; s.instr.find((i) => !i.ok).ok = true; A.beep(880, 0.2); } } }
+  };
+  const roam = (n) => { n.st = 'walk'; n.job = null; n.work = false; n.tx = X_MIN + 120 + Math.random() * (X_MAX - X_MIN - 160); };
+  function resetCrew() {
+    NPCS.forEach((n, i) => { n.x = i ? at('lab', 0.3) : at('power', 0.35); n.vx = 0; n.face = i ? 1 : -1; n.ph = i * 2; n.st = 'idle'; n.wait = 1 + i * 2.5; n.job = null; n.work = false; });
+    say(null);
+  }
+  /** Mensaje de radio de un tripulante, con su retrato. */
+  let sayT = 0;
+  function say(n, txt) {
+    const el = $('#crew-msg');
+    if (!n) { el.style.display = 'none'; sayT = 0; return; }
+    el.innerHTML = AV.tag(n.id, 52) + '<div><b>' + n.who.name.toUpperCase() + '</b><span>' + txt + '</span></div>';
+    el.style.display = 'flex'; sayT = 4.5; A.beep(600, 0.08);
+  }
+  function updateCrew(dt) {
+    if (sayT > 0 && (sayT -= dt) <= 0) say(null);
+    if (mode === 'voyage') {                                // detección: el tripulante libre más cercano acude
+      Object.keys(JOBS).forEach((id) => {
+        const j = JOBS[id];
+        if (!j.need(S) || !j.can(S) || NPCS.some((n) => n.job === id)) return;
+        if (P.work && current() && current().id === id) return;                // el cadete ya está en ello
+        const sx = station(id).x, free = NPCS.filter((n) => !n.job).sort((a, b) => Math.abs(a.x - sx) - Math.abs(b.x - sx))[0];
+        if (!free) return;
+        free.job = id; free.st = 'alert'; free.wait = NPC_REACT; free.work = false; free.tx = clamp(sx + 52, X_MIN, X_MAX); free.face = sx >= free.x ? 1 : -1;
+        say(free, j.txt + ' en ' + ROOMS[ri(station(id).room)].name + '. Voy para allá.');
+      });
+    }
+    NPCS.forEach((n) => {
+      const j = n.job && JOBS[n.job];
+      let dir = 0;
+      if (j && (mode !== 'voyage' || j.done(S) || !j.can(S))) {   // resuelta (o ya no se puede seguir)
+        if (mode === 'voyage' && j.done(S)) { say(n, j.end + (n.st === 'fix' ? '.' : '. Buen trabajo, cadete.')); if (n.st === 'fix') S.helped++; }
+        n.job = null; n.work = false; n.st = 'idle'; n.wait = 2 + Math.random() * 2;
+      } else if (n.st === 'alert') { if ((n.wait -= dt) <= 0) n.st = 'go'; }
+      else if (n.st === 'fix') { n.work = true; n.face = -1; j.work(S, dt); }
+      else if (n.st === 'idle') { if ((n.wait -= dt) <= 0) roam(n); }
+      else {                                                // 'walk' (paseo libre) o 'go' (hacia la avería)
+        const d = n.tx - n.x;
+        if (Math.abs(d) < 6) { n.x = n.tx; if (n.st === 'go') n.st = 'fix'; else { n.st = 'idle'; n.wait = 1.5 + Math.random() * 3.5; } }
+        else dir = Math.sign(d) * clamp(Math.abs(d) / 60, 0.3, 1) * (n.st === 'go' ? 1.15 : 0.6);
+      }
+      n.vx += (dir * NPC_SPEED - n.vx) * (1 - Math.exp(-dt * 10));
+      if (!dir && Math.abs(n.vx) < 3) n.vx = 0;
+      n.x = clamp(n.x + n.vx * dt, X_MIN, X_MAX);
+      if (dir) n.face = dir > 0 ? 1 : -1;
+      n.ph += Math.abs(n.vx) * dt * 0.02;
+    });
+  }
+  /** Qué está haciendo cada tripulante (barra de tripulación). */
+  function crewStatus(n) {
+    const room = ROOMS[roomAt(n.x)].name;
+    if (n.st === 'fix') return ['REPARANDO · ' + room, 'fix'];
+    if (n.job) return ['ACUDE A ' + ROOMS[ri(station(n.job).room)].name.toUpperCase(), 'go'];
+    return [(n.st === 'walk' ? 'Recorriendo · ' : 'En ') + room, ''];
+  }
+  let crewKey = '';
+  function renderCrew() {
+    const cur = current(), me = P.seated ? 'A los mandos' : P.work ? 'REPARANDO · ' + ROOMS[roomAt(P.x)].name : (cur && cur.id !== 'seat' ? 'Junto a ' : 'En ') + ROOMS[roomAt(P.x)].name;
+    const rows = [['player', me, P.work ? 'fix' : '']].concat(NPCS.map((n) => [n.id].concat(crewStatus(n))));
+    const key = JSON.stringify(rows) + A.settings.accent;
+    if (key === crewKey) return;
+    crewKey = key;
+    $('#crew').innerHTML = rows.map((r) => '<div class="crewchip ' + r[2] + '">' + AV.tag(r[0], 42) + '<div><b>' + CREW[r[0]].name + '</b><small>' + CREW[r[0]].role + '</small><span>' + r[1] + '</span></div></div>').join('');
+  }
+
   // ---------- Alertas ----------
   /** Lista de [puesto, texto]. */
   function alerts() {
@@ -362,7 +446,7 @@
       alertKey = key;
       $('#alerts').innerHTML = al.length ? '<div class="alrt-h">⚠ PANEL DE ALERTAS</div>' + al.map((x) => '<button class="alrt" data-s="' + x[0] + '"><span>' + x[1] + '</span><b>' + rel(x[0]) + '</b></button>').join('') : '';
       $('#alerts').querySelectorAll('button').forEach((b) => b.onclick = () => { goTo(b.dataset.s); b.blur(); });
-      $('#sh-map').innerHTML = ROOMS.map((r, i) => '<button class="mapb' + (i === room ? ' on' : '') + (hot.has(i) ? ' alarm' : '') + '" style="flex:' + r.w + ' 1 0" data-s="' + (i ? r.id : 'seat') + '">' + r.short + '</button>').join('') + '<i id="map-me"></i>';
+      $('#sh-map').innerHTML = ROOMS.map((r, i) => '<button class="mapb' + (i === room ? ' on' : '') + (hot.has(i) ? ' alarm' : '') + '" style="flex:' + r.w + ' 1 0" data-s="' + (i ? r.id : 'seat') + '">' + r.short + '</button>').join('') + '<i id="map-me"></i>' + NPCS.map((n) => '<i class="map-npc" id="map-' + n.id + '" style="background:' + n.who.tint + '" title="' + n.who.name + '"></i>').join('');
       $('#sh-map').querySelectorAll('button').forEach((b) => b.onclick = () => { goTo(b.dataset.s); b.blur(); });
       const l = ROOMS[room - 1], r = ROOMS[room + 1];
       $('#nav-l').innerHTML = '<small>◀ A</small>' + (l ? l.name : 'Proa'); $('#nav-r').innerHTML = '<small>D ▶</small>' + (r ? r.name : 'Popa');
@@ -496,6 +580,9 @@
     return (LAYERS[r.id] = cvs);
   }
 
+  /** ¿Hay alguien (el cadete o un tripulante) trabajando en ese puesto? */
+  const working = (id) => (P.work && current() && current().id === id) || NPCS.some((n) => n.st === 'fix' && n.job === id);
+
   function centerpiece(id, col, t) {
     const s = S, lv = M.ship();
     if (id === 'bridge') {                                   // ventanal + pantalla de navegación
@@ -518,7 +605,7 @@
         c.fillStyle = s.o2 < 25 ? '#ff5a3c' : '#3cdfb0'; c.fillRect(x, 570 - hgt + Math.sin(t * 3 + i) * 3, 80, hgt + 10); c.restore();
         c.strokeStyle = col(1.2); c.lineWidth = 3; c.beginPath(); c.roundRect(x, 250, 80, 330, 38); c.stroke();
       }
-      c.save(); c.translate(960, 340); c.fillStyle = '#0c1620'; c.beginPath(); c.arc(0, 0, 95, 0, 7); c.fill(); c.rotate(t * (P.work ? 9 : 2.5));
+      c.save(); c.translate(960, 340); c.fillStyle = '#0c1620'; c.beginPath(); c.arc(0, 0, 95, 0, 7); c.fill(); c.rotate(t * (working('life') ? 9 : 2.5));
       c.fillStyle = col(1.1, 0.9); for (let i = 0; i < 5; i++) { c.rotate(6.283 / 5); c.beginPath(); c.ellipse(45, 0, 42, 13, 0.4, 0, 7); c.fill(); } c.restore();
       c.strokeStyle = col(1.2); c.lineWidth = 4; c.beginPath(); c.arc(960, 340, 95, 0, 7); c.stroke();
       c.fillStyle = '#3a2a1c'; c.fillRect(850, 540, 240, 50);
@@ -610,13 +697,13 @@
       });
     }
     if (x1 < 900 && x2 > 500) {                              // antena de comunicaciones (se mueve al reapuntarla)
-      const a = -0.5 + (P.work && current() && current().id === 'bridge' ? Math.sin(t * 5) * 0.35 : Math.sin(t * 0.4) * 0.05);
+      const a = -0.5 + (working('bridge') ? Math.sin(t * 5) * 0.35 : Math.sin(t * 0.4) * 0.05);
       seg(700, TOP, 700, TOP - 52, 6, '#55627a');
       c.save(); c.translate(700, TOP - 56); c.rotate(a); c.fillStyle = '#c9d4e2'; c.beginPath(); c.ellipse(0, 0, 44, 12, 0, 0, 7); c.fill(); seg(0, 0, 0, -26, 3, '#c9d4e2'); c.restore();
     }
     const px = at('power', 0.5);
     if (x1 < px + 300 && x2 > px - 300) {                    // panel solar (gira al reorientarlo)
-      const a = P.work && current() && current().id === 'power' ? Math.sin(t * 4) * 0.25 : -0.12;
+      const a = working('power') ? Math.sin(t * 4) * 0.25 : -0.12;
       seg(px, TOP, px, TOP - 46, 6, '#55627a');
       c.save(); c.translate(px, TOP - 50); c.rotate(a); c.fillStyle = '#143a78'; c.fillRect(-190, -9, 380, 18); c.strokeStyle = '#6fb6ff'; c.lineWidth = 1.5; c.strokeRect(-190, -9, 380, 18);
       for (let i = -150; i < 190; i += 38) { c.beginPath(); c.moveTo(i, -9); c.lineTo(i, 9); c.stroke(); } c.restore();
@@ -710,22 +797,22 @@
     rr(x - 30, FLOOR - 54, 78, 16, 7, '#2b3648');
   }
 
-  /** El cadete: camina, espera, trabaja o va sentado a los mandos. */
-  function astronaut(t) {
-    const K = 0.9, mv = clamp(Math.abs(P.vx) / SPEED, 0, 1), sw = Math.sin(P.ph) * mv, acc = A.settings.accent;
-    const lit = '#e8eef5', dim = '#a3b0c0', boot = '#465168';
-    const bob = Math.abs(Math.cos(P.ph)) * 5 * mv + Math.sin(t * 2.2) * 1.5 * (1 - mv);
+  /** Un astronauta (el cadete o un tripulante): camina, espera, trabaja o va sentado a los mandos. */
+  function astronaut(t, B) {
+    const npc = B !== P, K = B.K || 0.9, mv = clamp(Math.abs(B.vx) / (npc ? NPC_SPEED : SPEED), 0, 1), sw = Math.sin(B.ph) * mv, acc = npc ? B.who.tint : A.settings.accent;
+    const lit = npc ? B.who.suit[0] : '#e8eef5', dim = npc ? B.who.suit[1] : '#a3b0c0', boot = '#465168';
+    const bob = Math.abs(Math.cos(B.ph)) * 5 * mv + Math.sin(t * 2.2) * 1.5 * (1 - mv);
     c.save();
-    if (P.seated) c.translate(SEAT_X + 2, FLOOR - 58); else c.translate(P.x, FLOOR - 84 * K - bob * K);
-    c.scale(P.face * K, K); c.lineCap = 'round'; c.lineJoin = 'round';
+    if (B.seated) c.translate(SEAT_X + 2, FLOOR - 58); else c.translate(B.x, FLOOR - 84 * K - bob * K);
+    c.scale(B.face * K, K); c.lineCap = 'round'; c.lineJoin = 'round';
     const leg = (a, col, fwd) => {                            // origen en la cadera
-      if (P.seated) { seg(0, 2, 42, 4, 20, col); seg(42, 4, 44, 44, 18, col); seg(44, 46, 58, 46, 14, boot); return; }
+      if (B.seated) { seg(0, 2, 42, 4, 20, col); seg(42, 4, 44, 44, 18, col); seg(44, 46, 58, 46, 14, boot); return; }
       const kx = Math.sin(a) * 42 + fwd, ky = Math.cos(a) * 42, fx = Math.sin(a) * 84, fy = 84 - Math.max(0, fwd) * 0.9;
       seg(0, 0, kx, ky, 20, col); seg(kx, ky, fx, fy, 18, col); seg(fx - 2, fy - 2, fx + 15, fy - 2, 14, boot);
     };
     const arm = (a, col) => {                                 // origen en el hombro
-      if (P.seated) { seg(2, -66, 30, -52, 15, col); seg(30, -52, 62, -60, 13, col); return; }
-      if (P.work && col === lit) {
+      if (B.seated) { seg(2, -66, 30, -52, 15, col); seg(30, -52, 62, -60, 13, col); return; }
+      if (B.work && col === lit) {
         seg(2, -66, 30, -52, 15, col); seg(30, -52, 56, -62 + Math.sin(t * 22) * 3, 13, col);
         c.fillStyle = 'rgba(255,230,140,' + (0.5 + Math.random() * 0.5) + ')'; c.beginPath(); c.arc(64, -62, 4 + Math.random() * 7, 0, 7); c.fill();
         return;
@@ -735,9 +822,9 @@
     };
     const idle = (1 - mv) * 0.09;
     leg(-sw * 0.55 - idle, dim, sw < 0 ? -sw * 12 : 0); arm(sw * 0.6, dim);
-    c.save(); c.rotate(P.seated ? -0.06 : 0.07 * mv);
-    rr(-40, -82, 22, 62, 7, '#b4c0cf');                         // mochila de soporte vital
-    rr(-24, -84, 48, 88, 15, lit); c.fillStyle = '#aab7c6'; c.fillRect(-24, -8, 48, 8);
+    c.save(); c.rotate(B.seated ? -0.06 : 0.07 * mv);
+    rr(-40, -82, 22, 62, 7, npc ? dim : '#b4c0cf');                         // mochila de soporte vital
+    rr(-24, -84, 48, 88, 15, lit); c.fillStyle = npc ? dim : '#aab7c6'; c.fillRect(-24, -8, 48, 8);
     c.fillStyle = acc; c.fillRect(-24, -44, 48, 6);
     rr(4, -68, 17, 20, 4, '#c3cedb'); c.fillStyle = '#3cff9e'; c.fillRect(8, -63, 5, 4);
     c.fillStyle = '#f4f8fb'; c.beginPath(); c.arc(2, -110, 30, 0, 7); c.fill();                               // casco
@@ -747,7 +834,24 @@
     c.restore();
     leg(sw * 0.55 + idle, lit, sw > 0 ? sw * 12 : 0); arm(-sw * 0.6, lit);
     c.restore();
-    c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(P.seated ? SEAT_X + 6 : P.x, FLOOR + 3, 40, 6, 0, 0, 7); c.fill();
+    c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(B.seated ? SEAT_X + 6 : B.x, FLOOR + 3, 40, 6, 0, 0, 7); c.fill();
+  }
+
+
+  /** Icono flotante de un tripulante: retrato, nombre y lo que está haciendo. */
+  function crewTag(n, t) {
+    const low = ST.some((s) => Math.abs(s.x - n.x) < 210);   // junto a un puesto va a los pies, para no tapar su lectura
+    const y = low ? FLOOR + 34 : FLOOR - 84 * n.K - 178 + Math.sin(t * 2 + n.ph) * 3, name = n.who.name.toUpperCase() + (n.st === 'fix' ? ' · REPARANDO' + '.'.repeat(1 + Math.floor(t * 3) % 3) : '');
+    c.font = '700 12px Orbitron, sans-serif'; const w = c.measureText(name).width + 50, x = n.x - w / 2, hot = n.st === 'alert' || n.st === 'go';
+    rr(x, y - 15, w, 30, 15, n.st === 'fix' ? 'rgba(8,60,40,.88)' : hot ? 'rgba(72,12,8,.88)' : 'rgba(4,20,45,.85)');
+    c.strokeStyle = n.st === 'fix' ? '#3cff9e' : hot ? '#ff5a3c' : n.who.tint; c.lineWidth = 1.5; c.beginPath(); c.roundRect(x, y - 15, w, 30, 15); c.stroke();
+    c.drawImage(AV.img(n.id), x + 2, y - 13, 26, 26);
+    c.textAlign = 'left'; c.fillStyle = '#eaf6ff'; c.fillText(name, x + 36, y + 4.5);
+    if (hot) {                                               // ha detectado una avería
+      const by = low ? FLOOR - 84 * n.K - 150 : y - 36 + Math.sin(t * 9) * 3;
+      rr(n.x - 13, by - 14, 26, 28, 7, '#ff5a3c'); c.fillStyle = '#fff'; c.font = '900 20px Orbitron, sans-serif'; c.textAlign = 'center'; c.fillText('!', n.x, by + 8);
+    }
+    c.textAlign = 'left';
   }
 
   /** Mamparo entre dos salas, con su puerta corredera. */
@@ -790,8 +894,10 @@
     if (x1 < 160) { bow(t); drawSeat(); }
     const hotSt = new Set(bad.map((a) => a[0]));
     ST.forEach((s) => { if (s.x > x1 - 160 && s.x < x2 + 160) drawStation(s, t, cur === s, hotSt.has(s.id)); });
-    astronaut(t);
+    NPCS.forEach((n) => { if (n.x > x1 - 120 && n.x < x2 + 120) astronaut(t, n); });
+    astronaut(t, P);
     ROOMS.forEach((r, i) => { if (i && r.x0 > x1 - 40 && r.x0 < x2 + 40) bulkhead(i, t, hot.has(r.id) || hot.has(ROOMS[i - 1].id)); });
+    NPCS.forEach((n) => { if (n.x > x1 - 120 && n.x < x2 + 120) crewTag(n, t); });
     dust.forEach((d) => {                                     // polvo en suspensión dentro del casco
       d[0] += Math.cos(d[2]) * 0.25; d[1] = CEIL + ((d[1] + Math.sin(d[2]) * 0.2 - CEIL + (FLOOR - CEIL)) % (FLOOR - CEIL));
       const x = cx + ((((d[0] - cx) % W) + W) % W);
@@ -811,6 +917,7 @@
     const dt = Math.min(0.05, (now - last) / 1000) * (A.ts || 1); last = now;
     if (!paused) {
       movePlayer(dt);
+      updateCrew(dt);
       if (mode === 'voyage') update(dt);
     } else P.vx = 0;
     if (mode === 'off') return;
@@ -818,7 +925,8 @@
     draw(now);
     renderAct();
     const me = $('#map-me'); if (me) me.style.left = (clamp(P.x / SHIP_W, 0, 1) * 100).toFixed(1) + '%';
-    hud += dt; if (hud > 0.15 || dirty) { hud = 0; dirty = false; renderConsole(); renderHud(); }
+    NPCS.forEach((n) => { const el = $('#map-' + n.id); if (el) el.style.left = (clamp(n.x / SHIP_W, 0, 1) * 100).toFixed(1) + '%'; });
+    hud += dt; if (hud > 0.15 || dirty) { hud = 0; dirty = false; renderConsole(); renderHud(); renderCrew(); }
     raf = requestAnimationFrame(loop);
   }
 

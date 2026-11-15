@@ -363,3 +363,45 @@ fallo por recursos agotados, botones táctiles, Esc y Continuar. Sin errores de 
 despegue y el descenso no se volvieron a jugar enteros: su código no se tocó. No se probó con
 jugadores reales ni en un móvil físico.
 
+## Etapa 9 · Tripulación: NPC con IA de reparación y avatares (15-11-2026)
+
+### Pedido
+Issue #5: añadir avatares para el personaje principal y para los NPC (en la interfaz de estado,
+en los diálogos o como iconos flotantes) y de uno a dos NPC tripulantes que caminen libremente
+por el mapa lateral; cuando un recurso o componente entre en alerta o avería, el NPC más cercano
+debe detectarlo, caminar hasta allí y simular la reparación. Nombres ficticios para los NPC.
+
+### Qué se construyó
+1. **Avatares** (`js/avatars.js`): retrato del cadete, de **Vera Kalani** (ingeniera de vuelo,
+   traje naranja) y de **Iker Solano** (técnico de sistemas, traje verde agua), dibujados por
+   código en un lienzo. El del cadete usa el color de acento de los ajustes.
+2. **Dónde se ven**: barra de tripulación con retrato, cargo y estado de cada uno; tarjetas de
+   presentación en los diálogos de la configuración y del viaje; retrato del cadete junto a
+   «Decisión del cadete» en los eventos críticos; mensajes de radio de los NPC; etiqueta
+   flotante con retrato y nombre sobre cada NPC, y un punto de su color en el minimapa.
+3. **NPC** (`js/ship.js`): dos astronautas con el mismo dibujo animado del cadete y su propio
+   color. Pasean por toda la nave (eligen un punto, caminan, esperan) y las puertas se abren a
+   su paso. Están en la configuración y en el viaje.
+4. **IA de reparación** (solo en el viaje): cada avería del panel de alertas (oxígeno, energía,
+   comunicaciones, fuga de propelente, escudo, instrumento) tiene su tarea. El NPC libre más
+   cercano la detecta (signo «!» y aviso por radio), camina hasta el panel y trabaja hasta
+   dejarla resuelta; después vuelve a pasear. Solo va un NPC por avería.
+
+### Decisiones
+- Los NPC reaccionan cuando salta la alarma, no antes; caminan más despacio que el cadete y
+  reparan a algo más de la mitad de su ritmo. Así ayudan sin quitarle el trabajo al jugador.
+- Reponen oxígeno, energía y señal hasta un nivel seguro (60-75 %), no hasta el máximo.
+- Gastan los mismos repuestos que el cadete para el escudo y los instrumentos.
+- No atienden los eventos críticos de Control de Misión: esa decisión es del cadete. Con el
+  evento de comunicaciones activo, tampoco reapuntan la antena.
+- La imagen de avatares enlazada en el issue no se pudo descargar desde el entorno de trabajo,
+  así que los retratos se dibujaron por código. `FILES`, en `js/avatars.js`, permite sustituir
+  cada retrato por un archivo de imagen sin tocar nada más.
+
+### Pruebas
+Prueba automática en Chrome: configuración (los NPC pasean y aparecen en la barra y el minimapa),
+un viaje entero sin tocar las averías (los NPC sellaron la fuga, recalibraron el instrumento,
+repusieron oxígeno y repararon el escudo) y otro atendiendo solo los tres eventos críticos, que
+llegó a Marte. Sin errores de JavaScript. El despegue y el descenso no se tocaron ni se
+volvieron a jugar. No se probó con jugadores reales ni en un móvil.
+

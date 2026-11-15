@@ -219,3 +219,20 @@ body.no-anim #shuttle, body.no-anim #flames { animation: none; }
 .actp.off { opacity: .6; animation: none; cursor: default; }
 @keyframes actpulse { 0%,100% { box-shadow: 0 0 14px rgba(25,180,255,.45); } 50% { box-shadow: 0 0 28px rgba(60,200,255,.95); } }
 body.no-anim .actp { animation: none; }
+
+/* Tripulación y avatares (issue #5) */
+.avatar { display: block; flex: none; border-radius: 50%; background: #04101f; box-shadow: 0 0 10px rgba(25,180,255,.55); }
+.crewchip { display: flex; align-items: center; gap: 9px; min-width: 214px; padding: 4px 14px 4px 5px; background: rgba(3,12,28,.82); border: 1px solid rgba(25,180,255,.5); border-radius: 26px; line-height: 1.1; }
+.crewchip b { display: block; font-family: Orbitron, sans-serif; font-size: 12px; letter-spacing: .1em; color: #fff; }
+.crewchip small { display: block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #6fc8f5; }
+.crewchip span { display: block; font-size: 13.5px; color: #bfe9ff; white-space: nowrap; }
+.crewchip.go { border-color: #ff5a3c; } .crewchip.go span { color: #ffb4a3; }
+.crewchip.fix { border-color: #3cff9e; } .crewchip.fix span { color: #9dffcf; }
+#crew-msg { align-items: center; gap: 12px; max-width: 560px; padding: 7px 18px 7px 8px; background: rgba(4,20,45,.9); border: 1px solid #7fdcff; border-radius: 34px;
+  box-shadow: 0 0 20px rgba(25,180,255,.55); animation: crewin .25s ease-out; }
+#crew-msg b { display: block; font-family: Orbitron, sans-serif; font-size: 11px; letter-spacing: .2em; color: #7fdcff; }
+#crew-msg span { font-size: 17px; line-height: 1.2; color: #eaf6ff; }
+@keyframes crewin { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+.crewcard { display: flex; align-items: center; gap: 14px; padding: 6px 12px; margin-bottom: 7px; background: rgba(25,180,255,.08); border-left: 3px solid var(--neon); }
+.brief .who.decide { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.map-npc { position: absolute; top: 2px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; box-shadow: 0 0 5px #000; pointer-events: none; }
