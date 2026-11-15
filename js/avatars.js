@@ -11,9 +11,9 @@
   const FILES = { player: '', vera: '', iker: '' };          // p. ej. 'assets/avatars/cadete.png'
 
   const CREW = {
-    player: { id: 'player', name: 'Cadete', role: 'Piloto · tú', suit: ['#e8eef5', '#a3b0c0'], skin: '#e9b98f', hair: '#4a3222', style: 'short' },
-    vera: { id: 'vera', name: 'Vera Kalani', role: 'Ingeniera de vuelo', suit: ['#f3b06a', '#c07f3e'], tint: '#ff9a3c', skin: '#b9794f', hair: '#1c1418', style: 'bun' },
-    iker: { id: 'iker', name: 'Iker Solano', role: 'Técnico de sistemas', suit: ['#86dccb', '#4f9f90'], tint: '#3cdfb0', skin: '#f0c8a4', hair: '#7a4a22', style: 'beard' }
+    player: { id: 'player', name: 'Cadet', role: 'Pilot · you', suit: ['#e8eef5', '#a3b0c0'], skin: '#e9b98f', hair: '#4a3222', style: 'short' },
+    vera: { id: 'vera', name: 'Vera Kalani', role: 'Flight engineer', suit: ['#f3b06a', '#c07f3e'], tint: '#ff9a3c', skin: '#b9794f', hair: '#1c1418', style: 'bun' },
+    iker: { id: 'iker', name: 'Iker Solano', role: 'Systems technician', suit: ['#86dccb', '#4f9f90'], tint: '#3cdfb0', skin: '#f0c8a4', hair: '#7a4a22', style: 'beard' }
   };
   const SIZE = 128, cache = {};
 

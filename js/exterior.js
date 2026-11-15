@@ -26,7 +26,7 @@
   const ease = (t) => t * t * (3 - 2 * t);
   const rgb = (a) => 'rgb(' + a.map(Math.round).join(',') + ')';
   const mixA = (a, b, t) => a.map((v, i) => lerp(v, b[i], t));
-  const fmt = (x, d) => x.toFixed(d).replace('.', ',');
+  const fmt = (x, d) => x.toFixed(d);
 
   const root = $('#ext'), cv = $('#ext-cv'), c = cv.getContext('2d'), btn = $('#cam-btn');
   let on = false, raf = 0, last = 0, kind = '', thr = 0, tt = 0;
@@ -281,7 +281,7 @@
     while (RS.drop < want) {
       const i = RS.drop++;
       debris.push({ kind: 'stage', i, lo: i ? def.cuts[i - 1] : 0, hi: def.cuts[i], born: performance.now(), vr: rnd(-0.12, 0.12), vx: rnd(-12, 12) });
-      say('SEPARACIÓN DE ETAPA ' + (i + 1));
+      say('STAGE ' + (i + 1) + ' SEPARATION');
       if (A.fx) A.fx.event('stage');          // golpe de cámara, zoom y detonación (js/fx.js)
     }
   }
@@ -308,9 +308,9 @@
       earthScroll += dt * (6 + f.v * 30);
       earthLimb(lerp(H + 30, 640, ease(u)), lerp(14000, 2600, u), earthScroll, clamp((h - 25) / 60, 0, 1));
     }
-    marker(h, 12, 'TROPOPAUSA · 12 km', 'rgba(220,240,255,.9)');
-    marker(h, 50, 'ESTRATOPAUSA · 50 km', 'rgba(180,215,255,.9)');
-    marker(h, R.KARMAN, 'LÍNEA DE KÁRMÁN · ' + R.KARMAN + ' km · COMIENZA EL ESPACIO', 'rgba(127,220,255,1)');
+    marker(h, 12, 'TROPOPAUSE · 12 km', 'rgba(220,240,255,.9)');
+    marker(h, 50, 'STRATOPAUSE · 50 km', 'rgba(180,215,255,.9)');
+    marker(h, R.KARMAN, 'KÁRMÁN LINE · ' + R.KARMAN + ' km · SPACE BEGINS', 'rgba(127,220,255,1)');
     // nubes del fondo
     const cloudPass = (front) => clouds.forEach((cl) => {
       if (cl.front !== front) return;
@@ -397,9 +397,9 @@
 
   // ---------- Nave interplanetaria ----------
   const MOD = [   // mismas salas que js/ship.js, de proa a popa
-    { id: 'bridge', n: 'PUENTE', hue: [50, 120, 210], w: 1150 }, { id: 'life', n: 'SOPORTE', hue: [40, 170, 120], w: 1000 },
-    { id: 'lab', n: 'LABORAT.', hue: [150, 100, 225], w: 1050 }, { id: 'hangar', n: 'HANGAR', hue: [200, 80, 80], w: 1050 },
-    { id: 'power', n: 'ENERGÍA', hue: [220, 170, 40], w: 1000 }, { id: 'prop', n: 'MOTORES', hue: [220, 110, 50], w: 1050 }
+    { id: 'bridge', n: 'BRIDGE', hue: [50, 120, 210], w: 1150 }, { id: 'life', n: 'LIFE SUP.', hue: [40, 170, 120], w: 1000 },
+    { id: 'lab', n: 'LAB', hue: [150, 100, 225], w: 1050 }, { id: 'hangar', n: 'HANGAR', hue: [200, 80, 80], w: 1050 },
+    { id: 'power', n: 'POWER', hue: [220, 170, 40], w: 1000 }, { id: 'prop', n: 'ENGINES', hue: [220, 110, 50], w: 1050 }
   ];
   const MOD_W = MOD.reduce((s, m) => s + m.w, 0);
   function drawShipEnv(f, dt) {
@@ -522,8 +522,8 @@
   const ES = { stage: 0, sx: 0 };
   function trackEDL(f) {
     if (f.stage < ES.stage || !ES.stage) { ES.stage = f.stage; debris = debris.filter((d) => d.kind === 'stage'); }
-    if (f.stage >= 2.5 && ES.stage < 2.5) { debris.push({ kind: 'shield', born: performance.now() }); say('ESCUDO TÉRMICO LIBERADO'); }
-    if (f.stage >= 3 && ES.stage < 3) { debris.push({ kind: 'back', born: performance.now(), chute: f.chute }); say('SEPARACIÓN DE LA CARCASA · DESCENSO PROPULSADO'); }
+    if (f.stage >= 2.5 && ES.stage < 2.5) { debris.push({ kind: 'shield', born: performance.now() }); say('HEAT SHIELD JETTISONED'); }
+    if (f.stage >= 3 && ES.stage < 3) { debris.push({ kind: 'back', born: performance.now(), chute: f.chute }); say('BACKSHELL SEPARATION · POWERED DESCENT'); }
     ES.stage = f.stage;
   }
   function drawEDL(f, dt) {
@@ -593,36 +593,36 @@
     hud.children[i].querySelector('small').textContent = unit;
     const bar = hud.children[i].querySelector('i'); bar.style.width = clamp(pct, 0, 100) + '%'; bar.classList.toggle('danger', !!bad);
   }
-  const layer = (h) => h < 12 ? 'TROPOSFERA' : h < 50 ? 'ESTRATOSFERA' : h < 85 ? 'MESOSFERA' : h < R.KARMAN ? 'TERMOSFERA' : 'ESPACIO · SOBRE LA LÍNEA DE KÁRMÁN';
+  const layer = (h) => h < 12 ? 'TROPOSPHERE' : h < 50 ? 'STRATOSPHERE' : h < 85 ? 'MESOSPHERE' : h < R.KARMAN ? 'THERMOSPHERE' : 'SPACE · ABOVE THE KÁRMÁN LINE';
   function renderHud(f, dt) {
     let sub = '', al = f.alerts || [], m = f.msg || '';
     if (f.kind === 'launch') {
-      sub = f.t < 0 ? 'CUENTA ATRÁS · T - ' + Math.ceil(-f.t) : 'FASE 1 · ' + layer(f.h);
-      row(0, 'ALTITUD', fmt(f.h, f.h < 10 ? 1 : 0), 'km', f.h / R.KARMAN * 100, false);
-      row(1, 'VELOCIDAD', fmt(f.v, 1), '/ ' + fmt(R.V_LEO, 1) + ' km/s', f.v / R.V_LEO * 100, false);
-      row(2, 'COMBUSTIBLE', f.fuel.toFixed(0), '%', f.fuel, f.fuel < 15);
+      sub = f.t < 0 ? 'COUNTDOWN · T - ' + Math.ceil(-f.t) : 'PHASE 1 · ' + layer(f.h);
+      row(0, 'ALTITUDE', fmt(f.h, f.h < 10 ? 1 : 0), 'km', f.h / R.KARMAN * 100, false);
+      row(1, 'VELOCITY', fmt(f.v, 1), '/ ' + fmt(R.V_LEO, 1) + ' km/s', f.v / R.V_LEO * 100, false);
+      row(2, 'FUEL', f.fuel.toFixed(0), '%', f.fuel, f.fuel < 15);
     } else if (f.kind === 'edl') {
       const km = f.stage < 3;
-      sub = 'FASE 3 · DESCENSO EN MARTE' + (f.stage < 2.5 ? ' · ENTRADA ATMOSFÉRICA' : f.stage < 3 ? ' · PARACAÍDAS' : f.landed ? ' · EN SUPERFICIE' : ' · DESCENSO PROPULSADO');
-      row(0, 'ALTITUD', km ? fmt(f.h, f.h < 20 ? 1 : 0) : Math.max(0, f.hm).toFixed(0), km ? 'km' : 'm', km ? f.h / R.ENTRY_H * 100 : f.hm / 26, false);
-      row(1, 'VELOCIDAD', f.v > 1000 ? fmt(f.v / 1000, 2) : fmt(f.v, f.stage >= 3 ? 1 : 0), f.v > 1000 ? 'km/s' : 'm/s', f.stage < 3 ? f.v / 55 : f.v / 2, f.stage >= 3 && f.v > 10 && f.hm < 200);
-      row(2, 'PROPELENTE', f.fuel.toFixed(0), '%', f.fuel, f.fuel < 20);
+      sub = 'PHASE 3 · MARS DESCENT' + (f.stage < 2.5 ? ' · ATMOSPHERIC ENTRY' : f.stage < 3 ? ' · PARACHUTE' : f.landed ? ' · ON THE SURFACE' : ' · POWERED DESCENT');
+      row(0, 'ALTITUDE', km ? fmt(f.h, f.h < 20 ? 1 : 0) : Math.max(0, f.hm).toFixed(0), km ? 'km' : 'm', km ? f.h / R.ENTRY_H * 100 : f.hm / 26, false);
+      row(1, 'VELOCITY', f.v > 1000 ? fmt(f.v / 1000, 2) : fmt(f.v, f.stage >= 3 ? 1 : 0), f.v > 1000 ? 'km/s' : 'm/s', f.stage < 3 ? f.v / 55 : f.v / 2, f.stage >= 3 && f.v > 10 && f.hm < 200);
+      row(2, 'PROPELLANT', f.fuel.toFixed(0), '%', f.fuel, f.fuel < 20);
     } else {
       const left = R.CRUISE_KM * (1 - clamp(f.progress, 0, 1)) / 1e6;
-      if (f.mode === 'config') { sub = '3.2 · EN ÓRBITA TERRESTRE'; row(0, 'ÓRBITA', 'BAJA', '> ' + R.KARMAN + ' km', 100, false); row(1, 'VELOCIDAD', fmt(R.V_LEO, 1), 'km/s', 100, false); }
+      if (f.mode === 'config') { sub = '3.2 · EARTH ORBIT'; row(0, 'ORBIT', 'LOW', '> ' + R.KARMAN + ' km', 100, false); row(1, 'VELOCITY', fmt(R.V_LEO, 1), 'km/s', 100, false); }
       else {
-        sub = f.mode === 'arrived' ? 'FASE 2 · LLEGADA A MARTE' : 'FASE 2 · VIAJE INTERPLANETARIO · DÍA ' + String(Math.floor(f.day)).padStart(3, '0') + ' / ' + R.CRUISE_DAYS;
-        row(0, 'TRAYECTO RESTANTE', fmt(left, left < 10 ? 1 : 0), 'millones de km', 100 - f.progress * 100, false);
-        row(1, 'VELOCIDAD MEDIA', fmt(R.CRUISE_KM / (R.CRUISE_DAYS * 86400), 1), 'km/s respecto al Sol', 100, false);
+        sub = f.mode === 'arrived' ? 'PHASE 2 · MARS ARRIVAL' : 'PHASE 2 · INTERPLANETARY CRUISE · DAY ' + String(Math.floor(f.day)).padStart(3, '0') + ' / ' + R.CRUISE_DAYS;
+        row(0, 'DISTANCE LEFT', fmt(left, left < 10 ? 1 : 0), 'million km', 100 - f.progress * 100, false);
+        row(1, 'AVERAGE SPEED', fmt(R.CRUISE_KM / (R.CRUISE_DAYS * 86400), 1), 'km/s relative to the Sun', 100, false);
       }
-      row(2, 'COMBUSTIBLE · Δv', fmt(Math.max(0, f.dv), 2), 'km/s', f.dv0 > 0 ? f.dv / f.dv0 * 100 : 100, f.leak || f.dv < 0.5);
-      if (al.length && f.mode === 'voyage') m = 'C · volver adentro y reparar';
+      row(2, 'FUEL · Δv', fmt(Math.max(0, f.dv), 2), 'km/s', f.dv0 > 0 ? f.dv / f.dv0 * 100 : 100, f.leak || f.dv < 0.5);
+      if (al.length && f.mode === 'voyage') m = 'C · go back inside and repair';
     }
     $('#ext-sub').textContent = sub;
     const key = al.join('|');
     if (key !== alertKey) {
       alertKey = key;
-      alertsEl.innerHTML = al.length ? '<div class="alrt-h">⚠ ALERTAS</div>' + al.map((t) => '<div class="alrt"><span>' + t + '</span></div>').join('') : '';
+      alertsEl.innerHTML = al.length ? '<div class="alrt-h">⚠ ALERTS</div>' + al.map((t) => '<div class="alrt"><span>' + t + '</span></div>').join('') : '';
     }
     const ba = bannerAge();
     $('#ext-banner').textContent = ba < 3.2 ? banner.txt : '';
@@ -651,7 +651,7 @@
     on = v;
     root.classList.toggle('hidden', !on);
     btn.classList.toggle('on', on);
-    btn.querySelector('span').textContent = on ? 'C · VOLVER ADENTRO' : 'C · CÁMARA EXTERIOR';
+    btn.querySelector('span').textContent = on ? 'C · BACK INSIDE' : 'C · EXTERIOR CAMERA';
     A.beep(on ? 620 : 420, 0.08);
     if (on) {
       const f = feed(); kind = f ? f.kind : ''; parts = []; RS.k = 0; alertKey = null;

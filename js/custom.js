@@ -122,14 +122,14 @@
     const r = R.get(S.launcher), k = M.calc(), cls = (b) => (b ? 'text-emerald-300' : 'text-red-400');
     $('#cu-name').textContent = r.name; $('#cu-sub').textContent = r.sub;
     $('#cu-info').innerHTML = '<p>' + r.info + '</p>' +
-      '<div class="kv"><span>Capacidad de carga</span><b>' + k.cap + ' t</b></div><div class="kv"><span>Coste del lanzador</span><b>' + k.launcher.cost + ' M$</b></div>' +
-      '<div class="kv"><span>Masa de la misión</span><b class="' + cls(k.massOk) + '">' + k.mass + ' / ' + k.cap + ' t</b></div>' +
-      '<div class="kv"><span>Coste total</span><b class="' + cls(k.costOk) + '">' + k.cost + ' / ' + k.budget + ' M$</b></div>';
+      '<div class="kv"><span>Payload capacity</span><b>' + k.cap + ' t</b></div><div class="kv"><span>Launcher cost</span><b>' + k.launcher.cost + ' M$</b></div>' +
+      '<div class="kv"><span>Mission mass</span><b class="' + cls(k.massOk) + '">' + k.mass + ' / ' + k.cap + ' t</b></div>' +
+      '<div class="kv"><span>Total cost</span><b class="' + cls(k.costOk) + '">' + k.cost + ' / ' + k.budget + ' M$</b></div>';
   }
   function renderColors() {
-    $('#cu-colors').innerHTML = '<button class="cu-sw cu-sw--orig' + (S.paint ? '' : ' on') + '" data-c="" title="Librea original" aria-label="Librea original">ORIG.</button>' +
+    $('#cu-colors').innerHTML = '<button class="cu-sw cu-sw--orig' + (S.paint ? '' : ' on') + '" data-c="" title="Original livery" aria-label="Original livery">ORIG.</button>' +
       COLORS.map((x) => '<button class="cu-sw' + (x === S.paint ? ' on' : '') + '" style="background:' + x + '" data-c="' + x + '" aria-label="Color ' + x + '"></button>').join('') +
-      '<label class="cu-sw cu-sw--pick' + (S.paint && !COLORS.includes(S.paint) ? ' on' : '') + '" title="Otro color"><input id="cu-pick" type="color" value="' + (S.paint || '#19b4ff') + '">+</label>';
+      '<label class="cu-sw cu-sw--pick' + (S.paint && !COLORS.includes(S.paint) ? ' on' : '') + '" title="Other color"><input id="cu-pick" type="color" value="' + (S.paint || '#19b4ff') + '">+</label>';
     $('#cu-colors').querySelectorAll('[data-c]').forEach((b) => b.onclick = () => { setPaint(b.dataset.c); A.beep(520, 0.06); renderColors(); });
     $('#cu-pick').oninput = (e) => { setPaint(e.target.value); $('#cu-colors').querySelectorAll('.cu-sw').forEach((x) => x.classList.toggle('on', x.classList.contains('cu-sw--pick'))); };
   }
@@ -145,7 +145,7 @@
       R.sticker(b.querySelector('canvas').getContext('2d'), b.dataset.s, 48, 48, 88);
       b.onclick = () => toggleSticker(b.dataset.s);
     });
-    $('#cu-file-btn').textContent = S.stickerImg ? 'Cambiar tu imagen' : 'Cargar tu imagen';
+    $('#cu-file-btn').textContent = S.stickerImg ? 'Change your image' : 'Upload your image';
     $('#cu-count').textContent = S.stickers.length + ' / ' + MAX_STICKERS;
   }
   function toggleSticker(id) {
