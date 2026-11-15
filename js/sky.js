@@ -59,7 +59,7 @@
 
   // ---------- Dibujo ----------
   function draw(st, firing, mode, dt, now) {
-    const h = st.h, v = st.v, q = st.q || 0, rho = Math.exp(-h / 12);
+    const h = st.h, v = st.v, q = st.q || 0, rho = Math.exp(-h / window.AEON.REAL.EARTH_SCALE_H);
     const space = clamp(h / 75, 0, 1);              // 0 = cielo diurno, 1 = espacio negro
     const tsec = now / 1000;
 

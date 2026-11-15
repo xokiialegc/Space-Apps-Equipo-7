@@ -46,7 +46,7 @@
   ];
   const station = (id) => ST.find((s) => s.id === id);
   const X_MIN = 262, X_MAX = SHIP_W - 85, REACH = 125, SPEED = 470;
-  const T_TOTAL = 150, DAYS = 210, DV_TMI = 3.6;
+  const T_TOTAL = 150, DAYS = A.REAL.CRUISE_DAYS, DV_TMI = A.REAL.DV_TMI;   // 210 días y 3,6 km/s (js/datos.js)
 
   let mode = 'off', S = null, cfg = null, last = 0, raf = 0;
   let paused = false, serv = false, open = null, dirty = true, conKey = '', alertKey = '', actKey = '', hud = 0;
@@ -163,7 +163,7 @@
   // ---------- Consola de cada sala (configuración) ----------
   const TXT = {
     bridge: ['1. NAVE PRINCIPAL', 'Es el módulo central de transporte y operación. Contiene los sistemas de navegación, propulsión, comunicaciones y soporte vital.', 'Prioriza una arquitectura equilibrada. La nave debe ser capaz de transportar a la tripulación y mantener sus sistemas durante todo el viaje.', 'hull', (o) => o.mass + ' t · ' + o.cost + ' M$ · ' + o.spares + ' repuestos'],
-    prop: ['PROPULSIÓN · DELTA-v', 'Los tanques de propelente fijan el delta-v: salir de la órbita, corregir el rumbo y frenar en Marte.', 'El combustible es tu capacidad de maniobra. Cada corrección tiene un coste.', 'prop', (o) => o.dv + ' km/s · ' + o.mass + ' t · ' + o.cost + ' M$'],
+    prop: ['PROPULSIÓN · DELTA-v', 'Los tanques suben vacíos y se llenan en la estación orbital. El delta-v sale de la ecuación del cohete, <b>Δv = Isp · g₀ · ln(m₀ / m_f)</b>: los mismos tanques dan menos en una nave más pesada.', 'El combustible es tu capacidad de maniobra. Solo salir hacia Marte cuesta ' + String(DV_TMI).replace('.', ',') + ' km/s.', 'prop', (o) => o.fuel + ' t de propelente<br>' + o.mass + ' t · ' + o.cost + ' M$'],
     life: ['SOPORTE VITAL · OXÍGENO', 'Reservas de oxígeno y depuración de CO₂ para la tripulación. El viaje dura unos siete meses (' + DAYS + ' días).', 'Calcula las reservas para la duración prevista y conserva un margen de seguridad.', 'life', (o) => o.days + ' días · ' + o.mass + ' t · ' + o.cost + ' M$'],
     power: ['POTENCIA ELÉCTRICA', 'Paneles y baterías que alimentan navegación, comunicaciones, control térmico, soporte vital e instrumentos.', 'Sin energía, los sistemas dejan de responder. Evita sobrecargar la red eléctrica.', 'power', (o) => o.kw + ' kW · ' + o.mass + ' t · ' + o.cost + ' M$']
   };
@@ -175,6 +175,8 @@
   function consoleConfig(id) {
     const sh = M.ship(), k = cfg; let h = '';
     if (TXT[id]) { const t = TXT[id]; h = '<h4>' + t[0] + '</h4><p>' + t[1] + '</p>' + '<div class="quote"><b>INSTRUCTOR:</b> ' + t[2] + '</div>' + optBtns(t[3], t[4]); }
+    if (id === 'prop') h += '<div class="my-2">' + kvRow('Impulso específico (H₂/O₂)', k.isp + ' s') + kvRow('Masa seca de la nave', k.mass + ' t') + kvRow('Propelente', k.fuel + ' t') +
+      kvRow('Delta-v (mínimo ' + String(M.DV_NEEDED).replace('.', ',') + ')', k.dv.toFixed(2).replace('.', ',') + ' km/s', !k.dvOk) + '</div>';
     if (id === 'seat') h = '<h4>PUESTO DEL PILOTO</h4><p>Desde los mandos se verifica el diseño y se inicia la transferencia a Marte. Levántate con <b>E</b> y recorre la nave: cada sala tiene la consola de su componente.</p>' +
       '<div class="my-2">' + kvRow('Masa total', k.mass + ' / ' + k.cap + ' t', !k.massOk) + kvRow('Presupuesto', k.budgetPct + ' %', !k.costOk) + kvRow('Delta-v', k.dv + ' km/s', !k.dvOk) +
       kvRow('Potencia', k.kw + ' / ' + k.demand + ' kW', !k.powerOk) + kvRow('Instrumentos', k.instr.length + ' / ' + k.landerCap, !k.capOk) + '</div>' +
@@ -224,7 +226,7 @@
       if (id === 'hangar') return [['Lander', k.pick.lander.n.toUpperCase()], ['Escudo térmico', k.pick.shield.n.toUpperCase()]];
       return [['Instrumentos', k.instr.length + ' / ' + k.landerCap, !k.capOk]];
     }
-    if (id === 'seat') return mode === 'arrived' ? [['Órbita de Marte', 'ALCANZADA'], ['Descenso', 'LISTO']] : [['Trayectoria', s.dev ? 'DESVIADA' : 'NOMINAL', !!s.dev], ['Llegada a Marte en', Math.max(0, Math.round(DAYS - day(s))) + ' días']];
+    if (id === 'seat') return mode === 'arrived' ? [['Aproximación a Marte', 'COMPLETADA'], ['Descenso', 'LISTO']] : [['Trayectoria', s.dev ? 'DESVIADA' : 'NOMINAL', !!s.dev], ['Llegada a Marte en', Math.max(0, Math.round(DAYS - day(s))) + ' días']];
     if (id === 'bridge') return [['Señal de comunicación', s.comms.toFixed(0) + ' %', s.comms < 35]];
     if (id === 'life') return [['Oxígeno', s.o2.toFixed(0) + ' %', s.o2 < 25], ['Reserva instalada', k.days + ' días']];
     if (id === 'power') return [['Baterías', s.bat.toFixed(0) + ' %', s.bat < 20], ['Potencia disponible', kw(s) + ' kW', s.bat < 20], ['Demanda', k.demand + ' kW']];
@@ -521,7 +523,7 @@
       A.run.voy = voy; A.store.set('aeon01.save', { phase: 'edl', run: A.run });
       dlg('CONTROL DE MISIÓN — FINAL DEL VIAJE INTERPLANETARIO',
         '<p>Cadete, los datos de navegación confirman que la nave ha llegado a las proximidades de Marte.</p><p>Las comunicaciones se mantienen dentro de los parámetros operativos.</p>' +
-        '<p>La tripulación está preparada y los sistemas de descenso han iniciado su secuencia de comprobación.</p><p>Hemos recorrido millones de kilómetros.</p><p>Ahora comienza la fase más delicada de la expedición.</p>' +
+        '<p>La tripulación está preparada y los sistemas de descenso han iniciado su secuencia de comprobación.</p><p>Hemos recorrido más de 470 millones de kilómetros.</p><p>Ahora comienza la fase más delicada de la expedición.</p>' +
         '<p class="motto">PREPARA LA MANIOBRA DE ENTRADA, DESCENSO Y ATERRIZAJE.</p>' +
         (P.seated ? '' : '<p>Vuelve al <b>puesto del piloto</b> y siéntate a los mandos para iniciar el descenso.</p>'),
         P.seated ? [{ l: 'Iniciar el descenso', fn: goEDL }] : [{ l: 'Ir al puesto del piloto', fn: () => goTo('seat') }]);
@@ -623,7 +625,7 @@
       }
     }
     if (id === 'prop') {                                     // tanques y tuberías
-      const full = clamp(s.dv / M.COMP.prop[2].dv, 0, 1);
+      const full = clamp(s.dv / M.DV_REF, 0, 1);
       [[460, 250], [460, 430]].forEach((p, i) => {
         c.fillStyle = '#0c1118'; c.beginPath(); c.roundRect(p[0], p[1], 520, 150, 75); c.fill();
         c.save(); c.beginPath(); c.roundRect(p[0] + 8, p[1] + 8, 504, 134, 66); c.clip();
