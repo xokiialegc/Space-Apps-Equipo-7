@@ -110,10 +110,11 @@ vibración se reduce.
 
 ## Música
 
-Cada escena tiene su canción: una para el menú, el briefing, el despegue y el viaje, otra para el
-descenso a Marte y otra solo para el hangar de personalización. El volumen se ajusta en
-**Ajustes → Música** y el botón del altavoz lo silencia todo. Las canciones tienen derechos de
-autor y no están en el repositorio: ver `assets/music/LEEME.md` para añadirlas a tu copia.
+Cada escena tiene su pista: «Hitman» en el menú, el briefing, el despegue y el viaje; «Hero Down»
+en el descenso y aterrizaje en Marte; «Aggressor» solo en el hangar de personalización. Todas son
+de Kevin MacLeod (incompetech.com), con licencia Creative Commons Atribución 4.0: el crédito está
+en el juego (Menú → Créditos) y en `assets/music/CREDITOS.md`. El volumen se ajusta en
+**Ajustes → Música** y el botón del altavoz lo silencia todo.
 
 ## Panel de partida
 

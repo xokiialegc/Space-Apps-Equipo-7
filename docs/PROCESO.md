@@ -639,3 +639,17 @@ Añadir los logos del evento (zip `010-LOGOS`) al menú principal y al final del
 ### Pruebas
 En Chrome: los cuatro logos cargan, se ven en el menú y, tras un descenso completo, en la pantalla
 final. Sin errores de JavaScript.
+
+## Etapa 13 · Nueva música: pistas de Kevin MacLeod (15-11-2026)
+
+### Pedido
+Quitar las canciones anteriores y usar tres pistas nuevas: «Landing» para el aterrizaje en Marte,
+«General» desde el menú hasta el descenso y «Customize» solo en el hangar de personalización.
+
+### Qué se hizo
+- Las pistas son «Hero Down», «Hitman» y «Aggressor» de Kevin MacLeod, con licencia Creative
+  Commons Atribución 4.0 (uso libre citando al autor). Por eso, a diferencia de las anteriores,
+  sí van en el repositorio, con su crédito en el juego (Créditos) y en `assets/music/CREDITOS.md`.
+- Se recodificaron a 128 kbps con los mismos nombres de archivo (`principal`, `descenso`,
+  `personalizacion`), así que el reproductor por escena de la etapa 11 no cambia.
+- Se quitó la regla de `.gitignore` que dejaba fuera los MP3.

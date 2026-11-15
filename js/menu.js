@@ -26,7 +26,7 @@
 
   // ---------- Sonido (WebAudio, se activa con el primer clic o tecla) ----------
   // Los efectos pasan por `master`, que el botón de silencio (js/fx.js) pone a cero.
-  // La música son tres canciones en assets/music (ver «Música por escena», más abajo).
+  // La música son tres pistas de Kevin MacLeod (CC BY 4.0) en assets/music (ver «Música por escena», más abajo).
   let actx = null, master = null;
   function audio() {
     if (actx) { if (actx.state === 'suspended' && unlocked) actx.resume().catch(() => {}); return actx; }
@@ -254,7 +254,9 @@
       // Para añadir los nombres del equipo, edita las líneas de abajo.
       const cr = (k, v) => '<div class="mt-4"><div class="font-display text-[12px] tracking-[.3em] text-sky-300">' + k + '</div><div class="font-display text-2xl tracking-wider">' + v + '</div></div>';
       openModal('Créditos', '<div class="text-center py-2"><div class="title-metal font-display font-black text-[64px] leading-none tracking-[.08em]">AEON-01</div>' +
-        cr('UN JUEGO DE', 'EQUIPO 7 · SPACE APPS') + cr('PROGRAMACIÓN', 'EQUIPO 7 + CLAUDE') + cr('ARTE Y SONIDO', 'GENERADOS POR CÓDIGO') + '</div>');
+        cr('UN JUEGO DE', 'EQUIPO 7 · SPACE APPS') + cr('PROGRAMACIÓN', 'EQUIPO 7 + CLAUDE') + cr('ARTE Y EFECTOS', 'GENERADOS POR CÓDIGO') +
+        cr('MÚSICA', 'KEVIN MACLEOD · INCOMPETECH.COM') +
+        '<div class="text-[15px] text-sky-200/80 mt-1">«Hitman» · «Hero Down» · «Aggressor»<br>Licencia Creative Commons: By Attribution 4.0 · creativecommons.org/licenses/by/4.0</div></div>');
     },
     exit() {
       openModal('Salir', '<p class="font-display tracking-wider text-2xl">¿Salir del juego?</p><div class="mt-6 flex gap-4 justify-end">' + btn('m-no', 'Cancelar') + btn('m-yes', 'Salir') + '</div>');
