@@ -108,3 +108,15 @@ estrés en los bordes), da un golpe seco con zoom al separar una etapa y una sac
 rojo en los bordes ante impactos y averías. Si el sistema tiene activado «reducir movimiento», la
 vibración se reduce.
 
+## Música
+
+Cada escena tiene su canción: una para el menú, el briefing, el despegue y el viaje, otra para el
+descenso a Marte y otra solo para el hangar de personalización. El volumen se ajusta en
+**Ajustes → Música** y el botón del altavoz lo silencia todo. Las canciones tienen derechos de
+autor y no están en el repositorio: ver `assets/music/LEEME.md` para añadirlas a tu copia.
+
+## Panel de partida
+
+Desde que empieza la partida hay un panel arriba a la derecha con **PAUSA** (también con Esc) y
+**MENÚ** (vuelve al menú principal; la partida guardada sigue en «Continuar»).
+

@@ -28,7 +28,7 @@
     Object.keys(L).forEach((k) => { $('#' + k).textContent = L[k]; });
     ['#holo', '#launch-end', '#l-msg-box'].forEach((s) => { $(s).classList.add('hidden'); $(s).classList.remove('flex'); });
     $('#l-count').textContent = ''; $('#heat').style.opacity = 0; $('#l-clock').textContent = 'EDL';
-    A.show('launch'); on = true; last = performance.now(); if (!raf) raf = requestAnimationFrame(loop);
+    A.show('launch'); A.music('descent'); on = true; last = performance.now(); if (!raf) raf = requestAnimationFrame(loop);
     card(1);
   };
 

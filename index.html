@@ -255,7 +255,7 @@
         <div id="edl-txt" class="text-[17px] leading-snug mt-1"></div>
         <div id="edl-ui" class="mt-2"></div>
       </div>
-      <div id="holo" class="holo absolute flex flex-col" style="left:230px;top:12px;width:1140px;max-height:468px">
+      <div id="holo" class="holo absolute flex flex-col" style="left:230px;top:12px;width:1090px;max-height:468px">
         <div class="flex items-baseline gap-4 whitespace-nowrap">
           <div id="holo-who" class="font-display text-[15px] tracking-[.18em] text-sky-200"></div>
           <div id="holo-sub" class="text-[13px] tracking-[.2em] text-sky-300/90 uppercase"></div>
@@ -325,13 +325,14 @@
   </div>
   <!-- efectos de pantalla (viñeta de alarma, líneas de estrés) y botón de sonido: js/fx.js -->
   <canvas id="fx-cv" width="1600" height="900" class="absolute inset-0 pointer-events-none" style="z-index:33"></canvas>
-  <button id="snd-btn" class="snd-btn absolute" style="z-index:36;right:10px;top:8px" aria-label="Silenciar el sonido">
+  <button id="snd-btn" class="snd-btn absolute" style="z-index:46;right:10px;top:8px" aria-label="Silenciar el sonido">
     <svg viewBox="0 0 24 24" class="ico" style="width:20px;height:20px"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="snd-on" d="M16 9a4 4 0 0 1 0 6M18.500 6.500a8 8 0 0 1 0 11"/><path class="snd-off" d="M16 9l5 6M21 9l-5 6"/></svg>
   </button>
-  <!-- pausa (Esc o botón): js/menu.js -->
-  <button id="pause-btn" class="snd-btn absolute hidden" style="z-index:36;right:56px;top:8px" aria-label="Pausa (Esc)" title="Pausa (Esc)">
-    <svg viewBox="0 0 24 24" class="ico" style="width:20px;height:20px"><path d="M8 5v14M16 5v14"/></svg>
-  </button>
+  <!-- panel de partida: pausa (Esc) y volver al menú principal. Visible desde que empieza la partida: js/menu.js -->
+  <div id="game-menu" class="game-menu absolute hidden" style="z-index:46;right:56px;top:8px">
+    <button id="gm-pause" title="Pausa (Esc)"><svg viewBox="0 0 24 24" class="ico"><path d="M8 5v14M16 5v14"/></svg><span>PAUSA</span></button>
+    <button id="gm-menu" title="Volver al menú principal"><svg viewBox="0 0 24 24" class="ico"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg><span>MENÚ</span></button>
+  </div>
   <div id="pause" class="absolute inset-0 hidden flex-col items-center justify-center gap-5" style="z-index:45">
     <div class="title-metal font-display font-black text-[86px] leading-none tracking-[.12em]">PAUSA</div>
     <div class="neon-wrap mt-4"><button id="p-go" class="neon-btn"><svg viewBox="0 0 24 24" class="ico"><path d="M7 4l13 8-13 8z"/></svg><span>Continuar</span></button></div>
