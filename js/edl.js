@@ -156,6 +156,16 @@
     raf = requestAnimationFrame(loop);
   }
 
+  // ---------- Telemetría para la cámara exterior (js/exterior.js, issue #9) ----------
+  (A.flight = A.flight || {}).edl = () => (!on || !E || E.stage >= 6 || $('#screen-launch').classList.contains('hidden')) ? null : {
+    kind: 'edl', stage: E.stage, h: E.h, hm: E.hm, v: E.v, heat: E.heat, a: E.a, off: E.off, shield: E.shield, fuel: E.fuel,
+    firing: E.firing, thrust: E.firing ? 1 : 0, chute: E.chute, landed: E.landed,
+    msg: E.stage === 1 ? 'Mantén el ángulo en el corredor con A / D' : E.stage === 2 ? 'Abre el paracaídas con P entre ' + km1(CH_HI) + ' y ' + km1(CH_LO) + ' km'
+      : E.stage === 3 ? 'Mantén ESPACIO para frenar · contacto a menos de 4 m/s' : '',
+    alerts: [E.stage === 1 && E.off > 0 && 'FUERA DEL CORREDOR DE ENTRADA', E.shield < 40 && 'ESCUDO TÉRMICO ' + E.shield.toFixed(0) + ' %',
+      E.stage === 3 && E.vm > 10 && E.hm < 200 && 'VELOCIDAD DE DESCENSO EXCESIVA', E.stage === 3 && E.fuel < 20 && 'PROPELENTE BAJO'].filter(Boolean)
+  };
+
   // ---------- Resultados ----------
   function fail(cause, retro) {
     E.stage = 9; $('#edl-card').classList.add('hidden'); $('#cockpit').style.transform = ''; A.beep(140, 0.7);

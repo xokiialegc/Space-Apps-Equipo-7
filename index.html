@@ -323,6 +323,26 @@
     </div>
   </section>
 
+  <!-- ============ CÁMARA EXTERIOR · VISTA DE DRON (tecla C, issue #9) ============ -->
+  <div id="ext" class="absolute inset-0 hidden" style="z-index:30">
+    <canvas id="ext-cv" width="1600" height="900" class="absolute inset-0"></canvas>
+    <div class="absolute left-6 top-5 pointer-events-none">
+      <div class="font-display text-[13px] tracking-[.3em] text-sky-300 flex items-center gap-2"><i class="ext-rec"></i>CÁMARA EXTERIOR · DRON</div>
+      <div id="ext-sub" class="font-display text-[19px] tracking-[.14em] text-white drop-shadow-[0_0_10px_rgba(25,180,255,.9)]"></div>
+    </div>
+    <div id="ext-alerts" class="absolute right-6 top-5 w-[430px] pointer-events-none"></div>
+    <div id="ext-banner" class="absolute left-0 right-0 text-center font-display font-black text-[40px] tracking-[.16em] title-metal pointer-events-none" style="top:722px;opacity:0"></div>
+    <div id="ext-hud" class="ext-hud absolute pointer-events-none" style="left:24px;bottom:24px">
+      <div class="ext-row"><label></label><div><b></b> <small></small></div><div class="mbar"><i></i></div></div>
+      <div class="ext-row"><label></label><div><b></b> <small></small></div><div class="mbar"><i></i></div></div>
+      <div class="ext-row"><label></label><div><b></b> <small></small></div><div class="mbar"><i></i></div></div>
+    </div>
+    <div id="ext-msg" class="holo absolute text-center text-[18px] pointer-events-none" style="left:500px;width:600px;bottom:28px;display:none"></div>
+  </div>
+  <button id="cam-btn" class="cam-btn absolute hidden" style="z-index:35" title="Cámara exterior (tecla C)">
+    <svg viewBox="0 0 24 24" class="ico" style="width:20px;height:20px"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3z"/></svg><span>C · CÁMARA EXTERIOR</span>
+  </button>
+
   <!-- ============ PANTALLA DE SALIDA ============ -->
   <section id="screen-exit" class="absolute inset-0 hidden flex-col items-center justify-center bg-black gap-6">
     <div class="title-metal font-display font-black text-6xl tracking-[.08em]">AEON-01</div>
@@ -361,5 +381,6 @@
 <script src="js/avatars.js"></script>
 <script src="js/ship.js"></script>
 <script src="js/edl.js"></script>
+<script src="js/exterior.js"></script>
 </body>
 </html>

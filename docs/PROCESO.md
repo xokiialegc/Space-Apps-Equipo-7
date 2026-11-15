@@ -445,3 +445,64 @@ hoja de estilos real. No se probó con jugadores reales ni en un móvil.
 ### Cambio posterior
 A petición del equipo se retiró del menú el botón «Datos reales» y su tabla. Las correcciones
 y las constantes de `js/datos.js` se mantienen; la comparación queda en `docs/AUDITORIA_NASA.md`.
+
+
+## Etapa 11 · Cámara exterior: vista de dron (15-11-2026)
+
+### Pedido
+Issue #9: una cámara exterior que se active y desactive con la tecla `C` (o un botón del HUD)
+y muestre la nave de cuerpo completo. Llamas y partículas según el empuje, separación de etapas,
+fondo según la altitud real (cielo azul en la troposfera, negro al cruzar la línea de Kármán,
+estrellas que se mueven con la velocidad, la Tierra abajo o Marte acercándose) y un HUD mínimo
+con altitud, velocidad, combustible y alertas de emergencia.
+
+### Qué se construyó
+1. **`js/exterior.js`**: una capa a pantalla completa sobre el escenario con su propio lienzo.
+   Solo dibuja; no toca la física.
+2. **Telemetría por fase** (`AEON.flight`): `launch.js`, `ship.js` y `edl.js` publican cada uno
+   una función que devuelve su estado (altitud, velocidad, combustible, empuje, alertas). La
+   cámara la lee en cada fotograma.
+3. **Despegue**: el cohete elegido en el hangar, con su color y calcomanías, se inclina con el
+   giro de gravedad. Llamas que se alargan con el empuje y se abren al bajar la presión exterior,
+   partículas de fuego, humo en el aire denso, cono de condensación cerca de Max-Q y calor en la
+   punta. Separación de etapas: el Saturno V suelta la primera etapa al 55 % de combustible y la
+   segunda al 22 %; X y Centella llevan debajo un propulsor dibujado por código (como el Super
+   Heavy de Starship) que se suelta al 50 %. Fondo por capas: troposfera, tropopausa (12 km),
+   estratosfera, estratopausa (50 km), mesosfera y línea de Kármán (100 km), con líneas de
+   referencia rotuladas, nubes, torre de lanzamiento y la Tierra curvándose abajo.
+4. **Órbita, viaje y llegada**: la nave interplanetaria con los seis módulos del interior, en el
+   mismo orden y con sus colores. Las alarmas se ven por fuera (baliza roja y ventanillas
+   parpadeando en el módulo afectado), igual que la fuga de propelente, el escudo agrietado, la
+   antena sin señal y los paneles solares apagados. La Tierra se aleja y Marte crece según el
+   día del viaje.
+5. **Descenso**: plasma en la entrada (rojo si se sale del corredor), paracaídas, escudo térmico
+   y carcasa que se sueltan, retropropulsores, polvo al acercarse al suelo y el suelo de Marte.
+6. **HUD mínimo**: altitud, velocidad y combustible con barras, la capa de la atmósfera o la fase,
+   las alertas de emergencia y el mensaje de la fase. En el viaje, si hay una alerta, recuerda
+   volver dentro con `C` para reparar.
+
+### Decisiones
+- El issue pedía integrarlo en un `index.html` autocontenido. El juego ya está dividido en varios
+  archivos, así que la cámara va en `js/exterior.js` y en `index.html` solo se añade su capa.
+- La física no cambia. La separación de etapas es visual: el modelo de vuelo tiene un único
+  depósito, así que las etapas se sueltan al cruzar ciertos niveles de combustible.
+- En el despegue y el descenso los mandos siguen activos con la cámara fuera, para pilotar
+  desde la toma exterior. En el interior de la nave se bloquea caminar y reparar mientras se mira
+  desde fuera: el cadete se queda quieto y la tripulación sigue trabajando.
+- La cámara vuelve sola al interior cuando aparece un diálogo, un evento crítico, el fin del
+  despegue o un informe, para que nunca tape una decisión.
+- En el viaje, la «velocidad media» es la distancia de Perseverance (472 millones de km) entre
+  los 210 días del viaje: unos 26 km/s respecto al Sol.
+- Las líneas de referencia de la atmósfera usan su propia escala (8 px por km) para que se vean
+  pasar; las nubes y el suelo usan otra mayor.
+
+### Pruebas
+Partida automática en Chrome con los tres cohetes: despegue completo hasta la órbita con la
+cámara exterior (separaciones de etapa a la vista, alternando con la cabina a mitad de vuelo),
+viaje acelerado con alertas activas (al pulsar `D` con la cámara fuera el cadete no se movió),
+órbita de configuración y descenso hasta el aterrizaje, con el informe final cerrando la cámara.
+Sin errores de JavaScript. Como en etapas anteriores, la prueba se hizo sin conexión, con un
+sustituto mínimo de Tailwind y sin las fuentes de Google, así que el aspecto final del HUD no se
+verificó con la hoja de estilos real. El monitor pequeño de la cabina sigue sin mostrar las
+separaciones de etapa. No se probó con jugadores reales ni en un móvil.
+
