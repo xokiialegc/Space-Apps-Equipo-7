@@ -193,13 +193,16 @@
     const grad = obj >= 50 && eff >= 50;
     const seg = (t, r) => '<div class="uxc ' + r[2] + '"><small>' + t + '</small><b>' + r[0] + '</b><span>' + r[1] + '</span></div>';
     const home = () => { on = false; A.store.del('aeon01.save'); A.show('menu'); };
+    // logos del evento al final del juego
+    const logos = '<div class="end-logos"><img src="assets/logos/space-apps-challenge-circular.png" alt="NASA International Space Apps Challenge">' +
+      '<img src="assets/logos/space-apps-encarnacion-circular.png" alt="NASA Space Apps Encarnación"></div>';
 
     const page2 = () => grad ? M.report('<div class="ux-big good">¡MISIÓN CUMPLIDA!</div><div class="ux-hero">Aterrizaste en Marte con la ciencia en marcha.</div>' +
-      '<div class="ok" style="font-size:22px;text-align:center">&lt; GRADUACIÓN AUTORIZADA &gt;</div><p class="motto mt-3 text-center">MARTE ES SOLO EL COMIENZO.</p>',
+      '<div class="ok" style="font-size:22px;text-align:center">&lt; GRADUACIÓN AUTORIZADA &gt;</div><p class="motto mt-3 text-center">MARTE ES SOLO EL COMIENZO.</p>' + logos,
       [{ l: 'Volver al inicio ▶', fn: home }])
       : M.report('<div class="ux-big bad">MISIÓN PARCIAL</div><div class="ux-hero">Aterrizaste, pero la ciencia no llegó.</div>' +
         grid([chip('Ciencia', obj + ' %', 'bad'), chip('Eficiencia', eff + ' %', eff >= 50 ? '' : 'bad')]) +
-        '<p class="ux-tip">Lleva más instrumentos operativos y gasta menos recursos.</p>',
+        '<p class="ux-tip">Lleva más instrumentos operativos y gasta menos recursos.</p>' + logos,
         [{ l: 'Volver al inicio', fn: home }, { l: 'Reintentar misión ▶', fn: () => { on = false; A.startShip('config'); } }]);
 
     M.report('<div class="who">INFORME FINAL · ' + (A.settings.shipName || 'AEON-01') + '</div><div class="ux-big ' + (grad ? 'good' : 'bad') + '">' + grade + ' · ' + eff + ' %</div>' +
