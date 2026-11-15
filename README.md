@@ -22,7 +22,8 @@ Abre `index.html` en un navegador (o publica la carpeta en GitHub Pages / cualqu
 
 ## Flujo del juego
 
-1. **Menú principal** — *Personalizar* abre el hangar de lanzamiento: un carrusel para elegir
+1. **Menú principal** — *Datos reales* muestra la tabla que compara cada dato físico del juego
+   con el valor oficial de NASA, ESA y otras fuentes. *Personalizar* abre el hangar de lanzamiento: un carrusel para elegir
    cohete (Centella, X o Apollo 11, cada uno con su capacidad de carga y su coste), color
    principal en tiempo real, hasta tres calcomanías sobre el fuselaje y nombre de la nave.
 2. **Nueva partida** — briefing del Instructor Jefe y Manual rápido de telemetría.
@@ -53,6 +54,7 @@ index.html      Menú principal, cabina de vuelo y paneles
 assets/cockpit.webp Imagen de la cabina con los cristales transparentes (Fase 1)
 css/style.css   Estilos propios (neón, título metálico, indicadores)
 js/menu.js      Fondo espacial, botones, ajustes, guardado
+js/datos.js     Constantes físicas verificadas (una sola definición por dato) y tabla «Datos reales»
 js/mission.js   Configuración de misión, briefing, telemetría y verificación de lanzamiento
 js/rockets.js   Cohetes en 2D dibujados por código, color principal y calcomanías
 js/custom.js    Hangar de lanzamiento: pantalla de personalización del cohete
@@ -62,6 +64,7 @@ js/avatars.js   Tripulación y retratos (avatares) del cadete y de los NPC
 js/ship.js      Interior de la nave en mapa lateral (casco con tuberías, cables y paneles): movimiento libre, configuración (3.2), viaje (Fase 2) y tripulación con IA de reparación
 js/edl.js       Fase 3: descenso en Marte, reporte final y resultados
 docs/PROCESO.md Bitácora del proceso de desarrollo
+docs/AUDITORIA_NASA.md Auditoría de los datos del juego frente a NASA y ESA, con fuentes
 ```
 
 El progreso y los ajustes se guardan en `localStorage` del navegador.
@@ -69,6 +72,19 @@ El progreso y los ajustes se guardan en `localStorage` del navegador.
 En el interior también se puede jugar con ratón o pantalla táctil: los botones `◀ A` y `D ▶` se
 mantienen pulsados para caminar, el indicador de acción hace de tecla `E`, y el minimapa y el
 panel de alertas llevan al cadete andando hasta el puesto elegido.
+
+## Rigor científico
+
+Los datos físicos del simulador están auditados contra fuentes oficiales (issue #6): gravedad,
+atmósfera, línea de Kármán, velocidad orbital, delta-v de inyección a Marte, ecuación del cohete
+de Tsiolkovski con un impulso específico real, capacidad del Saturno V y la secuencia de entrada,
+descenso y aterrizaje de la misión Perseverance. El informe completo, con la tabla comparativa,
+las correcciones y las simplificaciones que se mantienen, está en
+[`docs/AUDITORIA_NASA.md`](docs/AUDITORIA_NASA.md). Dentro del juego se consulta en
+**Menú → Datos reales**.
+
+Los tiempos están comprimidos (un despegue dura unos 40 segundos) y los costes y las masas de
+los módulos son ficticios.
 
 ## Avatares
 

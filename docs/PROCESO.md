@@ -405,3 +405,40 @@ repusieron oxígeno y repararon el escudo) y otro atendiendo solo los tres event
 llegó a Marte. Sin errores de JavaScript. El despegue y el descenso no se tocaron ni se
 volvieron a jugar. No se probó con jugadores reales ni en un móvil.
 
+
+## Etapa 10 · Auditoría de datos frente a NASA y ESA (15-11-2026)
+
+### Pedido
+Issue #6: revisar el código completo como lo haría un auditor técnico de la NASA, comparar cada
+constante y fórmula con datos oficiales, entregar una tabla comparativa y corregir lo que un
+jurado pudiera cuestionar.
+
+### Qué se construyó
+1. **Informe** (`docs/AUDITORIA_NASA.md`): 27 datos comparados con sus fuentes. 9 exactos,
+   9 aproximados, 8 corregidos y un grupo de valores ficticios.
+2. **Constantes en un solo sitio** (`js/datos.js`): el resto del código las lee de `AEON.REAL`.
+3. **Botón «Datos reales»** en el menú: la misma tabla, dentro del juego, con las fuentes.
+4. **Correcciones**: altura de escala de la atmósfera (12 → 8,5 km), gravedad derivada de g₀,
+   capacidad del Saturno V (100 → 118 t), delta-v calculado con la ecuación de Tsiolkovski y un
+   impulso específico de 450 s, temperatura del escudo (1 700 → 1 300 °C), ventana del
+   paracaídas centrada en 11 km y dos textos (distancia recorrida y llegada a Marte).
+
+### Decisiones
+- Al corregir la atmósfera hubo que bajar `Q_LIMIT` de 0,8 a 0,6: sin ese ajuste, subir a fondo
+  dejaba de romper la nave y se perdía la mecánica de modular el empuje.
+- El delta-v dependía solo del tanque. Ahora depende también de la masa de la nave. Para que la
+  masa cuadre con la ecuación del cohete, el propelente se carga en la estación orbital y el
+  lanzador sube la nave en seco. Las cargas se eligieron para que la nave por defecto conserve
+  los valores de antes.
+- No se tocaron el fin del paracaídas (70 m/s a 1,2 km) ni la tolerancia de contacto (4 m/s):
+  con los valores reales, una nave con tanques S no podría aterrizar. Quedan declarados como
+  aproximaciones.
+- Los costes y las masas de los módulos se dejan como ficticios y así se indica.
+
+### Pruebas
+Las 34 992 combinaciones de diseño calculadas en Node (5 065 viables). Partida automática en
+Chrome: despegue a fondo (falla) y modulado (órbita en 39 s), consola de Propulsión, descenso
+completo con paracaídas a 11 km y reporte final, y la tabla «Datos reales». Sin errores de
+JavaScript propios. El viaje interplanetario no se volvió a jugar entero. La prueba se hizo sin
+conexión, con un sustituto mínimo de Tailwind, así que el aspecto final no se verificó con la
+hoja de estilos real. No se probó con jugadores reales ni en un móvil.

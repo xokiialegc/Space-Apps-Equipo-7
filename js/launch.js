@@ -3,11 +3,14 @@
    2) Confirmación de Control de Misión.
    3) Cuenta atrás y despegue: el monitor central muestra la cámara exterior,
       con combustible y energía; los monitores laterales, altitud/velocidad y estructura.
-   Modelo de vuelo (sin cambios respecto a la etapa 2):
+   Modelo de vuelo (constantes físicas en js/datos.js, auditadas en docs/AUDITORIA_NASA.md):
    - Empuje constante mientras se mantienen los impulsores; el combustible baja en tiempo real.
-   - Densidad del aire: rho = e^(-h/12). Presión dinámica Q = rho·v². Por encima del límite
-     la estructura acumula daño: hay que modular el empuje en la atmósfera densa.
-   - La gravedad frena la nave mientras no alcanza la velocidad orbital (7,8 km/s). */
+   - Densidad del aire: rho = e^(-h/H), con H = 8,5 km (altura de escala de la atmósfera, NASA).
+     Presión dinámica Q ∝ rho·v² (la real es ½·rho·v²; aquí va normalizada al límite estructural).
+     Por encima del límite la estructura acumula daño: hay que modular el empuje en el aire denso.
+   - La gravedad es g₀ = 9,80665 m/s² multiplicada por la escala de tiempo del despegue (1 s de
+     juego ≈ 8 s reales) y se anula al alcanzar la velocidad orbital: g·(1 − v²/v_orb²).
+   - Objetivo: 7,8 km/s por encima de la línea de Kármán (100 km). */
 (function () {
   'use strict';
   const A = window.AEON;
@@ -15,9 +18,13 @@
   const cv = $('#launch'), c = cv.getContext('2d');
   const VW = cv.width, VH = cv.height;           // lienzo del monitor (resolución x2)
 
-  const V_ORBIT = 7.8, H_SPACE = 100;
+  const R = A.REAL;
+  const V_ORBIT = R.V_LEO, H_SPACE = R.KARMAN, H_SCALE = R.EARTH_SCALE_H;
   const BURN = 2.3;       // % de combustible por segundo de impulso
-  const GRAV = 0.08, DRAG = 0.04, Q_LIMIT = 0.8, STRESS_RATE = 25;
+  const GRAV = R.G0 / 1000 * R.LAUNCH_TIME_SCALE;      // km/s² de juego (0,0785)
+  // Q_LIMIT es el límite estructural en unidades del juego: se reajustó de 0,8 a 0,6 al corregir
+  // la altura de escala (12 → 8,5 km) para que el ascenso a fondo siga rompiendo la nave.
+  const DRAG = 0.04, Q_LIMIT = 0.6, STRESS_RATE = 25;
 
   let st = null, cfg = null, mode = 'off', last = 0, firing = false, held = false, raf = 0;
   const stars = [], clouds = [], streaks = [];
@@ -161,7 +168,7 @@
     $('#l-clock').textContent = 'T + ' + String(Math.floor(st.t)).padStart(3, '0') + ' s';
 
     firing = held && st.fuel > 0;
-    const rho = Math.exp(-st.h / 12);
+    const rho = Math.exp(-st.h / H_SCALE);
     const q = rho * st.v * st.v / Q_LIMIT;
     const g = (st.h > 0 || firing) ? GRAV * (1 - Math.pow(Math.min(1, st.v / V_ORBIT), 2)) : 0;
     st.v += ((firing ? cfg.thrust : 0) - g - DRAG * rho * st.v * Math.abs(st.v)) * dt;
@@ -200,7 +207,7 @@
   // ---------- Monitor central: cámara exterior que sigue al cohete ----------
   const mix = (a, b, t) => Math.round(a + (b - a) * t);
   function drawView(dt, now) {
-    const h = st.h, rho = Math.exp(-h / 12), sky = Math.min(1, h / 70);
+    const h = st.h, rho = Math.exp(-h / H_SCALE), sky = Math.min(1, h / 70);
     const RX = VW / 2, RY = 104;                     // posición del cohete en pantalla
     const g = c.createLinearGradient(0, 0, 0, VH);
     g.addColorStop(0, 'rgb(' + mix(40, 1, sky) + ',' + mix(120, 3, sky) + ',' + mix(230, 10, sky) + ')');
@@ -288,7 +295,7 @@
     $('#lb-energy').classList.toggle('danger', st.energy < 20);
     $('#l-fire').classList.toggle('is-held', firing);
     // vibración de la cabina y resplandor por rozamiento
-    const rho = Math.exp(-st.h / 12);
+    const rho = Math.exp(-st.h / H_SCALE);
     $('#cockpit').style.transform = firing
       ? 'translate(' + ((Math.random() - 0.5) * 4 * (0.4 + rho)).toFixed(1) + 'px,' + ((Math.random() - 0.5) * 4 * (0.4 + rho)).toFixed(1) + 'px)' : '';
     $('#heat').style.opacity = st.q > 0.6 ? Math.min(0.18, (st.q - 0.6) * 0.25) : 0;
