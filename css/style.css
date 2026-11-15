@@ -309,3 +309,11 @@ body.no-anim .actp { animation: none; }
 /* Pausa */
 #pause { background: radial-gradient(ellipse at center, rgba(3,14,34,.9), rgba(0,0,0,.94)); }
 #pause .neon-btn { width: 380px; height: 70px; font-size: 20px; }
+/* Logos de NASA Space Apps (menú principal y final del juego) */
+.menu-logos { right: 44px; top: 62px; gap: 20px; }
+.menu-logos img { height: 54px; width: auto; filter: drop-shadow(0 0 8px rgba(0,0,0,.6)); }
+.menu-logos .sep { width: 1px; height: 44px; background: rgba(255,255,255,.35); }
+.end-logos { display: flex; justify-content: center; align-items: center; gap: 46px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(110,210,255,.3); }
+.end-logos img { height: 128px; width: auto; }
+.end-logos small { display: block; width: 100%; text-align: center; }
+
