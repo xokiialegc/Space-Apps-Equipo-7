@@ -130,6 +130,47 @@ body.no-anim #shuttle, body.no-anim #flames { animation: none; }
 .brief--holo .motto { font-size: 18px; }
 .mon-tight { letter-spacing: .04em; font-size: 8px; }
 
+/* Hangar de lanzamiento: personalización del cohete */
+.cu-back { padding: 6px 4px; cursor: pointer; font-family: Orbitron, sans-serif; font-weight: 700; font-style: italic; font-size: 30px; letter-spacing: .06em;
+  color: #bfe9ff; text-shadow: 0 0 14px rgba(25,180,255,.9); transition: color .15s, transform .15s; }
+.cu-back span { font-size: 18px; font-style: normal; vertical-align: 4px; margin-right: 8px; color: #19b4ff; }
+.cu-back:hover, .cu-back:focus-visible { color: #fff; transform: translateX(-6px); outline: none; }
+.cu-line { left: 40px; right: 40px; top: 124px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, #7fdcff, rgba(25,180,255,.35) 30%, rgba(25,180,255,.12)); }
+.cu-strip { left: 250px; top: 138px; width: 1100px; height: 124px; display: flex; align-items: stretch; gap: 10px; padding: 8px 10px;
+  background: linear-gradient(180deg, rgba(190,215,240,.2), rgba(120,150,190,.12)); border: 1px solid rgba(190,225,255,.35); border-radius: 12px; backdrop-filter: blur(4px); }
+.cu-cells { flex: 1; display: flex; gap: 10px; min-width: 0; }
+.cu-arrow { flex: none; width: 46px; cursor: pointer; font-size: 20px; color: #dff3ff; border: 1px solid rgba(190,225,255,.4); border-radius: 8px; background: rgba(3,12,28,.45); }
+.cu-arrow:hover { background: rgba(25,120,220,.55); color: #fff; }
+.cu-cell { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; padding: 4px 14px; cursor: pointer; text-align: left; color: #dff3ff;
+  border: 2px solid transparent; border-radius: 10px; background: rgba(3,12,28,.4); transition: background .15s, border-color .15s; }
+.cu-cell canvas { flex: none; width: 62px; height: 98px; }
+.cu-cell span { display: flex; flex-direction: column; min-width: 0; }
+.cu-cell b { font-family: Orbitron, sans-serif; font-size: 21px; letter-spacing: .1em; color: #fff; white-space: nowrap; }
+.cu-cell small { font-size: 15px; line-height: 1.2; color: #bfe9ff; }
+.cu-cell em { font-family: Orbitron, sans-serif; font-style: normal; font-size: 12px; letter-spacing: .08em; color: #7fdcff; margin-top: 4px; }
+.cu-cell:hover { background: rgba(25,120,220,.3); }
+.cu-cell.on { border-color: #7fdcff; background: rgba(20,90,170,.5); box-shadow: 0 0 18px rgba(25,180,255,.65), inset 0 0 22px rgba(25,180,255,.25); }
+#cu-panel { right: 40px; top: 280px; width: 440px; }
+#cu-info p { font-size: 16px; line-height: 1.3; margin-bottom: 6px; }
+.cu-h { font-family: Orbitron, sans-serif; font-size: 12px; letter-spacing: .24em; color: #7fdcff; margin: 12px 0 6px; padding-top: 9px; border-top: 1px solid rgba(110,210,255,.3); }
+.cu-colors { display: flex; flex-wrap: wrap; gap: 6px; }
+.cu-sw { position: relative; width: 31px; height: 31px; border-radius: 6px; cursor: pointer; border: 2px solid rgba(255,255,255,.3); }
+.cu-sw.on { border-color: #fff; box-shadow: 0 0 12px rgba(127,220,255,.95); transform: translateY(-2px); }
+.cu-sw--orig { width: 58px; font-family: Orbitron, sans-serif; font-size: 10px; letter-spacing: .06em; color: #10151d;
+  background: repeating-linear-gradient(135deg, #eef2f6 0 8px, #b9c5d3 8px 16px); }
+.cu-sw--pick { display: flex; align-items: center; justify-content: center; font-size: 22px; line-height: 1; color: #fff; text-shadow: 0 0 4px #000;
+  background: conic-gradient(#ff5a3c, #ffc93c, #3cff9e, #19b4ff, #c06bff, #ff5a3c); }
+.cu-sw--pick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.cu-stickers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+.cu-st { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 2px 4px; cursor: pointer; color: #cfeaff;
+  border: 1px solid rgba(25,180,255,.4); background: rgba(3,10,24,.55); }
+.cu-st canvas { width: 46px; height: 46px; }
+.cu-st span { font-size: 13px; line-height: 1.1; white-space: nowrap; }
+.cu-st:hover { background: rgba(25,180,255,.15); }
+.cu-st.on { border-color: #7fdcff; background: rgba(25,180,255,.28); color: #fff; box-shadow: 0 0 10px rgba(25,180,255,.5); }
+.cu-link { margin-top: 6px; cursor: pointer; font-size: 15px; color: #7fdcff; text-decoration: underline; }
+.cu-link:hover { color: #fff; }
+
 /* Interior de la nave */
 .navdoor { width: 176px; touch-action: none; padding: 10px 14px; cursor: pointer; font-family: Orbitron, sans-serif; font-size: 14px; letter-spacing: .1em; color: #dff3ff; text-align: left;
   background: rgba(4,20,45,.72); border: 1px solid rgba(110,210,255,.8); box-shadow: 0 0 16px rgba(25,180,255,.45); }

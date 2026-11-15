@@ -14,6 +14,7 @@ Abre `index.html` en un navegador (o publica la carpeta en GitHub Pages / cualqu
 | Pantalla | Controles |
 |---|---|
 | Menú | Ratón o táctil |
+| Hangar de lanzamiento (Personalizar) | `←` / `→`, flechas en pantalla o clic para cambiar de cohete · ratón o táctil para color y calcomanías · `Esc` o «Menú Principal» para volver |
 | Briefing | Ratón o táctil |
 | Despegue (Fase 1) | Mantener `Espacio` (o `W` / `↑` / pantalla IMPULSORES) para encender los impulsores · `Esc` abortar |
 | Interior de la nave | `E` levantarse del asiento del piloto o sentarse · `A` / `D` o `←` / `→` caminar libremente (la cámara sigue al cadete) · `E` o `Espacio` junto a un panel, cuando aparece el indicador: abrir su consola, atender un evento o, manteniéndola, reparar · `Esc` cerrar consola / menú |
@@ -21,7 +22,9 @@ Abre `index.html` en un navegador (o publica la carpeta en GitHub Pages / cualqu
 
 ## Flujo del juego
 
-1. **Menú principal** — en *Personalizar* se elige el vehículo de lanzamiento, el color y el nombre.
+1. **Menú principal** — *Personalizar* abre el hangar de lanzamiento: un carrusel para elegir
+   cohete (Centella, X o Apollo 11, cada uno con su capacidad de carga y su coste), color
+   principal en tiempo real, hasta tres calcomanías sobre el fuselaje y nombre de la nave.
 2. **Nueva partida** — briefing del Instructor Jefe y Manual rápido de telemetría.
 3. **Fase 1 · Lanzamiento** — en la cabina: verificar carga y presupuesto, cuenta atrás y despegue
    hasta 7,8 km/s por encima de 100 km.
@@ -45,11 +48,13 @@ Abre `index.html` en un navegador (o publica la carpeta en GitHub Pages / cualqu
 index.html      Menú principal, cabina de vuelo y paneles
 assets/cockpit.webp Imagen de la cabina con los cristales transparentes (Fase 1)
 css/style.css   Estilos propios (neón, título metálico, indicadores)
-js/menu.js      Fondo espacial, botones, ajustes, personalización, guardado
+js/menu.js      Fondo espacial, botones, ajustes, guardado
 js/mission.js   Configuración de misión, briefing, telemetría y verificación de lanzamiento
+js/rockets.js   Cohetes en 2D dibujados por código, color principal y calcomanías
+js/custom.js    Hangar de lanzamiento: pantalla de personalización del cohete
 js/sky.js       Vista animada por las ventanas: cielo → espacio
 js/launch.js    Fase 1 en la cabina: verificación (holograma), cuenta atrás y despegue
-js/ship.js      Interior de la nave en mapa lateral: movimiento libre, configuración (3.2) y viaje (Fase 2)
+js/ship.js      Interior de la nave en mapa lateral (casco con tuberías, cables y paneles): movimiento libre, configuración (3.2) y viaje (Fase 2)
 js/edl.js       Fase 3: descenso en Marte, reporte final y resultados
 docs/PROCESO.md Bitácora del proceso de desarrollo
 ```

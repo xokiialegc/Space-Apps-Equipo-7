@@ -260,16 +260,8 @@
       pg.addColorStop(0, 'rgba(255,170,80,' + Math.min(0.9, st.q - 0.5) + ')'); pg.addColorStop(1, 'rgba(255,80,20,0)');
       c.fillStyle = pg; c.beginPath(); c.arc(RX, RY - 46, 26, 0, 7); c.fill();
     }
-    // cohete
-    c.fillStyle = '#e9eef4'; c.fillRect(RX - 7, RY - 30, 14, 80);
-    c.fillStyle = '#c9d2dd'; c.fillRect(RX + 2, RY - 30, 5, 80);
-    c.fillStyle = '#e9eef4'; c.beginPath(); c.moveTo(RX - 7, RY - 30); c.quadraticCurveTo(RX, RY - 56, RX + 7, RY - 30); c.fill();
-    c.fillStyle = (A.settings.accent || '#19b4ff');
-    c.fillRect(RX - 7, RY - 4, 14, 4);
-    c.fillStyle = '#20262f';
-    c.beginPath(); c.moveTo(RX - 7, RY + 34); c.lineTo(RX - 15, RY + 50); c.lineTo(RX - 7, RY + 46); c.fill();
-    c.beginPath(); c.moveTo(RX + 7, RY + 34); c.lineTo(RX + 15, RY + 50); c.lineTo(RX + 7, RY + 46); c.fill();
-    c.fillRect(RX - 5, RY + 50, 10, 3);
+    // cohete elegido en Personalizar, con su color
+    A.rockets.draw(c, A.settings.launcher, RX, RY + 53, 112, { paint: A.settings.paint });
     // marco de cámara y piloto de grabación
     c.strokeStyle = 'rgba(127,220,255,.5)'; c.lineWidth = 1;
     c.strokeRect(6, 22, VW - 12, VH - 28);

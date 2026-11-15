@@ -11,7 +11,7 @@
     del(k) { try { localStorage.removeItem(k); } catch (e) { /* nada */ } }
   };
   const settings = Object.assign(
-    { music: 40, sfx: 70, anim: true, accent: '#19b4ff', shipName: 'AEON-01', launcher: 'ares-h', ship: null },
+    { music: 40, sfx: 70, anim: true, accent: '#19b4ff', shipName: 'AEON-01', launcher: 'ares-h', ship: null, paint: '', stickers: [], stickerImg: '' },
     store.get('aeon01.settings', {})
   );
   const saveSettings = () => store.set('aeon01.settings', settings);
@@ -137,7 +137,7 @@
   requestAnimationFrame(drawMenu);
 
   // ---------- Pantallas ----------
-  const screens = { menu: $('#screen-menu'), brief: $('#screen-brief'), launch: $('#screen-launch'), ship: $('#screen-ship'), exit: $('#screen-exit') };
+  const screens = { menu: $('#screen-menu'), custom: $('#screen-custom'), brief: $('#screen-brief'), launch: $('#screen-launch'), ship: $('#screen-ship'), exit: $('#screen-exit') };
   function show(name) {
     for (const k in screens) {
       screens[k].classList.toggle('hidden', k !== name);
@@ -151,7 +151,6 @@
   function openModal(title, html) {
     mTitle.textContent = title; mBody.innerHTML = html;
     modal.classList.remove('hidden'); modal.classList.add('flex');
-    modal.firstElementChild.style.width = title === 'Personalizar' ? '860px' : '';
   }
   function closeModal() { modal.classList.add('hidden'); modal.classList.remove('flex'); }
   $('#modal-close').addEventListener('click', () => { beep(330, 0.08); closeModal(); });
@@ -166,7 +165,6 @@
   }
   applyShip();
 
-  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const btn = (id, label) => '<div class="neon-wrap"><button id="' + id + '" class="neon-btn neon-btn--sm">' + label + '</button></div>';
 
   const actions = {
@@ -202,31 +200,7 @@
       };
       $('#s-wipe').onclick = (e) => { store.del('aeon01.save'); e.currentTarget.textContent = 'Borrada ✓'; };
     },
-    custom() {
-      const M = AEON.mission;
-      const colors = ['#19b4ff', '#ff5a3c', '#ffc93c', '#3cff9e', '#c06bff', '#ffffff'];
-      openModal('Personalizar',
-        '<p class="text-base text-sky-200/80 mb-2">Los cambios se ven al instante en la nave del menú.</p>' +
-        '<div class="row"><span>Color de la franja</span><div class="flex gap-2">' +
-        colors.map((c) => '<button class="swatch' + (c === settings.accent ? ' on' : '') + '" style="background:' + c + ';color:' + c + '" data-c="' + c + '" aria-label="Color ' + c + '"></button>').join('') +
-        '</div></div>' +
-        '<div class="row"><label for="c-name">Nombre de la nave</label><input id="c-name" class="txt-in" maxlength="10" value="' + esc(settings.shipName) + '"></div>' +
-        '<div class="h-px bg-sky-400/30 my-2"></div>' +
-        '<p class="font-display text-sm tracking-[.2em] text-sky-300 mt-3">VEHÍCULO DE LANZAMIENTO</p><div class="flex gap-2 mt-2">' +
-        M.LAUNCHERS.map((l) => '<button class="opt' + (l.id === settings.launcher ? ' on' : '') + '" data-l="' + l.id + '"><b>' + l.name + '</b><br>' + l.cap + ' t · ' + l.cost + ' M$</button>').join('') + '</div>' +
-        '<p class="text-base text-sky-200/80 mt-3">Los sistemas de la nave (tanques, soporte vital, energía, lander, escudo e instrumentos) se configuran a bordo, en el Segmento Espacial.</p>' +
-        '<div id="c-sum" class="mt-4 text-lg"></div>');
-      const sum = () => {
-        const k = M.calc();
-        $('#c-sum').innerHTML = 'Masa total: <b class="' + (k.massOk ? 'text-emerald-300' : 'text-red-400') + '">' + k.mass + ' / ' + k.cap + ' t</b> &nbsp;·&nbsp; Coste: <b class="' +
-          (k.costOk ? 'text-emerald-300' : 'text-red-400') + '">' + k.cost + ' / ' + k.budget + ' M$</b>';
-      };
-      sum();
-      mBody.querySelectorAll('[data-l]').forEach((b) => b.onclick = () => {
-        settings.launcher = b.dataset.l; saveSettings(); beep(520, 0.08); sum();
-        mBody.querySelectorAll('[data-l]').forEach((x) => x.classList.toggle('on', x === b));
-      });
-    },
+    custom() { AEON.openCustom(); },          // pantalla propia: js/custom.js
     credits() {
       openModal('Créditos',
         '<p class="font-display tracking-[.2em] text-sky-300 text-base">AEON-01 · SPACE SIMULATOR</p>' +
@@ -251,5 +225,5 @@
   $('#exit-back').addEventListener('click', () => show('menu'));
 
   // API compartida con el módulo de vuelo
-  window.AEON = { W, H, store, settings, saveSettings, show, beep, audio, bg, actions, run: { tries: 0 }, startBriefing() {} };
+  window.AEON = { W, H, store, settings, saveSettings, applyShip, show, beep, audio, bg, actions, run: { tries: 0 }, startBriefing() {} };
 })();

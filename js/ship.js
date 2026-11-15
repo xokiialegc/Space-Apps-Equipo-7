@@ -449,6 +449,53 @@
   const dust = []; for (let i = 0; i < 40; i++) dust.push([Math.random() * W, Math.random() * H, Math.random() * 6.28]);
   const wstars = []; for (let i = 0; i < 90; i++) wstars.push([Math.random(), Math.random(), Math.random() * 1.6 + 0.4]);
 
+  // ---------- Detalle estructural del casco (issue #2), llevado al mapa lateral ----------
+  // Tuberías metálicas con bridas, bandeja y mazo de cables, paneles técnicos junto a las puertas,
+  // zócalo de paneles y guía de luz en el suelo, sobre la pared del fondo de cada sala y por
+  // debajo de su equipo. El metal es gris azulado neutro; el color de la sala solo aparece en un
+  // cable, los testigos y la guía. Es estático: se pinta una vez por sala en un lienzo aparte.
+  const METAL = ['#27303d', '#56637a', '#a9b6c8', '#6b788c', '#1c232e'];                                 // sombra → brillo → sombra
+  const LAYERS = {};
+  function detailLayer(r, col) {
+    if (LAYERS[r.id]) return LAYERS[r.id];
+    const w = r.w, h = FLOOR - CEIL, cvs = document.createElement('canvas'); cvs.width = w; cvs.height = h;
+    const g = cvs.getContext('2d');
+    const CABLES = ['#2b3442', col(1, 0.95), '#c9a23a', '#8d99ab'];
+    const hpipe = (y0, y1) => { const lg = g.createLinearGradient(0, y0, 0, y1); METAL.forEach((m, i) => lg.addColorStop(i / 4, m)); g.fillStyle = lg; g.fillRect(0, y0, w, y1 - y0); };
+    // tubería gruesa con bridas y tubería fina con abrazaderas, de mamparo a mamparo
+    hpipe(17, 31); hpipe(35, 42);
+    for (let x = 70; x < w; x += 140) { g.fillStyle = '#141a23'; g.fillRect(x - 9, 13, 18, 22); g.fillStyle = '#7d8a9d'; g.fillRect(x - 4, 13, 8, 22); }
+    for (let x = 35; x < w; x += 105) { g.fillStyle = '#141a23'; g.fillRect(x - 4, 33, 8, 11); }
+    // bandeja portacables con su mazo ordenado y bridas
+    g.fillStyle = '#0b1018'; g.fillRect(0, 46, w, 17);
+    CABLES.forEach((cb, i) => { g.fillStyle = cb; g.fillRect(0, 48.5 + i * 3.5, w, 2.4); });
+    g.fillStyle = '#6f7c8f'; g.fillRect(0, 45, w, 1.5); g.fillStyle = '#3c4656'; g.fillRect(0, 63, w, 1.5);
+    for (let x = 50; x < w; x += 96) { g.fillStyle = '#05080d'; g.fillRect(x - 2.5, 45, 5, 19); g.fillStyle = '#93a0b3'; g.fillRect(x - 0.75, 45, 1.5, 19); }
+    // paneles técnicos a los lados de las puertas: rejilla, testigo de estado y registro de mantenimiento
+    (r.id === 'bridge' ? [w - 100] : [34, w - 100]).forEach((x) => {
+      g.fillStyle = 'rgba(255,255,255,.035)'; g.fillRect(x, 282, 66, 128);
+      g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 2; g.strokeRect(x, 282, 66, 128);
+      g.fillStyle = 'rgba(255,255,255,.10)'; g.fillRect(x, 283, 66, 1);
+      for (let i = 0; i < 5; i++) { g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(x + 9, 295 + i * 7, 32, 3); }
+      g.fillStyle = col(1, 0.75); g.fillRect(x + 46, 295, 12, 9);
+      g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x + 9, 346, 48, 50);
+      [[13, 350], [50, 350], [13, 389], [50, 389]].forEach((p) => { g.fillStyle = '#8693a6'; g.fillRect(x + p[0], p[1], 3, 3); });
+    });
+    // zócalo de paneles técnicos
+    for (let x = 22; x + 108 < w; x += 140) {
+      g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x, 437, 108, 32);
+      g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = 1; g.strokeRect(x + 0.5, 437.5, 108, 32);
+      for (let i = 0; i < 4; i++) { g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(x + 10, 443 + i * 6, 52, 2.5); }
+      g.fillStyle = col(1, 0.8); g.fillRect(x + 74, 444, 22, 5); g.fillStyle = '#8693a6'; g.fillRect(x + 74, 456, 9, 5); g.fillRect(x + 87, 456, 9, 5);
+    }
+    // guía de luz junto al suelo
+    g.fillStyle = col(1, 0.22); g.fillRect(0, h - 13, w, 8); g.fillStyle = col(1.2, 0.8); g.fillRect(0, h - 8, w, 2);
+    // iluminación ambiental técnica: baño frío y limpio desde el techo
+    const amb = g.createLinearGradient(0, 0, 0, h); amb.addColorStop(0, 'rgba(190,220,255,.08)'); amb.addColorStop(0.5, 'rgba(190,220,255,.02)'); amb.addColorStop(1, 'rgba(0,0,0,.10)');
+    g.fillStyle = amb; g.fillRect(0, 0, w, h);
+    return (LAYERS[r.id] = cvs);
+  }
+
   function centerpiece(id, col, t) {
     const s = S, lv = M.ship();
     if (id === 'bridge') {                                   // ventanal + pantalla de navegación
@@ -538,7 +585,12 @@
     c.fillStyle = '#0d1219'; c.fillRect(x1, FLOOR, x2 - x1, BOT - FLOOR);
     c.strokeStyle = 'rgba(0,0,0,.4)'; c.lineWidth = 2;
     for (let x = Math.ceil(x1 / 150) * 150; x < x2; x += 150) { c.beginPath(); c.moveTo(x, TOP); c.lineTo(x, CEIL); c.moveTo(x + 60, FLOOR + 26); c.lineTo(x + 60, BOT); c.stroke(); }
-    seg(x1, TOP + 22, x2, TOP + 22, 7, '#34405a'); seg(x1, TOP + 38, x2, TOP + 38, 4, '#4a3a2c');
+    c.fillStyle = '#0b1018'; c.fillRect(x1, TOP + 8, x2 - x1, 15);                           // bandeja de cables del techo
+    ['#2b3442', '#8d99ab', '#c9a23a', '#b9c4d2'].forEach((cb, i) => { c.fillStyle = cb; c.fillRect(x1, TOP + 10 + i * 3.2, x2 - x1, 2.2); });
+    for (let x = Math.ceil(x1 / 96) * 96; x < x2; x += 96) { c.fillStyle = '#05080d'; c.fillRect(x - 2, TOP + 7, 4, 17); }
+    const pg = c.createLinearGradient(0, TOP + 29, 0, TOP + 42); METAL.forEach((m, i) => pg.addColorStop(i / 4, m));
+    c.fillStyle = pg; c.fillRect(x1, TOP + 29, x2 - x1, 13);                                // conducto metálico con bridas
+    for (let x = Math.ceil(x1 / 170) * 170 + 40; x < x2; x += 170) { c.fillStyle = '#141a23'; c.fillRect(x - 8, TOP + 26, 16, 19); c.fillStyle = '#7d8a9d'; c.fillRect(x - 3.5, TOP + 26, 7, 19); }
     c.fillStyle = '#05080d'; for (let x = Math.ceil(x1 / 34) * 34; x < x2; x += 34) c.fillRect(x, FLOOR + 9, 20, 5);       // rejilla del suelo
     c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(x1, FLOOR, x2 - x1, 2);
     seg(x1, TOP, x2, TOP, 3, '#4c5a72'); seg(x1, BOT, x2, BOT, 3, '#3b475c');
@@ -595,6 +647,7 @@
     c.strokeStyle = 'rgba(0,0,0,.32)'; c.lineWidth = 2;
     for (let px = x + 125; px < x + w - 20; px += 125) { c.beginPath(); c.moveTo(px, CEIL); c.lineTo(px, FLOOR); c.stroke(); }
     c.beginPath(); c.moveTo(x, 612); c.lineTo(x + w, 612); c.stroke();
+    c.drawImage(detailLayer(r, col), x, CEIL);                // tuberías, cables y paneles (issue #2)
     const pulse = hot ? 0.55 + 0.45 * Math.sin(t * 9) : 0.8 + 0.2 * Math.sin(t * 2 + i), lc = hot ? (k, a) => 'rgba(255,' + (70 * k | 0) + ',' + (50 * k | 0) + ',' + a + ')' : col;
     [0.27, 0.73].forEach((f) => {                             // luces de techo con su cono
       const lx = x + w * f, cg = c.createLinearGradient(0, CEIL, 0, FLOOR); cg.addColorStop(0, lc(1, 0.2 * pulse)); cg.addColorStop(1, lc(1, 0));
@@ -603,12 +656,12 @@
     });
     c.fillStyle = col(1, 0.9); c.fillRect(x, CEIL, w, 5); c.fillRect(x, FLOOR - 5, w, 5);
     c.font = '700 21px Orbitron, sans-serif'; c.fillStyle = col(1.25, 0.6); c.textAlign = 'left';
-    c.fillText('0' + (i + 1) + ' · ' + r.name.toUpperCase(), x + 46, CEIL + 46);
+    c.fillText('0' + (i + 1) + ' · ' + r.name.toUpperCase(), x + 46, CEIL + 86);
     c.font = '600 13px Orbitron, sans-serif'; c.fillStyle = 'rgba(190,225,255,.45)';
-    if (i) c.fillText('◀ ' + ROOMS[i - 1].name.toUpperCase(), x + 46, CEIL + 68);
-    if (ROOMS[i + 1]) { c.textAlign = 'right'; c.fillText(ROOMS[i + 1].name.toUpperCase() + ' ▶', x + w - 46, CEIL + 46); c.textAlign = 'left'; }
+    if (i) c.fillText('◀ ' + ROOMS[i - 1].name.toUpperCase(), x + 46, CEIL + 106);
+    if (ROOMS[i + 1]) { c.textAlign = 'right'; c.fillText(ROOMS[i + 1].name.toUpperCase() + ' ▶', x + w - 46, CEIL + 86); c.textAlign = 'left'; }
     const cx = r.id === 'bridge' ? x + w * 0.5 : x + w * 0.4, sc = 0.8;                                    // equipo en la pared del fondo
-    c.save(); c.translate(cx - 800 * sc, 455 - 430 * sc); c.scale(sc, sc); centerpiece(r.id, col, t); c.restore();
+    c.save(); c.translate(cx - 800 * sc, 462 - 430 * sc); c.scale(sc, sc); centerpiece(r.id, col, t); c.restore();
     const bx = x + w * 0.5;                                   // baliza de alarma
     rr(bx - 16, CEIL + 5, 32, 10, 3, '#0c1118');
     if (hot) {
