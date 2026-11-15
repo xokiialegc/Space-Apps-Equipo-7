@@ -8,14 +8,14 @@
   const K = '#14181f';
 
   const LIST = [
-    { id: 'ares-m', name: 'CENTELLA', sub: 'Avión espacial ligero', rel: 0.72, hw: 34,
-      info: 'Diseño propio del Equipo 7: despega en vertical y regresa planeando. Poca carga y bajo coste.',
+    { id: 'ares-m', name: 'CENTELLA', sub: 'Light spaceplane', rel: 0.72, hw: 34,
+      info: 'Team 7 original design: launches vertically and glides back. Low payload, low cost.',
       slots: [[0, 395, 46], [0, 235, 50], [0, 120, 44]] },
-    { id: 'titan-x', name: 'X', sub: 'Nave de acero reutilizable', rel: 0.86, hw: 70,
-      info: 'Casco de acero inoxidable y cuatro aletas para frenar en la atmósfera. La mayor capacidad de carga.',
+    { id: 'titan-x', name: 'X', sub: 'Reusable steel ship', rel: 0.86, hw: 70,
+      info: 'Stainless steel hull and four flaps to brake in the atmosphere. The biggest payload.',
       slots: [[0, 500, 86], [0, 345, 86], [0, 190, 80]] },
-    { id: 'ares-h', name: 'APOLLO 11', sub: 'Saturno V · 1969', rel: 1, hw: 46,
-      info: 'El cohete de tres etapas que llevó a la primera tripulación a la Luna en julio de 1969.',
+    { id: 'ares-h', name: 'APOLLO 11', sub: 'Saturn V · 1969', rel: 1, hw: 46,
+      info: 'The three-stage rocket that flew the first crew to the Moon in July 1969.',
       slots: [[0, 545, 62], [0, 165, 62], [0, 742, 40]] }
   ];
   const get = (id) => LIST.find((r) => r.id === id) || LIST[2];
@@ -112,33 +112,33 @@
   }
   const star = (c, r) => { c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * 0.42 : r; c.lineTo(Math.cos(a) * q, Math.sin(a) * q); } c.closePath(); };
   const STICKERS = [
-    { id: 'aeon', name: 'Emblema AEON', draw(c) {
+    { id: 'aeon', name: 'AEON emblem', draw(c) {
       c.beginPath(); for (let i = 0; i < 6; i++) c.lineTo(Math.cos(i * Math.PI / 3 + Math.PI / 6) * 48, Math.sin(i * Math.PI / 3 + Math.PI / 6) * 48); c.closePath();
       c.fillStyle = '#0a1a3a'; c.fill(); c.strokeStyle = '#19b4ff'; c.lineWidth = 5; c.stroke();
       c.fillStyle = '#fff'; c.beginPath(); c.moveTo(0, -30); c.lineTo(25, 24); c.lineTo(12, 24); c.lineTo(0, -4); c.lineTo(-12, 24); c.lineTo(-25, 24); c.closePath(); c.fill();
       c.fillStyle = '#ff7a3c'; c.beginPath(); c.arc(0, 15, 6, 0, 7); c.fill();
     } },
-    { id: 'e7', name: 'Equipo 7', draw(c) {
+    { id: 'e7', name: 'Team 7', draw(c) {
       c.fillStyle = '#10151d'; c.beginPath(); c.arc(0, 0, 46, 0, 7); c.fill(); c.strokeStyle = '#ffc93c'; c.lineWidth = 6; c.stroke();
-      c.fillStyle = '#ffc93c'; c.textAlign = 'center'; c.font = '700 11px Orbitron, Arial, sans-serif'; c.fillText('EQUIPO', 0, -22);
+      c.fillStyle = '#ffc93c'; c.textAlign = 'center'; c.font = '700 11px Orbitron, Arial, sans-serif'; c.fillText('TEAM', 0, -22);
       c.fillStyle = '#fff'; c.font = '900 52px Orbitron, Arial, sans-serif'; c.fillText('7', 0, 30); c.textAlign = 'left';
     } },
-    { id: 'mars', name: 'Destino Marte', draw(c) {
+    { id: 'mars', name: 'Mars bound', draw(c) {
       const g = c.createRadialGradient(-12, -12, 4, 0, 0, 40); g.addColorStop(0, '#ffb07a'); g.addColorStop(1, '#8a3216');
       c.fillStyle = g; c.beginPath(); c.arc(0, 0, 36, 0, 7); c.fill();
       c.fillStyle = 'rgba(90,30,10,.5)'; [[-12, 6, 7], [14, -10, 5], [8, 16, 4]].forEach((o) => { c.beginPath(); c.arc(o[0], o[1], o[2], 0, 7); c.fill(); });
       c.strokeStyle = '#fff'; c.lineWidth = 4; c.beginPath(); c.ellipse(0, 0, 48, 16, -0.5, 0.35, Math.PI * 1.75); c.stroke();
       c.fillStyle = '#fff'; c.beginPath(); c.arc(38, -28, 6, 0, 7); c.fill();
     } },
-    { id: 'star', name: 'Estrella', draw(c) { star(c, 46); c.fillStyle = '#ffc93c'; c.fill(); c.strokeStyle = '#10151d'; c.lineWidth = 5; c.lineJoin = 'round'; c.stroke(); } },
-    { id: 'chev', name: 'Galones', draw(c) {
+    { id: 'star', name: 'Star', draw(c) { star(c, 46); c.fillStyle = '#ffc93c'; c.fill(); c.strokeStyle = '#10151d'; c.lineWidth = 5; c.lineJoin = 'round'; c.stroke(); } },
+    { id: 'chev', name: 'Chevrons', draw(c) {
       ['#fff', '#19b4ff', '#fff'].forEach((col, i) => { const y = -34 + i * 26; c.fillStyle = col; c.beginPath(); c.moveTo(-44, y + 20); c.lineTo(0, y - 6); c.lineTo(44, y + 20); c.lineTo(44, y + 36); c.lineTo(0, y + 10); c.lineTo(-44, y + 36); c.closePath(); c.fill(); c.strokeStyle = '#10151d'; c.lineWidth = 3; c.stroke(); });
     } },
-    { id: 'bolt', name: 'Rayo', draw(c) {
+    { id: 'bolt', name: 'Bolt', draw(c) {
       c.beginPath(); c.moveTo(12, -48); c.lineTo(-26, 6); c.lineTo(-4, 6); c.lineTo(-14, 48); c.lineTo(28, -10); c.lineTo(4, -10); c.closePath();
       c.fillStyle = '#ffe14a'; c.fill(); c.strokeStyle = '#10151d'; c.lineWidth = 5; c.lineJoin = 'round'; c.stroke();
     } },
-    { id: 'img', name: 'Tu imagen', draw(c) {
+    { id: 'img', name: 'Your image', draw(c) {
       const im = customImage();
       c.save(); c.beginPath(); c.roundRect(-46, -46, 92, 92, 10);
       if (im) { c.clip(); const k = Math.min(92 / im.width, 92 / im.height); c.drawImage(im, -im.width * k / 2, -im.height * k / 2, im.width * k, im.height * k); }

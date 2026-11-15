@@ -145,7 +145,7 @@
   const mute = $('#snd-btn');
   function paintMute() {
     mute.classList.toggle('off', !!A.settings.muted);
-    mute.title = A.settings.muted ? 'Activar el sonido' : 'Silenciar el sonido';
+    mute.title = A.settings.muted ? 'Unmute sound' : 'Mute sound';
     mute.setAttribute('aria-label', mute.title); mute.setAttribute('aria-pressed', String(!!A.settings.muted));
   }
   mute.addEventListener('click', (e) => {

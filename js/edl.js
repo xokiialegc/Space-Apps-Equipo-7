@@ -13,7 +13,7 @@
   const G_MARS = R.G_MARS, THRUST = 13;            // m/s²: gravedad de Marte (NASA/ESA) y frenado de los retropropulsores
   // Paracaídas: Perseverance lo abrió a unos 11 km y 420 m/s. La ventana verde se centra en ese dato.
   const CH_TOP = R.CHUTE_H + 2.7, CH_HI = R.CHUTE_H + 0.9, CH_LO = R.CHUTE_H - 0.9, CH_END = R.CHUTE_H - 2.8;   // 13,7 · 11,9 · 10,1 · 8,2 km
-  const km1 = (x) => x.toFixed(1).replace('.', ',');
+  const km1 = (x) => x.toFixed(1);
 
   let E = null, cfg = null, voy = null, on = false, last = 0, raf = 0;
   const keys = { l: false, r: false, fire: false };
@@ -24,7 +24,7 @@
     E = { stage: 1, t: 0, h: R.ENTRY_H, v: R.ENTRY_V, heat: 0, a: 0, z: 0, off: 0, shield: v.shield, fuel: 100, fuelSec: clamp(6 + v.dv * 10, 6, 26), chute: null,
       energy: v.bat, hm: 0, vm: 0, firing: false, landed: false, hard: false, end: 0, step: 0 };
     keys.l = keys.r = keys.fire = false;
-    const L = { 'cam-lbl': 'CÁM. EXTERIOR · LANDER', 'ml-t': 'FASE 3 · DESCENSO', 'ml-a': 'ALTITUD', 'ml-b': 'VELOCIDAD', 'mr-t': 'PROTECCIÓN TÉRMICA', 'mr-a': 'TEMPERATURA', 'mr-au': '°C', 'mr-b': 'ESCUDO', 'l-fire-lbl': 'DESCENSO' };
+    const L = { 'cam-lbl': 'EXT. CAM · LANDER', 'ml-t': 'PHASE 3 · DESCENT', 'ml-a': 'ALTITUDE', 'ml-b': 'VELOCITY', 'mr-t': 'THERMAL PROTECTION', 'mr-a': 'TEMPERATURE', 'mr-au': '°C', 'mr-b': 'SHIELD', 'l-fire-lbl': 'DESCENT' };
     Object.keys(L).forEach((k) => { $('#' + k).textContent = L[k]; });
     ['#holo', '#launch-end', '#l-msg-box'].forEach((s) => { $(s).classList.add('hidden'); $(s).classList.remove('flex'); });
     $('#l-count').textContent = ''; $('#heat').style.opacity = 0; $('#l-clock').textContent = 'EDL';
@@ -35,10 +35,10 @@
   // ---------- Tarjeta holográfica de cada paso ----------
   const K = (k) => A.key(k);
   const STEPS = {
-    1: ['PASO 1 · ENTRADA', () => 'Mantén la marca blanca en verde ' + K('A') + K('D')],
-    2: ['PASO 2 · PARACAÍDAS', () => 'Pulsa ' + K('P') + ' en la zona verde'],
-    3: ['PASO 3 · RETROCOHETES', () => 'Mantén ' + K('ESPACIO') + ' · toca suelo a menos de 4 m/s'],
-    4: ['¡SUELO CERCA!', () => 'Frena: menos de 4 m/s al contacto']
+    1: ['STEP 1 · ENTRY', () => 'Keep the white marker in the green ' + K('A') + K('D')],
+    2: ['STEP 2 · PARACHUTE', () => 'Press ' + K('P') + ' in the green zone'],
+    3: ['STEP 3 · RETROROCKETS', () => 'Hold ' + K('SPACE') + ' · touch down under 4 m/s'],
+    4: ['GROUND CLOSE!', () => 'Brake: under 4 m/s at touchdown']
   };
   function card(n) {
     E.step = n;
@@ -50,7 +50,7 @@
         const b = $(x[0]); b.addEventListener('pointerdown', (e) => { e.preventDefault(); keys[x[1]] = true; });
         ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => b.addEventListener(t, () => { keys[x[1]] = false; }));
       });
-    } else if (n === 2) ui.innerHTML = '<div class="corr"><i style="left:' + ((CH_TOP - CH_HI) / (CH_TOP - CH_END) * 100).toFixed(1) + '%;width:' + ((CH_HI - CH_LO) / (CH_TOP - CH_END) * 100).toFixed(1) + '%"></i><u id="e-mark"></u></div><div class="flex justify-between text-[13px] mt-1"><span>' + km1(CH_TOP) + ' km</span><span>ventana ' + km1(CH_HI) + ' – ' + km1(CH_LO) + ' km</span><span>' + km1(CH_END) + ' km</span></div>';
+    } else if (n === 2) ui.innerHTML = '<div class="corr"><i style="left:' + ((CH_TOP - CH_HI) / (CH_TOP - CH_END) * 100).toFixed(1) + '%;width:' + ((CH_HI - CH_LO) / (CH_TOP - CH_END) * 100).toFixed(1) + '%"></i><u id="e-mark"></u></div><div class="flex justify-between text-[13px] mt-1"><span>' + km1(CH_TOP) + ' km</span><span>window ' + km1(CH_HI) + ' – ' + km1(CH_LO) + ' km</span><span>' + km1(CH_END) + ' km</span></div>';
     else ui.innerHTML = '';
     $('#edl-card').classList.remove('hidden');
   }
@@ -61,8 +61,8 @@
     E.chute = E.h > CH_HI ? 'rip' : E.h >= CH_LO ? 'ok' : 'late';
     E.stage = 2.5; E.t = 0; E.h1 = E.h; E.v1 = E.v;
     if (A.fx) A.fx.event(E.chute === 'ok' ? 'chute' : 'chuteBad'); else A.beep(E.chute === 'ok' ? 880 : 200, 0.3);
-    $('#edl-step').textContent = { ok: '✓ PARACAÍDAS ABIERTO', rip: '✗ PARACAÍDAS ROTO · DEMASIADO PRONTO', late: '⚠ APERTURA TARDÍA · FRENA MENOS' }[E.chute];
-    $('#edl-txt').innerHTML = '<span class="font-display text-[20px] tracking-wide">Vigila la velocidad</span>'; $('#edl-ui').innerHTML = '';
+    $('#edl-step').textContent = { ok: '✓ PARACHUTE DEPLOYED', rip: '✗ PARACHUTE TORN · TOO EARLY', late: '⚠ LATE DEPLOYMENT · LESS BRAKING' }[E.chute];
+    $('#edl-txt').innerHTML = '<span class="font-display text-[20px] tracking-wide">Watch your speed</span>'; $('#edl-ui').innerHTML = '';
   }
 
   // ---------- Simulación ----------
@@ -76,9 +76,9 @@
       e.a = clamp(e.a + (0.45 * Math.sin(e.t * 1.3 + 1) + ((keys.r ? 1 : 0) - (keys.l ? 1 : 0)) * 1.3) * dt, -1, 1);
       e.off = Math.max(0, Math.abs(e.a - e.z) - 0.22);
       e.shield -= e.heat * (1.2 + 14 * e.off) / cfg.shieldF * dt;
-      fireLabel(e.off > 0 ? 'FUERA DE CORREDOR' : 'ESCUDO ACTIVO', e.off === 0);
-      if (e.shield <= 0) { e.shield = 0; return fail('ESCUDO AGOTADO EN LA ENTRADA', 'SIN USAR'); }
-      if (u >= 1) { e.stage = 2; e.t = 0; e.heat = 0; card(2); fireLabel('PARACAÍDAS (P)', true); }
+      fireLabel(e.off > 0 ? 'OUT OF CORRIDOR' : 'SHIELD ACTIVE', e.off === 0);
+      if (e.shield <= 0) { e.shield = 0; return fail('SHIELD BURNED THROUGH ON ENTRY', 'UNUSED'); }
+      if (u >= 1) { e.stage = 2; e.t = 0; e.heat = 0; card(2); fireLabel('PARACHUTE (P)', true); }
     } else if (e.stage === 2) {
       e.h = CH_TOP - 0.8 * e.t; e.v = 450 - 8 * e.t;      // a 11 km la velocidad es de unos 420 m/s, como en Perseverance
       if (e.h < CH_END) deploy();
@@ -86,22 +86,22 @@
       const u = clamp(e.t / 3.5, 0, 1), k = u * u * (3 - 2 * u);
       const vt = { ok: 70, late: 110, rip: 190 }[e.chute], h0 = { ok: 1.2, late: 1.8, rip: 2.6 }[e.chute];
       e.h = e.h1 + (h0 - e.h1) * k; e.v = e.v1 + (vt - e.v1) * k;
-      if (u >= 1) { e.stage = 3; e.hm = h0 * 1000; e.vm = vt; card(3); fireLabel('RETRO (ESPACIO)', true); }
+      if (u >= 1) { e.stage = 3; e.hm = h0 * 1000; e.vm = vt; card(3); fireLabel('RETRO (SPACE)', true); }
     } else if (e.stage === 3) {
       e.firing = keys.fire && e.fuel > 0;
       e.vm += (G_MARS - (e.firing ? THRUST : 0)) * dt; e.hm -= e.vm * dt;
       if (e.firing) e.fuel = Math.max(0, e.fuel - 100 / e.fuelSec * dt);
       e.h = e.hm / 1000; e.v = e.vm;
-      fireLabel(e.fuel <= 0 ? 'SIN PROPELENTE' : e.firing ? 'RETRO ACTIVOS' : 'RETRO (ESPACIO)', !e.firing && e.fuel > 0);
+      fireLabel(e.fuel <= 0 ? 'NO PROPELLANT' : e.firing ? 'RETROS FIRING' : 'RETRO (SPACE)', !e.firing && e.fuel > 0);
       if (e.step === 3 && e.hm < 300) card(4);
-      if (e.step === 4) $('#edl-ui').innerHTML = '<div class="kv"><span>Velocidad <b class="' + (e.vm > 4 ? 'text-red-400' : 'text-emerald-300') + '">' + e.vm.toFixed(1) + ' m/s</b></span><span>Altitud <b>' + Math.max(0, e.hm).toFixed(0) + ' m</b></span><span>Propelente <b class="' + (e.fuel < 20 ? 'text-red-400' : '') + '">' + e.fuel.toFixed(0) + ' %</b></span></div>';
+      if (e.step === 4) $('#edl-ui').innerHTML = '<div class="kv"><span>Velocity <b class="' + (e.vm > 4 ? 'text-red-400' : 'text-emerald-300') + '">' + e.vm.toFixed(1) + ' m/s</b></span><span>Altitude <b>' + Math.max(0, e.hm).toFixed(0) + ' m</b></span><span>Propellant <b class="' + (e.fuel < 20 ? 'text-red-400' : '') + '">' + e.fuel.toFixed(0) + ' %</b></span></div>';
       if (e.hm <= 0) {
         e.hm = 0; e.h = 0; e.touch = e.vm;
-        if (e.vm > 10) return fail('IMPACTO A ' + e.vm.toFixed(0) + ' m/s', e.fuel > 0 ? 'POCO EMPUJE' : 'SIN PROPELENTE');
+        if (e.vm > 10) return fail('IMPACT AT ' + e.vm.toFixed(0) + ' m/s', e.fuel > 0 ? 'NOT ENOUGH THRUST' : 'NO PROPELLANT');
         e.hard = e.vm > 4; e.landed = true; e.stage = 5; e.t = 0; e.v = 0; e.firing = false; if (A.fx) A.fx.event(e.hard ? 'hardLanding' : 'touchdown'); A.beep(880, 0.6);
-        $('#edl-step').textContent = e.hard ? '⚠ CONTACTO BRUSCO · ' + e.vm.toFixed(1) + ' m/s' : '✓ CONTACTO SUAVE'; $('#edl-ui').innerHTML = '';
-        $('#edl-txt').innerHTML = '<span class="motto">¡ATERRIZAJE COMPLETADO!</span>';
-        fireLabel('EN SUPERFICIE', true);
+        $('#edl-step').textContent = e.hard ? '⚠ HARD TOUCHDOWN · ' + e.vm.toFixed(1) + ' m/s' : '✓ SOFT TOUCHDOWN'; $('#edl-ui').innerHTML = '';
+        $('#edl-txt').innerHTML = '<span class="motto">LANDING COMPLETE!</span>';
+        fireLabel('ON THE SURFACE', true);
       }
     } else if (e.stage === 5 && e.t > 3.2) { e.stage = 6; finalReport(); }
   }
@@ -161,10 +161,10 @@
   (A.flight = A.flight || {}).edl = () => (!on || !E || E.stage >= 6 || $('#screen-launch').classList.contains('hidden')) ? null : {
     kind: 'edl', stage: E.stage, h: E.h, hm: E.hm, v: E.v, heat: E.heat, a: E.a, off: E.off, shield: E.shield, fuel: E.fuel,
     firing: E.firing, thrust: E.firing ? 1 : 0, chute: E.chute, landed: E.landed,
-    msg: E.stage === 1 ? 'A / D · marca en verde' : E.stage === 2 ? 'P · paracaídas entre ' + km1(CH_HI) + ' y ' + km1(CH_LO) + ' km'
-      : E.stage === 3 ? 'ESPACIO · frena a menos de 4 m/s' : '',
-    alerts: [E.stage === 1 && E.off > 0 && '¡FUERA DEL CORREDOR!', E.shield < 40 && '¡ESCUDO BAJO! ' + E.shield.toFixed(0) + ' %',
-      E.stage === 3 && E.vm > 10 && E.hm < 200 && '¡DEMASIADO RÁPIDO!', E.stage === 3 && E.fuel < 20 && '¡PROPELENTE BAJO!'].filter(Boolean)
+    msg: E.stage === 1 ? 'A / D · marker in the green' : E.stage === 2 ? 'P · parachute between ' + km1(CH_HI) + ' and ' + km1(CH_LO) + ' km'
+      : E.stage === 3 ? 'SPACE · brake to under 4 m/s' : '',
+    alerts: [E.stage === 1 && E.off > 0 && 'OUT OF CORRIDOR!', E.shield < 40 && 'LOW SHIELD! ' + E.shield.toFixed(0) + '%',
+      E.stage === 3 && E.vm > 10 && E.hm < 200 && 'TOO FAST!', E.stage === 3 && E.fuel < 20 && 'LOW PROPELLANT!'].filter(Boolean)
   };
 
   // ---------- Resultados ----------
@@ -173,10 +173,10 @@
 
   function fail(cause, retro) {
     E.stage = 9; $('#edl-card').classList.add('hidden'); $('#cockpit').style.transform = ''; if (A.fx) A.fx.event('crash'); else A.beep(140, 0.7);
-    M.report('<div class="ux-big bad">✗ DESCENSO FALLIDO</div><div class="ux-hero">' + cause + '</div>' +
-      grid([chip('Escudo', E.shield.toFixed(0) + ' %', E.shield <= 0 ? 'bad' : ''), chip('Propelente', E.fuel.toFixed(0) + ' %', E.fuel <= 0 ? 'bad' : ''), chip('Retrocohetes', retro, 'bad')]) +
-      '<p class="ux-tip">Cuida el escudo, abre el paracaídas en verde y guarda propelente.</p>',
-      [{ l: 'Menú', fn: () => { on = false; A.show('menu'); } }, { l: 'Repetir el descenso', fn: () => A.startEDL(voy) }, { l: 'Reintentar misión ▶', fn: () => { on = false; A.startShip('config'); } }]);
+    M.report('<div class="ux-big bad">✗ DESCENT FAILED</div><div class="ux-hero">' + cause + '</div>' +
+      grid([chip('Shield', E.shield.toFixed(0) + '%', E.shield <= 0 ? 'bad' : ''), chip('Propellant', E.fuel.toFixed(0) + '%', E.fuel <= 0 ? 'bad' : ''), chip('Retrorockets', retro, 'bad')]) +
+      '<p class="ux-tip">Protect the shield, open the chute in the green and save propellant.</p>',
+      [{ l: 'Menu', fn: () => { on = false; A.show('menu'); } }, { l: 'Repeat the descent', fn: () => A.startEDL(voy) }, { l: 'Retry mission ▶', fn: () => { on = false; A.startShip('config'); } }]);
   }
 
   function finalReport() {
@@ -184,12 +184,12 @@
     const e = E, k = cfg, tries = A.run.tries || 1;
     const op = Math.max(0, voy.instrOk - (e.hard ? 1 : 0)), obj = Math.round(op / M.INSTR.length * 100);
     const kwNow = (k.kw * clamp(e.energy / 100, 0, 1)).toFixed(1);
-    const evL = tries > 1 ? ['SUPERADO', tries + ' intentos', 'good'] : ['SUPERADO', 'al primer intento', 'good'];
-    const evS = (voy.crit < 6 && !e.hard && e.chute === 'ok') ? ['EXCELENTE', 'nave intacta', 'good'] : ['SUPERADO', e.hard ? 'aterrizaje brusco' : voy.crit >= 6 ? 'recursos críticos' : 'paracaídas fuera de tiempo', ''];
-    const evT = [voy.right === 3 ? 'EXCELENTE' : voy.right === 2 ? 'SUPERADO' : 'DEFICIENTE', voy.right + '/3 decisiones', voy.right >= 2 ? 'good' : 'bad'];
-    const evU = [obj >= 75 ? 'EXCELENTE' : obj >= 50 ? 'SUPERADO' : obj > 0 ? 'PARCIAL' : 'NO CUMPLIDO', op + ' instrumentos', obj >= 50 ? 'good' : 'bad'];
+    const evL = tries > 1 ? ['PASSED', tries + ' attempts', 'good'] : ['PASSED', 'first attempt', 'good'];
+    const evS = (voy.crit < 6 && !e.hard && e.chute === 'ok') ? ['EXCELLENT', 'ship intact', 'good'] : ['PASSED', e.hard ? 'hard landing' : voy.crit >= 6 ? 'resources critical' : 'parachute mistimed', ''];
+    const evT = [voy.right === 3 ? 'EXCELLENT' : voy.right === 2 ? 'PASSED' : 'POOR', voy.right + '/3 decisions', voy.right >= 2 ? 'good' : 'bad'];
+    const evU = [obj >= 75 ? 'EXCELLENT' : obj >= 50 ? 'PASSED' : obj > 0 ? 'PARTIAL' : 'NOT MET', op + ' instruments', obj >= 50 ? 'good' : 'bad'];
     const eff = Math.round(0.35 * obj + 0.2 * e.fuel + 0.2 * e.shield + 0.15 * voy.o2 + 0.1 * voy.right / 3 * 100);
-    const grade = eff >= 80 ? 'SOBRESALIENTE' : eff >= 65 ? 'NOTABLE' : eff >= 50 ? 'APROBADO' : 'INSUFICIENTE';
+    const grade = eff >= 80 ? 'OUTSTANDING' : eff >= 65 ? 'GREAT' : eff >= 50 ? 'PASS' : 'FAIL';
     const grad = obj >= 50 && eff >= 50;
     const seg = (t, r) => '<div class="uxc ' + r[2] + '"><small>' + t + '</small><b>' + r[0] + '</b><span>' + r[1] + '</span></div>';
     const home = () => { on = false; A.store.del('aeon01.save'); A.show('menu'); };
@@ -197,19 +197,19 @@
     const logos = '<div class="end-logos"><img src="assets/logos/space-apps-challenge-circular.png" alt="NASA International Space Apps Challenge">' +
       '<img src="assets/logos/space-apps-encarnacion-circular.png" alt="NASA Space Apps Encarnación"></div>';
 
-    const page2 = () => grad ? M.report('<div class="ux-big good">¡MISIÓN CUMPLIDA!</div><div class="ux-hero">Aterrizaste en Marte con la ciencia en marcha.</div>' +
-      '<div class="ok" style="font-size:22px;text-align:center">&lt; GRADUACIÓN AUTORIZADA &gt;</div><p class="motto mt-3 text-center">MARTE ES SOLO EL COMIENZO.</p>' + logos,
-      [{ l: 'Volver al inicio ▶', fn: home }])
-      : M.report('<div class="ux-big bad">MISIÓN PARCIAL</div><div class="ux-hero">Aterrizaste, pero la ciencia no llegó.</div>' +
-        grid([chip('Ciencia', obj + ' %', 'bad'), chip('Eficiencia', eff + ' %', eff >= 50 ? '' : 'bad')]) +
-        '<p class="ux-tip">Lleva más instrumentos operativos y gasta menos recursos.</p>' + logos,
-        [{ l: 'Volver al inicio', fn: home }, { l: 'Reintentar misión ▶', fn: () => { on = false; A.startShip('config'); } }]);
+    const page2 = () => grad ? M.report('<div class="ux-big good">MISSION ACCOMPLISHED!</div><div class="ux-hero">You landed on Mars with the science running.</div>' +
+      '<div class="ok" style="font-size:22px;text-align:center">&lt; GRADUATION AUTHORIZED &gt;</div><p class="motto mt-3 text-center">MARS IS ONLY THE BEGINNING.</p>' + logos,
+      [{ l: 'Back to start ▶', fn: home }])
+      : M.report('<div class="ux-big bad">PARTIAL MISSION</div><div class="ux-hero">You landed, but the science didn\'t make it.</div>' +
+        grid([chip('Science', obj + '%', 'bad'), chip('Efficiency', eff + '%', eff >= 50 ? '' : 'bad')]) +
+        '<p class="ux-tip">Bring more working instruments and spend fewer resources.</p>' + logos,
+        [{ l: 'Back to start', fn: home }, { l: 'Retry mission ▶', fn: () => { on = false; A.startShip('config'); } }]);
 
-    M.report('<div class="who">INFORME FINAL · ' + (A.settings.shipName || 'AEON-01') + '</div><div class="ux-big ' + (grad ? 'good' : 'bad') + '">' + grade + ' · ' + eff + ' %</div>' +
-      grid([seg('Lanzamiento', evL), seg('Espacial', evS), seg('Terrestre', evT), seg('Usuario · ciencia', evU)], 4) +
-      grid([chip('Instrumentos', op + ' / ' + voy.instrN, op ? '' : 'bad'), chip('Propelente', e.fuel.toFixed(0) + ' %'), chip('Escudo', e.shield.toFixed(0) + ' %'),
-        chip('Oxígeno', voy.o2.toFixed(0) + ' %'), chip('Energía', kwNow + ' kW'), chip('Presupuesto', k.budgetPct + ' %')], 3),
-      [{ l: 'Continuar ▶', fn: page2 }]);
+    M.report('<div class="who">FINAL REPORT · ' + (A.settings.shipName || 'AEON-01') + '</div><div class="ux-big ' + (grad ? 'good' : 'bad') + '">' + grade + ' · ' + eff + '%</div>' +
+      grid([seg('Launch', evL), seg('Space', evS), seg('Ground', evT), seg('User · science', evU)], 4) +
+      grid([chip('Instruments', op + ' / ' + voy.instrN, op ? '' : 'bad'), chip('Propellant', e.fuel.toFixed(0) + '%'), chip('Shield', e.shield.toFixed(0) + '%'),
+        chip('Oxygen', voy.o2.toFixed(0) + '%'), chip('Power', kwNow + ' kW'), chip('Budget', k.budgetPct + '%')], 3),
+      [{ l: 'Continue ▶', fn: page2 }]);
   }
 
   // ---------- Controles ----------

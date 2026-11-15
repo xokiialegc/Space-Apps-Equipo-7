@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -122,23 +122,23 @@
     <nav class="menu-nav absolute flex flex-col">
       <div class="neon-wrap"><button class="neon-btn" data-action="new">
         <svg viewBox="0 0 24 24" class="ico"><path d="M12 2c3 2.5 4.5 6 4.5 10v4l2.5 3h-4l-1 3h-4l-1-3H5l2.5-3v-4C7.500 8 9 4.500 12 2z"/><circle cx="12" cy="10" r="1.800"/></svg>
-        <span>Nueva partida</span></button></div>
+        <span>New game</span></button></div>
       <div class="neon-wrap"><button class="neon-btn" data-action="continue">
         <svg viewBox="0 0 24 24" class="ico"><path d="M7 4l13 8-13 8z"/></svg>
-        <span>Continuar</span></button></div>
+        <span>Continue</span></button></div>
       <div class="neon-wrap"><button class="neon-btn" data-action="settings">
         <svg viewBox="0 0 24 24" class="ico"><circle cx="12" cy="12" r="3.200"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.900 4.900l2.100 2.100M17 17l2.100 2.100M4.900 19.100L7 17M17 7l2.100-2.100"/></svg>
-        <span>Ajustes</span></button></div>
+        <span>Settings</span></button></div>
       <div class="neon-wrap"><button class="neon-btn" data-action="custom">
         <svg viewBox="0 0 24 24" class="ico"><path d="M4 20c0-3 2-4 4-4s3 1.500 3 3-2 3-7 1z"/><path d="M10 15L20 4l1.500 1.500L12 17"/></svg>
-        <span>Personalizar</span></button></div>
+        <span>Customize</span></button></div>
       <div class="neon-wrap"><button class="neon-btn" data-action="credits">
         <svg viewBox="0 0 24 24" class="ico"><circle cx="9" cy="8" r="3.200"/><path d="M3 20c0-4 3-6 6-6s6 2 6 6"/><circle cx="17.500" cy="9" r="2.400"/><path d="M16.500 14c3 0 5 2 5 5"/></svg>
-        <span>Créditos</span></button></div>
+        <span>Credits</span></button></div>
 
       <div class="neon-wrap"><button class="neon-btn" data-action="exit">
         <svg viewBox="0 0 24 24" class="ico"><path d="M12 3v9"/><path d="M6.500 6.500a8 8 0 1 0 11 0"/></svg>
-        <span>Salir</span></button></div>
+        <span>Exit</span></button></div>
     </nav>
 
     <!-- logos del evento: NASA International Space Apps Challenge y sede Encarnación -->
@@ -175,34 +175,34 @@
 
     <div class="absolute left-10 top-6 pointer-events-none">
       <h1 class="title-metal font-display font-black text-[66px] leading-none tracking-[.08em]">AEON-01</h1>
-      <div class="font-display text-[13px] tracking-[.56em] text-sky-200 mt-1 pl-1">HANGAR DE LANZAMIENTO</div>
+      <div class="font-display text-[13px] tracking-[.56em] text-sky-200 mt-1 pl-1">LAUNCH HANGAR</div>
     </div>
-    <button id="cu-back" class="cu-back absolute right-10 top-8"><span>◀</span> Menú Principal</button>
+    <button id="cu-back" class="cu-back absolute right-10 top-8"><span>◀</span> Main Menu</button>
     <div class="cu-line absolute"></div>
 
     <!-- carrusel de cohetes -->
     <div class="cu-strip absolute">
-      <button id="cu-prev" class="cu-arrow" aria-label="Cohete anterior">◀</button>
+      <button id="cu-prev" class="cu-arrow" aria-label="Previous rocket">◀</button>
       <div id="cu-cells" class="cu-cells"></div>
-      <button id="cu-next" class="cu-arrow" aria-label="Cohete siguiente">▶</button>
+      <button id="cu-next" class="cu-arrow" aria-label="Next rocket">▶</button>
     </div>
 
     <div class="absolute left-10 pointer-events-none" style="bottom:30px">
       <div id="cu-name" class="font-display font-black text-[46px] leading-none tracking-[.1em] text-white drop-shadow-[0_0_12px_rgba(25,180,255,.9)]"></div>
       <div id="cu-sub" class="font-display text-[15px] tracking-[.34em] text-sky-300 mt-2 uppercase"></div>
     </div>
-    <div class="absolute font-display text-[11px] tracking-[.22em] text-sky-300/70" style="left:640px;bottom:22px">← → CAMBIAR DE COHETE · ESC MENÚ PRINCIPAL</div>
+    <div class="absolute font-display text-[11px] tracking-[.22em] text-sky-300/70" style="left:640px;bottom:22px">← → CHANGE ROCKET · ESC MAIN MENU</div>
 
     <!-- opciones de personalización -->
     <div id="cu-panel" class="holo absolute">
       <div id="cu-info"></div>
-      <div class="cu-h">COLOR PRINCIPAL</div>
+      <div class="cu-h">MAIN COLOR</div>
       <div id="cu-colors" class="cu-colors"></div>
-      <div class="cu-h flex justify-between">CALCOMANÍAS <span id="cu-count" class="text-sky-200"></span></div>
+      <div class="cu-h flex justify-between">DECALS <span id="cu-count" class="text-sky-200"></span></div>
       <div id="cu-stickers" class="cu-stickers"></div>
-      <button id="cu-file-btn" class="cu-link">Cargar tu imagen</button>
+      <button id="cu-file-btn" class="cu-link">Upload your image</button>
       <input id="cu-file" type="file" accept="image/*" style="display:none">
-      <div class="cu-h"><label for="cu-shipname">NOMBRE DE LA NAVE</label></div>
+      <div class="cu-h"><label for="cu-shipname">SHIP NAME</label></div>
       <input id="cu-shipname" class="txt-in" maxlength="10" style="width:100%">
     </div>
   </section>
@@ -222,34 +222,34 @@
       <!-- monitor central: cámara exterior del despegue + combustible y energía -->
       <div class="mon absolute" style="left:693px;top:483px;width:221px;height:121px">
         <canvas id="launch" width="442" height="184" class="block" style="width:221px;height:92px"></canvas>
-        <div id="cam-lbl" class="absolute left-[6px] top-[3px] mon-lbl">CÁM. EXTERIOR · AEON-01</div>
+        <div id="cam-lbl" class="absolute left-[6px] top-[3px] mon-lbl">EXT. CAM · AEON-01</div>
         <div class="absolute left-0 right-0 bottom-0 h-[29px] px-[6px] grid grid-cols-2 gap-[8px] items-center border-t border-sky-400/40">
-          <div><div class="flex justify-between mon-lbl mon-tight"><span>COMBUSTIBLE</span><b id="l-fuel" class="mon-val">100%</b></div><div class="mbar"><i id="lb-fuel"></i></div></div>
-          <div><div class="flex justify-between mon-lbl mon-tight"><span>ENERGÍA</span><b id="l-energy" class="mon-val">100%</b></div><div class="mbar"><i id="lb-energy"></i></div></div>
+          <div><div class="flex justify-between mon-lbl mon-tight"><span>FUEL</span><b id="l-fuel" class="mon-val">100%</b></div><div class="mbar"><i id="lb-fuel"></i></div></div>
+          <div><div class="flex justify-between mon-lbl mon-tight"><span>POWER</span><b id="l-energy" class="mon-val">100%</b></div><div class="mbar"><i id="lb-energy"></i></div></div>
         </div>
       </div>
 
       <!-- monitor izquierdo: altitud y velocidad -->
       <div class="mon absolute px-[8px] py-[5px]" style="left:492px;top:508px;width:158px;height:84px">
-        <div id="ml-t" class="mon-lbl">FASE 1 · ASCENSO</div>
-        <div class="flex justify-between items-baseline mt-[3px]"><span id="ml-a" class="mon-lbl">ALTITUD</span><span><b id="l-alt" class="mon-big">0</b> <small id="ml-au" class="mon-lbl">km</small></span></div>
+        <div id="ml-t" class="mon-lbl">PHASE 1 · ASCENT</div>
+        <div class="flex justify-between items-baseline mt-[3px]"><span id="ml-a" class="mon-lbl">ALTITUDE</span><span><b id="l-alt" class="mon-big">0</b> <small id="ml-au" class="mon-lbl">km</small></span></div>
         <div class="mbar"><i id="lb-alt"></i></div>
-        <div class="flex justify-between items-baseline mt-[3px]"><span id="ml-b" class="mon-lbl">VELOCIDAD</span><span><b id="l-vel" class="mon-big">0.0</b> <small id="ml-bu" class="mon-lbl">/7.8 km/s</small></span></div>
+        <div class="flex justify-between items-baseline mt-[3px]"><span id="ml-b" class="mon-lbl">VELOCITY</span><span><b id="l-vel" class="mon-big">0.0</b> <small id="ml-bu" class="mon-lbl">/7.8 km/s</small></span></div>
         <div class="mbar"><i id="lb-vel"></i></div>
       </div>
 
       <!-- monitor derecho: presión dinámica e integridad -->
       <div class="mon absolute px-[8px] py-[5px]" style="left:962px;top:510px;width:164px;height:84px">
-        <div id="mr-t" class="mon-lbl">ESTRUCTURA</div>
-        <div class="flex justify-between items-baseline mt-[3px]"><span id="mr-a" class="mon-lbl">PRESIÓN DIN.</span><span><b id="l-q" class="mon-big">0</b> <small id="mr-au" class="mon-lbl">%</small></span></div>
+        <div id="mr-t" class="mon-lbl">STRUCTURE</div>
+        <div class="flex justify-between items-baseline mt-[3px]"><span id="mr-a" class="mon-lbl">DYN. PRESSURE</span><span><b id="l-q" class="mon-big">0</b> <small id="mr-au" class="mon-lbl">%</small></span></div>
         <div class="mbar"><i id="lb-q"></i></div>
-        <div class="flex justify-between items-baseline mt-[3px]"><span id="mr-b" class="mon-lbl">INTEGRIDAD</span><span><b id="l-hull" class="mon-big">100</b> <small class="mon-lbl">%</small></span></div>
+        <div class="flex justify-between items-baseline mt-[3px]"><span id="mr-b" class="mon-lbl">INTEGRITY</span><span><b id="l-hull" class="mon-big">100</b> <small class="mon-lbl">%</small></span></div>
         <div class="mbar"><i id="lb-hull"></i></div>
       </div>
 
       <!-- pantalla lateral: encendido de impulsores -->
       <button id="l-fire" class="mon fire absolute flex flex-col items-center justify-center" style="left:1158px;top:604px;width:116px;height:54px">
-        <span id="l-fire-lbl" class="mon-lbl">IMPULSORES</span><span id="l-fire-txt" class="font-display text-[13px] tracking-[.12em]">BLOQUEADO</span>
+        <span id="l-fire-lbl" class="mon-lbl">THRUSTERS</span><span id="l-fire-txt" class="font-display text-[13px] tracking-[.12em]">LOCKED</span>
       </button>
 
       <!-- hologramas del parabrisas -->
@@ -275,7 +275,7 @@
 
     <div id="launch-end" class="absolute inset-0 hidden items-center justify-center bg-black/60">
       <div class="panel w-[760px] text-center">
-        <div class="text-[15px] tracking-[.3em] text-sky-400">CONTROL DE MISIÓN</div>
+        <div class="text-[15px] tracking-[.3em] text-sky-400">MISSION CONTROL</div>
         <h2 id="le-title" class="mt-2 font-display text-3xl tracking-[.2em] text-sky-200"></h2>
         <p id="le-text" class="mt-4 text-xl leading-relaxed text-sky-100/90"></p>
         <div id="le-btns" class="mt-7 flex justify-center gap-4"></div>
@@ -318,7 +318,7 @@
   <div id="ext" class="absolute inset-0 hidden" style="z-index:30">
     <canvas id="ext-cv" width="1600" height="900" class="absolute inset-0"></canvas>
     <div class="absolute left-6 top-5 pointer-events-none">
-      <div class="font-display text-[13px] tracking-[.3em] text-sky-300 flex items-center gap-2"><i class="ext-rec"></i>CÁMARA EXTERIOR · DRON</div>
+      <div class="font-display text-[13px] tracking-[.3em] text-sky-300 flex items-center gap-2"><i class="ext-rec"></i>EXTERIOR CAMERA · DRONE</div>
       <div id="ext-sub" class="font-display text-[19px] tracking-[.14em] text-white drop-shadow-[0_0_10px_rgba(25,180,255,.9)]"></div>
     </div>
     <div id="ext-alerts" class="absolute right-6 w-[430px] pointer-events-none" style="top:54px"></div>
@@ -332,29 +332,29 @@
   </div>
   <!-- efectos de pantalla (viñeta de alarma, líneas de estrés) y botón de sonido: js/fx.js -->
   <canvas id="fx-cv" width="1600" height="900" class="absolute inset-0 pointer-events-none" style="z-index:33"></canvas>
-  <button id="snd-btn" class="snd-btn absolute" style="z-index:46;right:10px;top:8px" aria-label="Silenciar el sonido">
+  <button id="snd-btn" class="snd-btn absolute" style="z-index:46;right:10px;top:8px" aria-label="Mute sound">
     <svg viewBox="0 0 24 24" class="ico" style="width:20px;height:20px"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="snd-on" d="M16 9a4 4 0 0 1 0 6M18.500 6.500a8 8 0 0 1 0 11"/><path class="snd-off" d="M16 9l5 6M21 9l-5 6"/></svg>
   </button>
   <!-- panel de partida: pausa (Esc) y volver al menú principal. Visible desde que empieza la partida: js/menu.js -->
   <div id="game-menu" class="game-menu absolute hidden" style="z-index:46;right:56px;top:8px">
-    <button id="gm-pause" title="Pausa (Esc)"><svg viewBox="0 0 24 24" class="ico"><path d="M8 5v14M16 5v14"/></svg><span>PAUSA</span></button>
-    <button id="gm-menu" title="Volver al menú principal"><svg viewBox="0 0 24 24" class="ico"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg><span>MENÚ</span></button>
+    <button id="gm-pause" title="Pause (Esc)"><svg viewBox="0 0 24 24" class="ico"><path d="M8 5v14M16 5v14"/></svg><span>PAUSE</span></button>
+    <button id="gm-menu" title="Back to the main menu"><svg viewBox="0 0 24 24" class="ico"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg><span>MENU</span></button>
   </div>
   <div id="pause" class="absolute inset-0 hidden flex-col items-center justify-center gap-5" style="z-index:45">
-    <div class="title-metal font-display font-black text-[86px] leading-none tracking-[.12em]">PAUSA</div>
-    <div class="neon-wrap mt-4"><button id="p-go" class="neon-btn"><svg viewBox="0 0 24 24" class="ico"><path d="M7 4l13 8-13 8z"/></svg><span>Continuar</span></button></div>
-    <div class="neon-wrap"><button id="p-menu" class="neon-btn"><svg viewBox="0 0 24 24" class="ico"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg><span>Menú principal</span></button></div>
-    <div class="font-display text-[13px] tracking-[.3em] text-sky-300/80 mt-3"><kbd class="kc">ESC</kbd> CONTINUAR</div>
+    <div class="title-metal font-display font-black text-[86px] leading-none tracking-[.12em]">PAUSED</div>
+    <div class="neon-wrap mt-4"><button id="p-go" class="neon-btn"><svg viewBox="0 0 24 24" class="ico"><path d="M7 4l13 8-13 8z"/></svg><span>Resume</span></button></div>
+    <div class="neon-wrap"><button id="p-menu" class="neon-btn"><svg viewBox="0 0 24 24" class="ico"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg><span>Main menu</span></button></div>
+    <div class="font-display text-[13px] tracking-[.3em] text-sky-300/80 mt-3"><kbd class="kc">ESC</kbd> RESUME</div>
   </div>
-  <button id="cam-btn" class="cam-btn absolute hidden" style="z-index:35" title="Cámara exterior (tecla C)">
-    <svg viewBox="0 0 24 24" class="ico" style="width:20px;height:20px"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3z"/></svg><span>C · CÁMARA EXTERIOR</span>
+  <button id="cam-btn" class="cam-btn absolute hidden" style="z-index:35" title="Exterior camera (C key)">
+    <svg viewBox="0 0 24 24" class="ico" style="width:20px;height:20px"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3z"/></svg><span>C · EXTERIOR CAMERA</span>
   </button>
 
   <!-- ============ PANTALLA DE SALIDA ============ -->
   <section id="screen-exit" class="absolute inset-0 hidden flex-col items-center justify-center bg-black gap-6">
     <div class="title-metal font-display font-black text-6xl tracking-[.08em]">AEON-01</div>
-    <p class="font-display text-xl text-sky-200/80 tracking-[.3em]">SESIÓN CERRADA</p>
-    <div class="neon-wrap"><button id="exit-back" class="neon-btn neon-btn--sm">Volver al menú</button></div>
+    <p class="font-display text-xl text-sky-200/80 tracking-[.3em]">SESSION CLOSED</p>
+    <div class="neon-wrap"><button id="exit-back" class="neon-btn neon-btn--sm">Back to menu</button></div>
   </section>
 
   <!-- ============ INFORME SUPERPUESTO ============ -->
@@ -370,7 +370,7 @@
     <div class="panel w-[680px]">
       <div class="flex items-center justify-between">
         <h2 id="modal-title" class="font-display text-2xl tracking-[.25em] text-sky-200"></h2>
-        <button id="modal-close" class="font-display text-sky-300 hover:text-white text-xl px-2" aria-label="Cerrar">✕</button>
+        <button id="modal-close" class="font-display text-sky-300 hover:text-white text-xl px-2" aria-label="Close">✕</button>
       </div>
       <div class="h-px bg-gradient-to-r from-neon to-transparent my-4"></div>
       <div id="modal-body" class="text-xl text-sky-50/90"></div>
