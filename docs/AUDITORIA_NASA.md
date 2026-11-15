@@ -14,8 +14,7 @@ compararon con fuentes oficiales los 27 datos físicos o técnicos que contiene.
 | Corregido | 8 | Era incorrecto o indefendible ante un jurado. Ya está corregido en el código. |
 | Ficticio | 1 grupo | Costes, masas de módulos y cohetes inventados: no existe valor oficial. |
 
-Las ocho correcciones están aplicadas en esta rama. Además, el menú principal tiene un botón
-nuevo, **Datos reales**, que muestra esta misma tabla dentro del juego con sus fuentes.
+Las ocho correcciones están aplicadas en esta rama.
 
 Aviso sobre el issue: pedía auditar «densidad atmosférica por capas», «empuje» e «impulso
 específico». El juego no tenía capas atmosféricas (usa una sola exponencial), ni empuje en
@@ -257,6 +256,5 @@ La velocidad orbital a 300 km está calculada con el GM terrestre de la fuente 1
     el delta-v se recalcula.
   - Descenso: paracaídas abierto a 11 km y 423 m/s, temperatura máxima 1 300 °C, aterrizaje y
     reporte final.
-  - Botón «Datos reales»: abre la tabla con sus 27 filas y fuentes.
 - No se volvió a jugar entero el viaje interplanetario (su lógica no cambia; solo el delta-v
   inicial). No se probó con jugadores reales ni en un móvil.

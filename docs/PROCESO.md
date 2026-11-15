@@ -417,8 +417,7 @@ jurado pudiera cuestionar.
 1. **Informe** (`docs/AUDITORIA_NASA.md`): 27 datos comparados con sus fuentes. 9 exactos,
    9 aproximados, 8 corregidos y un grupo de valores ficticios.
 2. **Constantes en un solo sitio** (`js/datos.js`): el resto del código las lee de `AEON.REAL`.
-3. **Botón «Datos reales»** en el menú: la misma tabla, dentro del juego, con las fuentes.
-4. **Correcciones**: altura de escala de la atmósfera (12 → 8,5 km), gravedad derivada de g₀,
+3. **Correcciones**: altura de escala de la atmósfera (12 → 8,5 km), gravedad derivada de g₀,
    capacidad del Saturno V (100 → 118 t), delta-v calculado con la ecuación de Tsiolkovski y un
    impulso específico de 450 s, temperatura del escudo (1 700 → 1 300 °C), ventana del
    paracaídas centrada en 11 km y dos textos (distancia recorrida y llegada a Marte).
@@ -438,7 +437,11 @@ jurado pudiera cuestionar.
 ### Pruebas
 Las 34 992 combinaciones de diseño calculadas en Node (5 065 viables). Partida automática en
 Chrome: despegue a fondo (falla) y modulado (órbita en 39 s), consola de Propulsión, descenso
-completo con paracaídas a 11 km y reporte final, y la tabla «Datos reales». Sin errores de
+completo con paracaídas a 11 km y reporte final. Sin errores de
 JavaScript propios. El viaje interplanetario no se volvió a jugar entero. La prueba se hizo sin
 conexión, con un sustituto mínimo de Tailwind, así que el aspecto final no se verificó con la
 hoja de estilos real. No se probó con jugadores reales ni en un móvil.
+
+### Cambio posterior
+A petición del equipo se retiró del menú el botón «Datos reales» y su tabla. Las correcciones
+y las constantes de `js/datos.js` se mantienen; la comparación queda en `docs/AUDITORIA_NASA.md`.

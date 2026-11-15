@@ -148,9 +148,8 @@
 
   // ---------- Modal ----------
   const modal = $('#modal'), mTitle = $('#modal-title'), mBody = $('#modal-body');
-  function openModal(title, html, width) {
+  function openModal(title, html) {
     mTitle.textContent = title; mBody.innerHTML = html;
-    $('#modal-panel').style.width = (width || 680) + 'px';
     modal.classList.remove('hidden'); modal.classList.add('flex');
   }
   function closeModal() { modal.classList.add('hidden'); modal.classList.remove('flex'); }
@@ -226,5 +225,5 @@
   $('#exit-back').addEventListener('click', () => show('menu'));
 
   // API compartida con el módulo de vuelo
-  window.AEON = { W, H, store, settings, saveSettings, applyShip, show, beep, audio, bg, actions, openModal, closeModal, run: { tries: 0 }, startBriefing() {} };
+  window.AEON = { W, H, store, settings, saveSettings, applyShip, show, beep, audio, bg, actions, run: { tries: 0 }, startBriefing() {} };
 })();
