@@ -19,6 +19,7 @@ Abre `index.html` en un navegador (o publica la carpeta en GitHub Pages / cualqu
 | Despegue (Fase 1) | Mantener `Espacio` (o `W` / `↑` / pantalla IMPULSORES) para encender los impulsores · `Esc` abortar |
 | Interior de la nave | `E` levantarse del asiento del piloto o sentarse · `A` / `D` o `←` / `→` caminar libremente (la cámara sigue al cadete) · `E` o `Espacio` junto a un panel, cuando aparece el indicador: abrir su consola, atender un evento o, manteniéndola, reparar · `Esc` cerrar consola / menú |
 | Descenso en Marte | `A` / `D` ángulo de entrada · `P` paracaídas · mantener `Espacio` retropropulsores |
+| Cámara exterior (despegue, órbita, viaje y descenso) | `C` o el botón «C · Cámara exterior» (arriba, en el centro) alterna entre la vista de dentro y la toma exterior de la nave. En el despegue y el descenso los mandos siguen funcionando; en el interior de la nave hay que volver dentro con `C` para caminar y reparar |
 
 ## Flujo del juego
 
@@ -62,6 +63,7 @@ js/launch.js    Fase 1 en la cabina: verificación (holograma), cuenta atrás y 
 js/avatars.js   Tripulación y retratos (avatares) del cadete y de los NPC
 js/ship.js      Interior de la nave en mapa lateral (casco con tuberías, cables y paneles): movimiento libre, configuración (3.2), viaje (Fase 2) y tripulación con IA de reparación
 js/edl.js       Fase 3: descenso en Marte, reporte final y resultados
+js/exterior.js  Cámara exterior (tecla C): toma de cuerpo completo de la nave según la telemetría de cada fase
 docs/PROCESO.md Bitácora del proceso de desarrollo
 docs/AUDITORIA_NASA.md Auditoría de los datos del juego frente a NASA y ESA, con fuentes
 ```

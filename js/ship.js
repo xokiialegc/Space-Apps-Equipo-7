@@ -940,6 +940,15 @@
 
   // ---------- Teclado ----------
   const live = () => mode === 'config' || mode === 'voyage' || mode === 'arrived';
+
+  // ---------- Telemetría para la cámara exterior (js/exterior.js, issue #9) ----------
+  (A.flight = A.flight || {}).ship = () => (!live() || paused || !S || $('#screen-ship').classList.contains('hidden')) ? null : {
+    kind: 'ship', mode, progress: mode === 'config' ? 0 : mode === 'arrived' ? 1 : clamp(S.t / T_TOTAL, 0, 1), day: day(S),
+    dv: S.dv, dv0: mode === 'config' ? cfg.dv : cfg.dv - DV_TMI, o2: S.o2, bat: S.bat, shield: S.shield, comms: S.comms,
+    leak: !!S.leak, flash: S.flash || 0, instr: S.instr.some((i) => !i.ok), thrust: mode === 'voyage' ? 0.3 : 0,
+    alerts: alerts().map((a) => a[1]), hot: faults().map((a) => station(a[0]).room),
+    onEnter: () => { keys.l = keys.r = false; serv = false; P.auto = null; }   // mirando desde fuera, el cadete se queda quieto
+  };
   window.addEventListener('keydown', (e) => {
     if (!live() || (e.target && e.target.tagName === 'INPUT')) return;
     const k = e.key.toLowerCase();

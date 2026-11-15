@@ -313,6 +313,16 @@
   function startLoop() { last = performance.now(); if (!raf) raf = requestAnimationFrame(loop); }
   function stopLoop() { mode = 'off'; held = false; firing = false; }
 
+  // ---------- Telemetría para la cámara exterior (js/exterior.js, issue #9) ----------
+  (A.flight = A.flight || {}).launch = () => (mode !== 'launch' || !st || $('#screen-launch').classList.contains('hidden')) ? null : {
+    kind: 'launch', t: st.t, h: st.h, v: st.v, q: st.q || 0, fuel: st.fuel, thrust: firing ? 1 : 0,
+    rocket: A.settings.launcher, msg: $('#l-msg').textContent,
+    alerts: [st.q > 1 && 'PRESIÓN DINÁMICA ' + (st.q * 100).toFixed(0) + ' % · reduce el impulso',
+      st.stress > 50 && 'INTEGRIDAD ESTRUCTURAL ' + Math.max(0, 100 - st.stress).toFixed(0) + ' %',
+      st.fuel < 15 && (st.fuel <= 0 ? 'COMBUSTIBLE AGOTADO' : 'COMBUSTIBLE BAJO'),
+      st.energy < 20 && 'ENERGÍA BAJA ' + st.energy.toFixed(0) + ' %'].filter(Boolean)
+  };
+
   // ---------- Controles ----------
   const isFireKey = (e) => e.code === 'Space' || e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp';
   window.addEventListener('keydown', (e) => {
