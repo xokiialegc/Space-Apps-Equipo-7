@@ -560,3 +560,64 @@ reactiva el nodo maestro. Sin errores de JavaScript. El sonido no se pudo escuch
 automática, así que el volumen y la mezcla hay que ajustarlos de oído. Como siempre, sin
 conexión y con un sustituto mínimo de Tailwind. No se probó con jugadores reales ni en un móvil.
 
+
+## Etapa 10 · Textos e interfaz: lectura instantánea (15-11-2026)
+
+### Pedido
+Revisar todos los textos, tutoriales y pantallas con una regla: simplificar al máximo. Sin paredes
+de texto; frases cortas, comandos directos y códigos visuales; HUD limpio con alertas de una
+línea; pantallas de inicio, pausa y créditos limpias, con botones grandes. Sin tocar la jugabilidad.
+
+### Qué cambió
+- **Menú principal**: solo el título, la nave y seis botones grandes en una columna (Salir incluido).
+  Fuera la cabecera, la versión y el lema. «Continuar» aparece atenuado si no hay partida.
+- **Ajustes, créditos y salida**: etiquetas de una palabra; créditos en tres líneas grandes;
+  confirmaciones con una sola pregunta.
+- **Pausa nueva**: Esc o el botón ⏸ (arriba a la derecha) congela el despegue, la nave o el
+  descenso. Continuar o volver al menú. Antes, Esc salía al menú sin preguntar.
+- **Briefing**: de dos pantallas de párrafos a dos pantallas de tarjetas: la misión en una frase
+  con los 4 segmentos, y los 5 indicadores con su umbral de peligro.
+- **Cabina**: verificación con dos tarjetas que se ponen en verde o rojo; controles como teclas
+  dibujadas; mensajes de vuelo en mayúsculas, y en rojo parpadeante si son alerta
+  («¡MAX-Q! SUELTA EL EMPUJE», «¡COMBUSTIBLE BAJO!»).
+- **Nave**: introducciones de 3-4 líneas con teclas; consolas con una línea por sala; eventos
+  críticos con una frase, tarjetas de datos y dos opciones cortas; verificación del diseño como
+  rejilla de ✓ / ✗; alertas de una línea («¡OXÍGENO BAJO! 18 %»); tripulación compacta.
+- **Descenso**: cada paso en una línea con su tecla; informes finales con nota grande y
+  tarjetas; la página final y el mensaje del instructor se unieron en una sola.
+
+### Pruebas
+Recorrido automático en Chrome por menú, créditos, ajustes, briefing, verificación, despegue,
+pausa (la altitud y el día del viaje no avanzan en pausa), configuración, viaje con eventos,
+descenso fallido y descenso completo hasta «¡Misión cumplida!». Sin errores de JavaScript.
+
+## Etapa 11 · Música por escena y panel de partida (15-11-2026)
+
+### Pedido
+Tres canciones: «Cornfield Chase» (Hans Zimmer) en el descenso a Marte; «Everybody Wants to Rule
+the World» (Tears for Fears) en todo lo demás, desde el menú hasta el descenso; «Riders on the
+Storm» (The Doors, remix) solo en el hangar de personalización. El deslizador de música de Ajustes
+debe controlarlas. Y un panel pequeño, desde que empieza la partida, con pausa y vuelta al menú.
+
+### Qué se construyó
+- **Reproductor por escena** (`js/menu.js`): cada pantalla pide su canción; al cambiar, la
+  anterior se funde a cero en ~1 s y se pausa, y la nueva sube al volumen del deslizador. La
+  principal y la de personalización continúan donde se quedaron; la del descenso empieza siempre
+  desde el principio (`js/edl.js` la pide al iniciar el descenso y sigue hasta el informe final).
+- **Volumen**: «Ajustes → Música» fija el volumen al instante; el botón del altavoz la silencia.
+  Se quitó el zumbido ambiental sintetizado, que sonaba debajo de las canciones.
+- **Panel de partida**: PAUSA (o Esc) y MENÚ, arriba a la derecha, en el briefing, la cabina, la
+  nave y el descenso. MENÚ cierra cualquier informe abierto y vuelve al menú principal.
+
+### Decisiones
+- Las canciones se recodificaron a 128 kbps (12 MB en total en lugar de 29) para que el juego
+  cargue antes.
+- El repositorio es público y las canciones tienen derechos de autor: por decisión del
+  responsable del proyecto no se suben (`.gitignore`). `assets/music/LEEME.md` explica los nombres
+  de archivo. Sin ellas el juego funciona igual, en silencio.
+
+### Pruebas
+Prueba en Chrome: la canción correcta suena en el menú, el hangar, el briefing, la nave y el
+descenso; el deslizador y el silencio cambian el volumen; el panel aparece solo en partida, pausa
+y vuelve al menú. Sin los MP3, el juego no da errores.
+

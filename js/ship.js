@@ -21,12 +21,12 @@
   const TOP = 150, CEIL = 205, FLOOR = 690, BOT = 765;   // casco superior, techo, suelo, casco inferior
   const DOOR = 440;                                       // dintel de las puertas
   const ROOMS = [
-    { id: 'bridge', name: 'Puente de mando', short: 'PUENTE', res: 'Pilotaje · navegación · comunicaciones', hue: [50, 120, 210], w: 1150 },
+    { id: 'bridge', name: 'Puente de mando', short: 'PUENTE', res: 'Pilotaje · comunicaciones', hue: [50, 120, 210], w: 1150 },
     { id: 'life', name: 'Soporte vital', short: 'SOPORTE', res: 'Oxígeno', hue: [40, 170, 120], w: 1000 },
-    { id: 'lab', name: 'Laboratorio', short: 'LABORAT.', res: 'Instrumentos científicos', hue: [150, 100, 225], w: 1050 },
+    { id: 'lab', name: 'Laboratorio', short: 'LABORAT.', res: 'Instrumentos', hue: [150, 100, 225], w: 1050 },
     { id: 'hangar', name: 'Hangar del lander', short: 'HANGAR', res: 'Lander · escudo térmico', hue: [200, 80, 80], w: 1050 },
     { id: 'power', name: 'Sala de energía', short: 'ENERGÍA', res: 'Potencia eléctrica', hue: [220, 170, 40], w: 1000 },
-    { id: 'prop', name: 'Propulsión', short: 'MOTORES', res: 'Delta-v / combustible', hue: [220, 110, 50], w: 1050 }
+    { id: 'prop', name: 'Propulsión', short: 'MOTORES', res: 'Delta-v', hue: [220, 110, 50], w: 1050 }
   ];
   let SHIP_W = 0; ROOMS.forEach((r) => { r.x0 = SHIP_W; SHIP_W += r.w; });
   const ri = (id) => ROOMS.findIndex((r) => r.id === id);
@@ -69,50 +69,45 @@
   const q = (who, t) => '<div class="quote"><div class="who">' + who + '</div>' + t + '</div>';
   const AV = A.avatar, CREW = A.crew;
   /** Tarjeta de un personaje con su retrato, para los diálogos. */
-  const card = (id, t) => '<div class="crewcard">' + AV.tag(id, 64) + '<div><div class="who">' + CREW[id].name.toUpperCase() + ' · ' + CREW[id].role.toUpperCase() + '</div>' + t + '</div></div>';
+  const card = (id, t) => '<div class="crewcard">' + AV.tag(id, 52) + '<div><div class="who">' + CREW[id].name.toUpperCase() + '</div>' + t + '</div></div>';
+  const K = (k) => A.key(k);
+  const chip = (l, v, cls) => '<div class="uxc' + (cls ? ' ' + cls : '') + '"><small>' + l + '</small><b>' + v + '</b></div>';
+  const chips = (arr, n) => '<div class="ux-grid" style="grid-template-columns:repeat(' + (n || arr.length) + ',1fr)">' + arr.join('') + '</div>';
   const ok = (b) => '<span class="' + (b ? 'text-emerald-300' : 'text-red-400') + '">' + (b ? '✓' : '✗') + '</span> ';
 
   // ---------- Eventos críticos de la Fase 2 ----------
   const EV = [
-    { at: 22, st: 'bridge', tag: '&lt; ALERTA DE TELEMETRÍA &gt;', title: 'EVENTO CRÍTICO 01 — PÉRDIDA PARCIAL DE COMUNICACIONES', who: 'ESTACIÓN TERRESTRE — COMUNICACIÓN', short: 'Comunicaciones degradadas',
-      body: 'Atención, Control de Misión. Estamos detectando una degradación en la señal de comunicación con la nave. La recepción de telemetría es intermitente. Algunos paquetes de datos no están llegando correctamente.',
-      tel: () => ['Señal de comunicación: 42 %', 'Telemetría: Parcial', 'Navegación: Sin anomalías confirmadas', 'Estado de la nave: Operativo'],
-      cm: 'Cadete, debemos recuperar la recepción de datos antes de perder visibilidad sobre los sistemas de la nave.',
-      a: 'A. Activar el sistema de comunicaciones de respaldo.', b: 'B. Mantener la configuración actual y solicitar una nueva transmisión de telemetría.',
-      good: ['Comunicación de respaldo establecida. La recepción de telemetría mejora progresivamente.', 'Buena decisión, cadete. Hemos recuperado visibilidad sobre la nave.'],
-      bad: ['La pérdida de datos continúa. El equipo terrestre no puede verificar adecuadamente el estado de los sistemas.', 'La supervisión de la misión está comprometida. Debemos recuperar la comunicación antes de continuar.'],
+    { at: 22, st: 'bridge', title: 'EVENTO 1 · COMUNICACIONES', short: 'COMUNICACIONES',
+      body: 'La señal con la Tierra se está perdiendo.',
+      tel: () => [['Señal', '42 %', 'bad'], ['Telemetría', 'PARCIAL', 'bad'], ['Navegación', 'OK', 'good']],
+      a: 'A · Activar comunicaciones de respaldo', b: 'B · Esperar otra transmisión',
+      good: 'Señal recuperada.', bad: 'Seguimos sin datos. Vuelve a decidir.',
       start(s) { s.comms = 42; }, onGood(s) { s.comms = 92; }, onBad(s) { s.comms = Math.max(15, s.comms - 10); } },
-    { at: 66, st: 'power', tag: '&lt; ALERTA DE RADIACIÓN &gt;', title: 'EVENTO CRÍTICO 02 — TORMENTA SOLAR', who: 'CENTRO DE CONTROL DE MISIÓN', short: 'Tormenta solar',
-      body: 'Atención, cadete. Los instrumentos de monitoreo espacial han detectado un incremento de actividad solar. La radiación puede afectar los componentes electrónicos y aumentar la exposición de la tripulación.',
-      tel: (s) => ['Actividad solar: Elevada', 'Exposición a radiación: En aumento', 'Sistemas electrónicos: Operativos', 'Potencia eléctrica: ' + kw(s) + ' kW'],
-      cm: 'Debemos proteger los sistemas sensibles y conservar la energía disponible.',
-      a: 'A. Activar el protocolo de protección contra radiación y priorizar los sistemas esenciales.', b: 'B. Mantener todos los sistemas funcionando a máxima potencia.',
-      good: ['Protocolo de protección activado. Los sistemas esenciales permanecen operativos y la tripulación dispone de protección adicional.', 'Excelente respuesta. La seguridad de la tripulación es prioritaria. Hemos reducido los riesgos operativos.'],
-      bad: ['El consumo eléctrico permanece elevado y los sistemas continúan expuestos a condiciones desfavorables.', 'La gestión energética y la protección de la tripulación son insuficientes. Reevalúa tus prioridades.'],
+    { at: 66, st: 'power', title: 'EVENTO 2 · TORMENTA SOLAR', short: 'TORMENTA SOLAR',
+      body: 'Radiación en aumento: peligran equipos y tripulación.',
+      tel: (s) => [['Radiación', 'ALTA', 'bad'], ['Potencia', kw(s) + ' kW', ''], ['Sistemas', 'OK', 'good']],
+      a: 'A · Protegerse y dejar solo lo esencial', b: 'B · Seguir a plena potencia',
+      good: 'Tripulación y sistemas protegidos.', bad: 'Baterías dañadas y un instrumento fuera de servicio.',
       start() {}, onGood(s) { s.bat = Math.max(5, s.bat - 4); }, onBad(s) { s.bat = Math.max(5, s.bat - 20); const i = s.instr.find((x) => x.ok); if (i) i.ok = false; } },
-    { at: 108, st: 'seat', tag: '&lt; ALERTA DE NAVEGACIÓN &gt;', title: 'EVENTO CRÍTICO 03 — DESVIACIÓN DE TRAYECTORIA', who: 'CENTRO DE CONTROL DE MISIÓN', short: 'Desviación de trayectoria',
-      body: 'Cadete, hemos detectado una desviación respecto a la trayectoria interplanetaria prevista. Los datos de navegación indican que la nave podría llegar a Marte fuera de los parámetros establecidos.',
-      tel: (s) => ['Desviación de trayectoria: Elevada', 'Propelente disponible: ' + s.dv.toFixed(2) + ' km/s', 'Navegación: Operativa', 'Tiempo estimado de llegada: ' + Math.max(0, Math.round(DAYS - day(s))) + ' días'],
-      cm: 'Debemos evaluar la trayectoria y determinar si es necesaria una corrección. Recuerda que cada maniobra consume propelente. No podemos desperdiciar nuestras reservas.',
-      a: 'A. Ejecutar una corrección de trayectoria utilizando el presupuesto de delta-v disponible.', b: 'B. Mantener el rumbo actual y continuar monitoreando la desviación.',
-      good: ['Maniobra de corrección completada. La nave recupera una trayectoria compatible con los parámetros de llegada previstos.', 'Excelente trabajo, cadete. Has corregido la desviación sin comprometer las reservas críticas de combustible.'],
-      bad: ['La desviación persiste y los parámetros de llegada continúan fuera de los márgenes previstos.', 'Una trayectoria incorrecta puede comprometer toda la fase de aproximación. La navegación requiere supervisión constante.'],
+    { at: 108, st: 'seat', title: 'EVENTO 3 · DESVÍO DE RUMBO', short: 'DESVÍO DE RUMBO',
+      body: 'La nave se sale de la trayectoria a Marte.',
+      tel: (s) => [['Desvío', 'ALTO', 'bad'], ['Δv', s.dv.toFixed(2) + ' km/s', ''], ['Llegada', Math.max(0, Math.round(DAYS - day(s))) + ' días', '']],
+      a: 'A · Corregir el rumbo (gasta Δv)', b: 'B · Mantener el rumbo y vigilar',
+      good: 'Rumbo corregido.', bad: 'El desvío crece: corregirlo costará más Δv.',
       start(s) { s.dev = 1; }, onGood(s) { s.dv = Math.max(0.05, s.dv - s.corr); s.dev = 0; }, onBad(s) { s.corr += 0.15; } }
   ];
   const day = (s) => s.t / T_TOTAL * DAYS;
   const kw = (s) => (cfg.kw * clamp(s.bat / 100, 0, 1)).toFixed(1);
 
   function openEvent(e, n) {
-    const tel = e.tel(S).map((x) => '<li>' + x + '</li>').join('');
-    dlg(e.title, '<div class="alert mb-2"><b>' + e.tag + '</b></div>' + q(e.who, e.body) + '<ul>' + tel + '</ul>' + q('CONTROL DE MISIÓN', e.cm) +
-      '<div class="who decide">' + AV.tag('player', 40) + 'DECISIÓN DEL CADETE</div>',
+    dlg(e.title, '<div class="ux-hero" style="color:#ffb4a3">⚠ ' + e.body + '</div>' + chips(e.tel(S).map((x) => chip(x[0], x[1], x[2]))) +
+      '<div class="who decide">' + AV.tag('player', 40) + 'TÚ DECIDES</div>',
       [{ l: e.a, fn: () => { e.done = true; if (e.tries === 0) S.right++; e.onGood(S); result(e, true); } },
        { l: e.b, fn: () => { e.tries++; S.wrong++; e.cool = S.t + 5; e.onBad(S); result(e, false); } }]);
   }
   function result(e, good) {
-    const r = good ? e.good : e.bad;
-    dlg(good ? 'RESULTADO — DECISIÓN CORRECTA' : 'RESULTADO — DECISIÓN INCORRECTA', '<div class="' + (good ? 'ok' : 'alert mb-2') + '">' + r[0] + '</div>' + q('CONTROL DE MISIÓN', r[1]) +
-      (good ? '' : '<p>La anomalía sigue activa: tendrás que volver a decidir.</p>'), [{ l: 'Continuar', fn: () => {} }]);
+    dlg(e.title, '<div class="ux-big ' + (good ? 'good">✓ BIEN HECHO' : 'bad">✗ MALA DECISIÓN') + '</div><div class="ux-hero">' + (good ? e.good : e.bad) + '</div>',
+      [{ l: 'Continuar', fn: () => {} }]);
   }
 
   // ---------- Arranques ----------
@@ -131,13 +126,13 @@
     S = { t: 0, o2: 100, bat: 100, dv: cfg.dv, shield: 100, comms: 100, dev: 0, leak: false, instr: [] };
     A.store.set('aeon01.save', { phase: 'config', run: A.run });
     begin('config');
-    dlg('INSTRUCTOR — SEGMENTO ESPACIAL', '<h3>3.2 · CONFIGURACIÓN DE LA NAVE INTERPLANETARIA</h3>' +
-      '<p>Con la nave en órbita, comienza la configuración de los sistemas que harán posible el viaje a Marte.</p>' +
-      '<p>Debes seleccionar y equilibrar los componentes de la expedición. Cada módulo consume masa, presupuesto y, en algunos casos, energía.</p>' +
-      '<p>Estás en el <b>puesto del piloto</b>. Pulsa <b>E</b> para levantarte y recorre la nave con <b>A / D</b> o <b>← / →</b>: la cámara te sigue de una sala a otra.</p>' +
-      '<p>Acércate a la consola de cada sala y pulsa <b>E</b> (o <b>Espacio</b>) cuando aparezca el indicador para configurar su componente. Cuando termines, vuelve a sentarte a los mandos y confirma el diseño.</p>' +
-      '<div class="who">TU TRIPULACIÓN</div>' + card('vera', 'Me encargo de energía y propulsión. Me verás recorriendo la nave.') + card('iker', 'Yo vigilo soporte vital e instrumentos. Si algo falla durante el viaje, iremos a repararlo.'),
-      [{ l: 'Recorrer la nave', fn: () => {} }]);
+    dlg('3.2 · CONFIGURA TU NAVE', '<div class="ux-big">ELIGE TUS SISTEMAS</div>' +
+      '<div class="ux-ctrl">' +
+      '<div>' + K('A') + K('D') + 'Caminar</div>' +
+      '<div>' + K('E') + 'Levantarse · abrir la consola de la sala</div>' +
+      '<div><span class="ic" style="color:#9dffcf">✓</span>Vuelve al asiento para confirmar el diseño</div></div>' +
+      card('vera', 'Energía y propulsión.') + card('iker', 'Soporte vital e instrumentos.'),
+      [{ l: 'Empezar ▶', fn: () => {} }]);
   };
 
   function startVoyage() {
@@ -148,24 +143,23 @@
       hits: [r(30, 40), r(82, 92), r(122, 132)], leakAt: r(44, 56), glitchAt: r(94, 100), ev: EV.map((e) => Object.assign({}, e, { on: false, done: false, tries: 0, cool: 0 })) };
     A.store.set('aeon01.save', { phase: 'voyage', run: A.run });
     begin('voyage');
-    dlg('INSTRUCTOR — FASE 2 · EL VIAJE INTERPLANETARIO', '<h3>SEGMENTO TERRESTRE EN ACCIÓN</h3>' +
-      '<p>Cadete, la nave ha abandonado la órbita terrestre y se encuentra en trayectoria interplanetaria.</p>' +
-      '<p>Desde el Centro de Control de Misión, las estaciones terrestres reciben telemetría, verifican las comunicaciones y supervisan el comportamiento de la nave. Durante el viaje, pueden aparecer anomalías que exijan decisiones inmediatas.</p>' +
-      '<p>Recuerda: el Segmento Terrestre no controla físicamente la nave de forma continua. Analiza los datos recibidos, evalúa las condiciones y transmite instrucciones cuando es necesario.</p>' +
-      '<p class="motto">Tu capacidad para interpretar la información será puesta a prueba.</p>' +
-      '<p>A bordo: vigila los indicadores de abajo y las luces de alarma de cada módulo. Lo crítico aparece en el <b>panel de alertas</b> (arriba a la derecha): púlsalo para ir andando hasta el módulo, o camina tú con <b>A / D</b>. ' +
-      'Junto al panel averiado, mantén <b>E</b> (o <b>Espacio</b>) para repararlo. Al llegar a Marte tendrás que volver al puesto del piloto.</p>' +
-      card('vera', 'No estás solo, cadete. Cuando salte una alarma, quien esté más cerca de <b>Iker</b> y de mí irá andando a repararla. Los eventos críticos de Control de Misión son decisión tuya.'),
-      [{ l: 'Iniciar transferencia', fn: () => {} }]);
+    dlg('FASE 2 · VIAJE A MARTE', '<div class="ux-big">' + DAYS + ' DÍAS · MANTÉN LA NAVE VIVA</div>' +
+      '<div class="ux-ctrl">' +
+      '<div><span class="ic">⚠</span>Pulsa una alerta para ir al módulo</div>' +
+      '<div>' + K('E') + 'Mantén junto al panel para reparar</div>' +
+      '<div><span class="ic">!</span>Eventos críticos: decides tú</div>' +
+      '<div>' + K('C') + 'Ver la nave desde fuera</div></div>' +
+      card('vera', 'Iker y yo reparamos lo que tengamos cerca.'),
+      [{ l: 'Iniciar viaje ▶', fn: () => {} }]);
   }
   function goEDL() { const voy = A.run.voy; mode = 'off'; A.startEDL(voy); }
 
   // ---------- Consola de cada sala (configuración) ----------
   const TXT = {
-    bridge: ['1. NAVE PRINCIPAL', 'Es el módulo central de transporte y operación. Contiene los sistemas de navegación, propulsión, comunicaciones y soporte vital.', 'Prioriza una arquitectura equilibrada. La nave debe ser capaz de transportar a la tripulación y mantener sus sistemas durante todo el viaje.', 'hull', (o) => o.mass + ' t · ' + o.cost + ' M$ · ' + o.spares + ' repuestos'],
-    prop: ['PROPULSIÓN · DELTA-v', 'Los tanques suben vacíos y se llenan en la estación orbital. El delta-v sale de la ecuación del cohete, <b>Δv = Isp · g₀ · ln(m₀ / m_f)</b>: los mismos tanques dan menos en una nave más pesada.', 'El combustible es tu capacidad de maniobra. Solo salir hacia Marte cuesta ' + String(DV_TMI).replace('.', ',') + ' km/s.', 'prop', (o) => o.fuel + ' t de propelente<br>' + o.mass + ' t · ' + o.cost + ' M$'],
-    life: ['SOPORTE VITAL · OXÍGENO', 'Reservas de oxígeno y depuración de CO₂ para la tripulación. El viaje dura unos siete meses (' + DAYS + ' días).', 'Calcula las reservas para la duración prevista y conserva un margen de seguridad.', 'life', (o) => o.days + ' días · ' + o.mass + ' t · ' + o.cost + ' M$'],
-    power: ['POTENCIA ELÉCTRICA', 'Paneles y baterías que alimentan navegación, comunicaciones, control térmico, soporte vital e instrumentos.', 'Sin energía, los sistemas dejan de responder. Evita sobrecargar la red eléctrica.', 'power', (o) => o.kw + ' kW · ' + o.mass + ' t · ' + o.cost + ' M$']
+    bridge: ['NAVE PRINCIPAL', 'Más grande: más repuestos y más masa.', 'hull', (o) => o.mass + ' t · ' + o.cost + ' M$ · ' + o.spares + ' repuestos'],
+    prop: ['PROPULSIÓN · Δv', 'Más propelente: más Δv. Mínimo ' + String(M.DV_NEEDED).replace('.', ',') + ' km/s.', 'prop', (o) => o.fuel + ' t de propelente<br>' + o.mass + ' t · ' + o.cost + ' M$'],
+    life: ['OXÍGENO', 'Necesitas al menos ' + (DAYS + 30) + ' días.', 'life', (o) => o.days + ' días · ' + o.mass + ' t · ' + o.cost + ' M$'],
+    power: ['ENERGÍA', 'Debe cubrir la demanda de los sistemas.', 'power', (o) => o.kw + ' kW · ' + o.mass + ' t · ' + o.cost + ' M$']
   };
   const kvRow = (l, v, bad) => '<div class="kv"><span>' + l + '</span><b class="' + (bad ? 'text-red-400' : 'text-emerald-300') + '">' + v + '</b></div>';
   function optBtns(key, fmt) {
@@ -174,21 +168,20 @@
   }
   function consoleConfig(id) {
     const sh = M.ship(), k = cfg; let h = '';
-    if (TXT[id]) { const t = TXT[id]; h = '<h4>' + t[0] + '</h4><p>' + t[1] + '</p>' + '<div class="quote"><b>INSTRUCTOR:</b> ' + t[2] + '</div>' + optBtns(t[3], t[4]); }
-    if (id === 'prop') h += '<div class="my-2">' + kvRow('Impulso específico (H₂/O₂)', k.isp + ' s') + kvRow('Masa seca de la nave', k.mass + ' t') + kvRow('Propelente', k.fuel + ' t') +
-      kvRow('Delta-v (mínimo ' + String(M.DV_NEEDED).replace('.', ',') + ')', k.dv.toFixed(2).replace('.', ',') + ' km/s', !k.dvOk) + '</div>';
-    if (id === 'seat') h = '<h4>PUESTO DEL PILOTO</h4><p>Desde los mandos se verifica el diseño y se inicia la transferencia a Marte. Levántate con <b>E</b> y recorre la nave: cada sala tiene la consola de su componente.</p>' +
-      '<div class="my-2">' + kvRow('Masa total', k.mass + ' / ' + k.cap + ' t', !k.massOk) + kvRow('Presupuesto', k.budgetPct + ' %', !k.costOk) + kvRow('Delta-v', k.dv + ' km/s', !k.dvOk) +
-      kvRow('Potencia', k.kw + ' / ' + k.demand + ' kW', !k.powerOk) + kvRow('Instrumentos', k.instr.length + ' / ' + k.landerCap, !k.capOk) + '</div>' +
-      '<button id="c-confirm" class="serv mt-1">VERIFICAR Y CONFIRMAR DISEÑO</button>';
-    if (id === 'hangar') h = '<h4>2. MÓDULO DE ATERRIZAJE (LANDER)</h4><p>Vehículo destinado a transportar la carga científica y realizar el descenso hasta la superficie marciana.</p>' +
+    if (TXT[id]) { const t = TXT[id]; h = '<h4>' + t[0] + '</h4><p>' + t[1] + '</p>' + optBtns(t[2], t[3]); }
+    if (id === 'prop') h += '<div class="my-2">' + kvRow('Masa de la nave', k.mass + ' t') + kvRow('Δv', k.dv.toFixed(2).replace('.', ',') + ' km/s', !k.dvOk) + '</div>';
+    if (id === 'power') h += '<div class="my-2">' + kvRow('Potencia / demanda', k.kw + ' / ' + k.demand + ' kW', !k.powerOk) + '</div>';
+    if (id === 'life') h += '<div class="my-2">' + kvRow('Oxígeno', k.days + ' días', k.days < DAYS + 30) + '</div>';
+    if (id === 'seat') h = '<h4>PUESTO DEL PILOTO</h4>' +
+      '<div class="my-2">' + kvRow('Masa', k.mass + ' / ' + k.cap + ' t', !k.massOk) + kvRow('Presupuesto', k.budgetPct + ' %', !k.costOk) + kvRow('Δv', k.dv + ' km/s', !k.dvOk) +
+      kvRow('Energía', k.kw + ' / ' + k.demand + ' kW', !k.powerOk) + kvRow('Oxígeno', k.days + ' días', k.days < DAYS + 30) + kvRow('Instrumentos', k.instr.length + ' / ' + k.landerCap, !k.capOk) + '</div>' +
+      '<button id="c-confirm" class="serv mt-1">CONFIRMAR DISEÑO ▶</button>';
+    if (id === 'hangar') h = '<h4>LANDER</h4><p>Más grande: más instrumentos.</p>' +
       optBtns('lander', (o) => o.cap + ' instr. · ' + o.mass + ' t · ' + o.cost + ' M$') +
-      '<h4 class="mt-3">3. ESCUDO TÉRMICO</h4><div class="quote"><b>INSTRUCTOR:</b> No sacrifiques protección térmica para ahorrar masa. Una nave que no puede soportar la entrada atmosférica no llegará intacta a su destino.</div>' +
+      '<h4 class="mt-3">ESCUDO TÉRMICO</h4><p>Te protege al entrar en Marte. No lo recortes.</p>' +
       optBtns('shield', (o) => o.mass + ' t · ' + o.cost + ' M$');
-    if (id === 'lab') h = '<h4>4. INSTRUMENTOS CIENTÍFICOS</h4><p>Equipamiento destinado a analizar el suelo, la atmósfera y las condiciones ambientales de Marte.</p>' +
-      '<div class="quote"><b>INSTRUCTOR:</b> Cada instrumento representa una oportunidad científica. Selecciona aquellos que aporten información relevante sin comprometer los recursos de la misión.</div>' +
-      '<div class="grid grid-cols-2 gap-2">' + M.INSTR.map((o) => '<button class="opt' + (sh.instr.includes(o.id) ? ' on' : '') + '" data-ins="' + o.id + '"><b>' + o.name + '</b><br>' + o.mass + ' t · ' + o.cost + ' M$ · ' + o.kw + ' kW</button>').join('') + '</div>' +
-      '<p class="mt-2">El lander admite ' + cfg.landerCap + ' instrumentos.</p>';
+    if (id === 'lab') h = '<h4>INSTRUMENTOS</h4><p>Hasta ' + cfg.landerCap + '. Cada uno gasta energía.</p>' +
+      '<div class="grid grid-cols-2 gap-2">' + M.INSTR.map((o) => '<button class="opt' + (sh.instr.includes(o.id) ? ' on' : '') + '" data-ins="' + o.id + '"><b>' + o.name + '</b><br>' + o.mass + ' t · ' + o.cost + ' M$ · ' + o.kw + ' kW</button>').join('') + '</div>';
     return h;
   }
   function renderConsole() {
@@ -207,12 +200,12 @@
 
   // ---------- Reparaciones del viaje: [acción, se puede, motivo si no, progreso 0-1] ----------
   const SERV = {
-    bridge: ['REAPUNTAR ANTENA', (s) => s.comms < 99, () => 'SEÑAL NOMINAL', (s) => s.comms / 100],
-    life: ['REGENERAR OXÍGENO (usa energía)', (s) => s.o2 < 99 && s.bat > 6, (s) => (s.o2 >= 99 ? 'OXÍGENO AL MÁXIMO' : 'SIN ENERGÍA PARA REGENERAR'), (s) => s.o2 / 100],
-    power: ['REORIENTAR PANELES SOLARES', (s) => s.bat < 99, () => 'BATERÍAS CARGADAS', (s) => s.bat / 100],
-    prop: ['SELLAR FUGA DE PROPELENTE', (s) => s.leak, () => 'CIRCUITO ESTANCO', (s) => s.seal / 2.5],
-    hangar: ['REPARAR LOSETAS (1 repuesto)', (s) => s.shield < 99 && s.spares > 0, (s) => (s.shield >= 99 ? 'ESCUDO ÍNTEGRO' : 'SIN REPUESTOS'), (s) => s.rep / 1.4],
-    lab: ['RECALIBRAR INSTRUMENTO (1 repuesto)', (s) => s.instr.some((i) => !i.ok) && s.spares > 0, (s) => (s.instr.some((i) => !i.ok) ? 'SIN REPUESTOS' : 'INSTRUMENTOS OPERATIVOS'), (s) => s.cal / 2.5]
+    bridge: ['REAPUNTAR ANTENA', (s) => s.comms < 99, () => 'SEÑAL OK', (s) => s.comms / 100],
+    life: ['REGENERAR OXÍGENO · GASTA ENERGÍA', (s) => s.o2 < 99 && s.bat > 6, (s) => (s.o2 >= 99 ? 'OXÍGENO AL MÁXIMO' : 'SIN ENERGÍA'), (s) => s.o2 / 100],
+    power: ['RECARGAR BATERÍAS', (s) => s.bat < 99, () => 'BATERÍAS LLENAS', (s) => s.bat / 100],
+    prop: ['SELLAR FUGA', (s) => s.leak, () => 'SIN FUGAS', (s) => s.seal / 2.5],
+    hangar: ['REPARAR ESCUDO · 1 REPUESTO', (s) => s.shield < 99 && s.spares > 0, (s) => (s.shield >= 99 ? 'ESCUDO OK' : 'SIN REPUESTOS'), (s) => s.rep / 1.4],
+    lab: ['RECALIBRAR · 1 REPUESTO', (s) => s.instr.some((i) => !i.ok) && s.spares > 0, (s) => (s.instr.some((i) => !i.ok) ? 'SIN REPUESTOS' : 'INSTRUMENTOS OK'), (s) => s.cal / 2.5]
   };
   /** Lecturas que flotan sobre cada puesto: [etiqueta, valor, ¿mal?]. */
   function lines(id) {
@@ -220,37 +213,32 @@
     if (mode === 'config') {
       if (id === 'seat') { const all = k.massOk && k.costOk && k.dvOk && k.powerOk && k.capOk && k.days >= DAYS + 30; return [['Masa', k.mass + ' / ' + k.cap + ' t', !k.massOk], ['Presupuesto', k.budgetPct + ' %', !k.costOk], ['Diseño', all ? 'LISTO' : 'REVISAR', !all]]; }
       if (id === 'bridge') return [['Nave principal', k.pick.hull.n.toUpperCase()], ['Repuestos', String(k.spares)]];
-      if (id === 'life') return [['Reserva de oxígeno', k.days + ' días', k.days < DAYS + 30]];
+      if (id === 'life') return [['Oxígeno', k.days + ' días', k.days < DAYS + 30]];
       if (id === 'power') return [['Potencia', k.kw + ' kW'], ['Demanda', k.demand + ' kW', !k.powerOk]];
-      if (id === 'prop') return [['Tanques', k.pick.prop.n.toUpperCase()], ['Delta-v', k.dv + ' km/s', !k.dvOk]];
-      if (id === 'hangar') return [['Lander', k.pick.lander.n.toUpperCase()], ['Escudo térmico', k.pick.shield.n.toUpperCase()]];
+      if (id === 'prop') return [['Tanques', k.pick.prop.n.toUpperCase()], ['Δv', k.dv + ' km/s', !k.dvOk]];
+      if (id === 'hangar') return [['Lander', k.pick.lander.n.toUpperCase()], ['Escudo', k.pick.shield.n.toUpperCase()]];
       return [['Instrumentos', k.instr.length + ' / ' + k.landerCap, !k.capOk]];
     }
-    if (id === 'seat') return mode === 'arrived' ? [['Aproximación a Marte', 'COMPLETADA'], ['Descenso', 'LISTO']] : [['Trayectoria', s.dev ? 'DESVIADA' : 'NOMINAL', !!s.dev], ['Llegada a Marte en', Math.max(0, Math.round(DAYS - day(s))) + ' días']];
-    if (id === 'bridge') return [['Señal de comunicación', s.comms.toFixed(0) + ' %', s.comms < 35]];
-    if (id === 'life') return [['Oxígeno', s.o2.toFixed(0) + ' %', s.o2 < 25], ['Reserva instalada', k.days + ' días']];
-    if (id === 'power') return [['Baterías', s.bat.toFixed(0) + ' %', s.bat < 20], ['Potencia disponible', kw(s) + ' kW', s.bat < 20], ['Demanda', k.demand + ' kW']];
-    if (id === 'prop') return [['Delta-v disponible', s.dv.toFixed(2) + ' km/s', s.dv < 0.5], ['Circuito de propelente', s.leak ? 'FUGA' : 'ESTANCO', s.leak]];
-    if (id === 'hangar') return [['Integridad del escudo', s.shield.toFixed(0) + ' %', s.shield < 60], ['Repuestos', String(s.spares), s.spares === 0]];
+    if (id === 'seat') return mode === 'arrived' ? [['Marte', 'ALCANZADO'], ['Descenso', 'LISTO']] : [['Trayectoria', s.dev ? 'DESVIADA' : 'NOMINAL', !!s.dev], ['Llegada en', Math.max(0, Math.round(DAYS - day(s))) + ' días']];
+    if (id === 'bridge') return [['Señal', s.comms.toFixed(0) + ' %', s.comms < 35]];
+    if (id === 'life') return [['Oxígeno', s.o2.toFixed(0) + ' %', s.o2 < 25], ['Reserva', k.days + ' días']];
+    if (id === 'power') return [['Baterías', s.bat.toFixed(0) + ' %', s.bat < 20], ['Potencia', kw(s) + ' / ' + k.demand + ' kW', s.bat < 20]];
+    if (id === 'prop') return [['Δv', s.dv.toFixed(2) + ' km/s', s.dv < 0.5], ['Circuito', s.leak ? 'FUGA' : 'OK', s.leak]];
+    if (id === 'hangar') return [['Escudo', s.shield.toFixed(0) + ' %', s.shield < 60], ['Repuestos', String(s.spares), s.spares === 0]];
     return s.instr.map((i) => [i.name, i.ok ? 'OPERATIVO' : 'FALLO', !i.ok]).concat([['Repuestos', String(s.spares), s.spares === 0]]);
   }
 
   function confirmDesign() {
     const k = cfg = M.calc();
-    const checks = [[k.massOk, 'Masa total dentro de la capacidad del lanzador (' + k.mass + ' / ' + k.cap + ' t)'], [k.costOk, 'Presupuesto disponible (' + k.cost + ' / ' + k.budget + ' M$)'],
-      [k.dvOk, 'Propelente suficiente para las maniobras (' + k.dv + ' km/s; mínimo ' + M.DV_NEEDED + ')'], [true, 'Integridad del escudo térmico (100 %, escudo ' + k.pick.shield.n.toLowerCase() + ')'],
-      [k.days >= DAYS + 30, 'Reservas adecuadas de oxígeno (' + k.days + ' días para ' + DAYS + ' de viaje)'], [k.powerOk, 'Potencia eléctrica suficiente para los sistemas esenciales (' + k.kw + ' / ' + k.demand + ' kW)'],
-      [k.capOk, 'Instrumentos dentro de la capacidad del lander (' + k.instr.length + ' / ' + k.landerCap + ')']];
+    const checks = [[k.massOk, 'Masa', k.mass + ' / ' + k.cap + ' t'], [k.costOk, 'Presupuesto', k.budgetPct + ' %'], [k.dvOk, 'Δv', k.dv + ' km/s'],
+      [k.days >= DAYS + 30, 'Oxígeno', k.days + ' días'], [k.powerOk, 'Energía', k.kw + ' / ' + k.demand + ' kW'], [k.capOk, 'Instrumentos', k.instr.length + ' / ' + k.landerCap],
+      [true, 'Escudo', k.pick.shield.n]];
     const all = checks.every((x) => x[0]);
-    const list = '<div class="who">CONSEJO DE CONFIGURACIÓN</div><ul>' + checks.map((x) => '<li style="padding-left:0">' + ok(x[0]) + x[1] + '</li>').join('') + '</ul>';
-    if (!all) return dlg('CONTROL DE MISIÓN — VERIFICACIÓN DE DISEÑO', list + q('INSTRUCTOR', 'Una nave demasiado pesada puede no despegar. Una nave mal equipada puede no aterrizar. Y una nave sin instrumentos adecuados puede llegar a Marte sin cumplir su objetivo científico. Diseña con inteligencia, cadete.') +
-      '<div class="alert">El diseño no cumple todos los requisitos. Levántate y ajusta los componentes marcados en su sala.</div>', [{ l: 'Seguir configurando', fn: () => {} }]);
-    dlg('CONTROL DE MISIÓN — CONFIRMACIÓN DE CONFIGURACIÓN', list + '<div class="ok"><b>Configuración de la nave registrada.</b></div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 30px">' +
-      [['Masa total', k.mass + ' t'], ['Presupuesto utilizado', k.budgetPct + ' %'], ['Capacidad de propelente', k.dv + ' km/s'], ['Integridad térmica', '100 %'], ['Soporte vital', '100 %'], ['Potencia eléctrica', k.kw + ' kW']]
-        .map((x) => '<div class="kv"><span>' + x[0] + '</span><b>' + x[1] + '</b></div>').join('') + '</div>' +
-      '<p class="motto mt-2">La misión está lista para iniciar la transferencia interplanetaria.</p>',
-      [{ l: 'Seguir configurando', fn: () => {} }, { l: '[ INICIAR VIAJE A MARTE ]', fn: startVoyage }]);
+    const grid = chips(checks.map((x) => chip((x[0] ? '✓ ' : '✗ ') + x[1], x[2], x[0] ? 'good' : 'bad')), 4);
+    if (!all) return dlg('VERIFICACIÓN DEL DISEÑO', '<div class="ux-big bad">✗ DISEÑO INCOMPLETO</div>' + grid +
+      '<div class="ux-hero">Corrige lo marcado con ✗ en su sala.</div>', [{ l: 'Seguir configurando', fn: () => {} }]);
+    dlg('VERIFICACIÓN DEL DISEÑO', '<div class="ux-big good">✓ NAVE LISTA</div>' + grid + '<div class="ux-hero">Rumbo a Marte.</div>',
+      [{ l: 'Seguir configurando', fn: () => {} }, { l: 'Iniciar viaje a Marte ▶', fn: startVoyage }]);
   }
 
   // ---------- Movimiento libre del cadete ----------
@@ -306,17 +294,17 @@
   /** Acción disponible ahora: { l: texto, fn | hold, can, prog, hot }. */
   function action() {
     const st = current(); if (!st) return null;
-    const seatAct = () => (P.seated ? { l: 'LEVANTARSE DEL ASIENTO', fn: stand, can: true } : { l: 'SENTARSE A LOS MANDOS', fn: sit, can: true });
-    if (mode === 'arrived') return st.id === 'seat' ? { l: P.seated ? 'INICIAR EL DESCENSO A MARTE' : 'SENTARSE Y PILOTAR EL DESCENSO', fn: goEDL, can: true } : null;
+    const seatAct = () => (P.seated ? { l: 'LEVANTARSE', fn: stand, can: true } : { l: 'SENTARSE', fn: sit, can: true });
+    if (mode === 'arrived') return st.id === 'seat' ? { l: 'INICIAR DESCENSO', fn: goEDL, can: true } : null;
     if (mode === 'voyage') {
       const i = S.ev.findIndex((e) => e.on && !e.done && e.st === st.id);
-      if (i >= 0) { const e = S.ev[i]; return S.t > e.cool ? { l: 'ATENDER EVENTO CRÍTICO 0' + (i + 1), fn: () => openEvent(e, i), can: true, hot: true } : { l: 'SISTEMAS REINICIANDO…', can: false }; }
+      if (i >= 0) { const e = S.ev[i]; return S.t > e.cool ? { l: '¡EVENTO ' + (i + 1) + '! · DECIDIR', fn: () => openEvent(e, i), can: true, hot: true } : { l: 'REINICIANDO…', can: false }; }
       if (st.id === 'seat') return seatAct();
       const sv = SERV[st.id], can = sv[1](S) && P.full !== st.id;
       return { l: can ? sv[0] : sv[2](S), hold: true, can, prog: clamp(sv[3](S), 0, 1) };
     }
     if (st.id === 'seat') return seatAct();
-    return open === st.id ? { l: 'CERRAR CONSOLA', fn: () => { open = null; }, can: true } : { l: 'ABRIR CONSOLA · ' + (st.cfgLabel || st.label), fn: () => { open = st.id; P.auto = null; }, can: true };
+    return open === st.id ? { l: 'CERRAR', fn: () => { open = null; }, can: true } : { l: 'CONSOLA · ' + (st.cfgLabel || st.label), fn: () => { open = st.id; P.auto = null; }, can: true };
   }
   function press() {
     if (paused || (mode !== 'config' && mode !== 'voyage' && mode !== 'arrived')) return;
@@ -352,12 +340,12 @@
   const NPCS = ['vera', 'iker'].map((id) => ({ id, who: CREW[id], x: 0, vx: 0, face: 1, ph: 0, seated: false, work: false, st: 'idle', wait: 0, tx: 0, job: null, K: 0.86 }));
   /** Averías que la tripulación sabe reparar: cuándo saltan, cuándo se dan por resueltas y cómo se trabaja en ellas. */
   const JOBS = {
-    life: { txt: 'Oxígeno crítico', end: 'Oxígeno estabilizado', need: (s) => s.o2 < 25, done: (s) => s.o2 >= 60, can: (s) => s.bat > 12, work(s, dt) { s.o2 += 8 * dt; s.bat -= 1.4 * dt; } },
-    power: { txt: 'Potencia eléctrica crítica', end: 'Baterías recuperadas', need: (s) => s.bat < 20, done: (s) => s.bat >= 60, can: () => true, work(s, dt) { s.bat += 7 * dt; } },
-    bridge: { txt: 'Señal de comunicación débil', end: 'Antena reapuntada', need: (s) => s.comms < 35, done: (s) => s.comms >= 75, can: (s) => !(s.ev[0].on && !s.ev[0].done), work(s, dt) { s.comms += 9 * dt; } },   // con el evento 01 activo la antena no basta: decide el cadete
+    life: { txt: 'Oxígeno bajo', end: 'Oxígeno estable', need: (s) => s.o2 < 25, done: (s) => s.o2 >= 60, can: (s) => s.bat > 12, work(s, dt) { s.o2 += 8 * dt; s.bat -= 1.4 * dt; } },
+    power: { txt: 'Energía baja', end: 'Baterías cargadas', need: (s) => s.bat < 20, done: (s) => s.bat >= 60, can: () => true, work(s, dt) { s.bat += 7 * dt; } },
+    bridge: { txt: 'Señal débil', end: 'Antena reapuntada', need: (s) => s.comms < 35, done: (s) => s.comms >= 75, can: (s) => !(s.ev[0].on && !s.ev[0].done), work(s, dt) { s.comms += 9 * dt; } },   // con el evento 1 activo la antena no basta: decide el cadete
     prop: { txt: 'Fuga de propelente', end: 'Fuga sellada', need: (s) => s.leak, done: (s) => !s.leak, can: () => true, work(s, dt) { s.seal += 0.6 * dt; if (s.seal > 2.5) { s.leak = false; A.beep(880, 0.2); } } },
-    hangar: { txt: 'Escudo térmico dañado', end: 'Losetas reparadas', need: (s) => s.shield < 60 && s.spares > 0, done: (s) => s.shield >= 60, can: (s) => s.spares > 0, work(s, dt) { s.nrep += dt; if (s.nrep > 2.4) { s.nrep = 0; s.spares--; s.shield += 12; A.beep(880, 0.1); } } },
-    lab: { txt: 'Instrumento científico en fallo', end: 'Instrumento recalibrado', need: (s) => s.instr.some((i) => !i.ok) && s.spares > 0, done: (s) => s.instr.every((i) => i.ok), can: (s) => s.spares > 0, work(s, dt) { s.ncal += dt; if (s.ncal > 4) { s.ncal = 0; s.spares--; s.instr.find((i) => !i.ok).ok = true; A.beep(880, 0.2); } } }
+    hangar: { txt: 'Escudo dañado', end: 'Escudo reparado', need: (s) => s.shield < 60 && s.spares > 0, done: (s) => s.shield >= 60, can: (s) => s.spares > 0, work(s, dt) { s.nrep += dt; if (s.nrep > 2.4) { s.nrep = 0; s.spares--; s.shield += 12; A.beep(880, 0.1); } } },
+    lab: { txt: 'Instrumento averiado', end: 'Instrumento listo', need: (s) => s.instr.some((i) => !i.ok) && s.spares > 0, done: (s) => s.instr.every((i) => i.ok), can: (s) => s.spares > 0, work(s, dt) { s.ncal += dt; if (s.ncal > 4) { s.ncal = 0; s.spares--; s.instr.find((i) => !i.ok).ok = true; A.beep(880, 0.2); } } }
   };
   const roam = (n) => { n.st = 'walk'; n.job = null; n.work = false; n.tx = X_MIN + 120 + Math.random() * (X_MAX - X_MIN - 160); };
   function resetCrew() {
@@ -382,14 +370,14 @@
         const sx = station(id).x, free = NPCS.filter((n) => !n.job).sort((a, b) => Math.abs(a.x - sx) - Math.abs(b.x - sx))[0];
         if (!free) return;
         free.job = id; free.st = 'alert'; free.wait = NPC_REACT; free.work = false; free.tx = clamp(sx + 52, X_MIN, X_MAX); free.face = sx >= free.x ? 1 : -1;
-        say(free, j.txt + ' en ' + ROOMS[ri(station(id).room)].name + '. Voy para allá.');
+        say(free, '¡' + j.txt + '! Voy a ' + ROOMS[ri(station(id).room)].name + '.');
       });
     }
     NPCS.forEach((n) => {
       const j = n.job && JOBS[n.job];
       let dir = 0;
       if (j && (mode !== 'voyage' || j.done(S) || !j.can(S))) {   // resuelta (o ya no se puede seguir)
-        if (mode === 'voyage' && j.done(S)) { say(n, j.end + (n.st === 'fix' ? '.' : '. Buen trabajo, cadete.')); if (n.st === 'fix') S.helped++; }
+        if (mode === 'voyage' && j.done(S)) { say(n, '✓ ' + j.end + (n.st === 'fix' ? '' : ' · ¡Bien, cadete!')); if (n.st === 'fix') S.helped++; }
         n.job = null; n.work = false; n.st = 'idle'; n.wait = 2 + Math.random() * 2;
       } else if (n.st === 'alert') { if ((n.wait -= dt) <= 0) n.st = 'go'; }
       else if (n.st === 'fix') { n.work = true; n.face = -1; j.work(S, dt); }
@@ -409,33 +397,33 @@
   /** Qué está haciendo cada tripulante (barra de tripulación). */
   function crewStatus(n) {
     const room = ROOMS[roomAt(n.x)].name;
-    if (n.st === 'fix') return ['REPARANDO · ' + room, 'fix'];
-    if (n.job) return ['ACUDE A ' + ROOMS[ri(station(n.job).room)].name.toUpperCase(), 'go'];
-    return [(n.st === 'walk' ? 'Recorriendo · ' : 'En ') + room, ''];
+    if (n.st === 'fix') return ['REPARANDO', 'fix'];
+    if (n.job) return ['→ ' + ROOMS[ri(station(n.job).room)].name, 'go'];
+    return [room, ''];
   }
   let crewKey = '';
   function renderCrew() {
-    const cur = current(), me = P.seated ? 'A los mandos' : P.work ? 'REPARANDO · ' + ROOMS[roomAt(P.x)].name : (cur && cur.id !== 'seat' ? 'Junto a ' : 'En ') + ROOMS[roomAt(P.x)].name;
+    const me = P.seated ? 'A los mandos' : P.work ? 'REPARANDO' : ROOMS[roomAt(P.x)].name;
     const rows = [['player', me, P.work ? 'fix' : '']].concat(NPCS.map((n) => [n.id].concat(crewStatus(n))));
     const key = JSON.stringify(rows) + A.settings.accent;
     if (key === crewKey) return;
     crewKey = key;
-    $('#crew').innerHTML = rows.map((r) => '<div class="crewchip ' + r[2] + '">' + AV.tag(r[0], 42) + '<div><b>' + CREW[r[0]].name + '</b><small>' + CREW[r[0]].role + '</small><span>' + r[1] + '</span></div></div>').join('');
+    $('#crew').innerHTML = rows.map((r) => '<div class="crewchip ' + r[2] + '">' + AV.tag(r[0], 38) + '<div><b>' + CREW[r[0]].name.split(' ')[0] + '</b><span>' + r[1] + '</span></div></div>').join('');
   }
 
   // ---------- Alertas ----------
   /** Lista de [puesto, texto]. */
   function alerts() {
-    if (mode === 'arrived') return [['seat', 'Llegada a Marte: vuelve al puesto del piloto']];
+    if (mode === 'arrived') return [['seat', 'MARTE · VUELVE A LOS MANDOS']];
     if (mode !== 'voyage') return [];
     const s = S, a = [];
-    s.ev.forEach((e, i) => { if (e.on && !e.done) a.push([e.st, 'EVENTO CRÍTICO 0' + (i + 1) + ' · ' + e.short]); });
-    if (s.o2 < 25) a.push(['life', 'Oxígeno crítico: ' + s.o2.toFixed(0) + ' %']);
-    if (s.bat < 20) a.push(['power', 'Potencia eléctrica crítica: ' + s.bat.toFixed(0) + ' %']);
-    if (s.leak) a.push(['prop', 'Fuga de propelente: perdiendo delta-v']);
-    if (s.shield < 60) a.push(['hangar', 'Escudo térmico dañado: ' + s.shield.toFixed(0) + ' %']);
-    if (s.comms < 35 && !s.ev[0].on) a.push(['bridge', 'Señal de comunicación débil: ' + s.comms.toFixed(0) + ' %']);
-    if (s.instr.some((i) => !i.ok)) a.push(['lab', 'Instrumento científico en fallo']);
+    s.ev.forEach((e, i) => { if (e.on && !e.done) a.push([e.st, '¡EVENTO ' + (i + 1) + '! ' + e.short]); });
+    if (s.o2 < 25) a.push(['life', '¡OXÍGENO BAJO! ' + s.o2.toFixed(0) + ' %']);
+    if (s.bat < 20) a.push(['power', '¡ENERGÍA BAJA! ' + s.bat.toFixed(0) + ' %']);
+    if (s.leak) a.push(['prop', '¡FUGA DE PROPELENTE!']);
+    if (s.shield < 60) a.push(['hangar', '¡ESCUDO DAÑADO! ' + s.shield.toFixed(0) + ' %']);
+    if (s.comms < 35 && !s.ev[0].on) a.push(['bridge', '¡SEÑAL DÉBIL! ' + s.comms.toFixed(0) + ' %']);
+    if (s.instr.some((i) => !i.ok)) a.push(['lab', '¡INSTRUMENTO AVERIADO!']);
     return a;
   }
   /** Averías y eventos activos (lo que enciende las luces de alarma). */
@@ -446,24 +434,24 @@
     const key = JSON.stringify(al.map((x) => x[1].replace(/\d+ %/, '') + rel(x[0]))) + room + mode;
     if (key !== alertKey) {
       alertKey = key;
-      $('#alerts').innerHTML = al.length ? '<div class="alrt-h">⚠ PANEL DE ALERTAS</div>' + al.map((x) => '<button class="alrt" data-s="' + x[0] + '"><span>' + x[1] + '</span><b>' + rel(x[0]) + '</b></button>').join('') : '';
+      $('#alerts').innerHTML = al.length ? '<div class="alrt-h">⚠ ALERTAS</div>' + al.map((x) => '<button class="alrt" data-s="' + x[0] + '"><span>' + x[1] + '</span><b>' + rel(x[0]) + '</b></button>').join('') : '';
       $('#alerts').querySelectorAll('button').forEach((b) => b.onclick = () => { goTo(b.dataset.s); b.blur(); });
       $('#sh-map').innerHTML = ROOMS.map((r, i) => '<button class="mapb' + (i === room ? ' on' : '') + (hot.has(i) ? ' alarm' : '') + '" style="flex:' + r.w + ' 1 0" data-s="' + (i ? r.id : 'seat') + '">' + r.short + '</button>').join('') + '<i id="map-me"></i>' + NPCS.map((n) => '<i class="map-npc" id="map-' + n.id + '" style="background:' + n.who.tint + '" title="' + n.who.name + '"></i>').join('');
       $('#sh-map').querySelectorAll('button').forEach((b) => b.onclick = () => { goTo(b.dataset.s); b.blur(); });
       const l = ROOMS[room - 1], r = ROOMS[room + 1];
       $('#nav-l').innerHTML = '<small>◀ A</small>' + (l ? l.name : 'Proa'); $('#nav-r').innerHTML = '<small>D ▶</small>' + (r ? r.name : 'Popa');
       $('#nav-l').classList.toggle('alarm', [...hot].some((i) => i < room)); $('#nav-r').classList.toggle('alarm', [...hot].some((i) => i > room));
-      $('#sh-room').textContent = ROOMS[room].name; $('#sh-res').textContent = ROOMS[room].res;
+      $('#sh-room').textContent = ROOMS[room].name; $('#sh-res').textContent = '';
     }
     const st = (l, v, bad) => '<div class="stat' + (bad ? ' bad' : '') + '"><label>' + l + '</label><b>' + v + '</b></div>';
     if (mode === 'config') {
       const k = cfg;
-      $('#sh-phase').textContent = '3.2 · SEGMENTO ESPACIAL · CONFIGURACIÓN EN ÓRBITA';
+      $('#sh-phase').textContent = '3.2 · CONFIGURACIÓN EN ÓRBITA';
       $('#sh-stats').innerHTML = st('MASA', k.mass + '/' + k.cap + ' t', !k.massOk) + st('PRESUPUESTO', k.budgetPct + ' %', !k.costOk) + st('DELTA-v', k.dv + ' km/s', !k.dvOk) +
         st('OXÍGENO', k.days + ' días', false) + st('POTENCIA', k.kw + '/' + k.demand + ' kW', !k.powerOk) + st('ESCUDO', k.pick.shield.n, false) + st('INSTRUM.', k.instr.length + '/' + k.landerCap, !k.capOk);
     } else {
       const s = S;
-      $('#sh-phase').textContent = mode === 'arrived' ? 'FASE 2 · VIAJE INTERPLANETARIO · LLEGADA A MARTE' : 'FASE 2 · VIAJE INTERPLANETARIO · DÍA ' + String(Math.min(DAYS, Math.floor(day(s)))).padStart(3, '0') + ' / ' + DAYS;
+      $('#sh-phase').textContent = mode === 'arrived' ? 'FASE 2 · LLEGADA A MARTE' : 'FASE 2 · DÍA ' + String(Math.min(DAYS, Math.floor(day(s)))).padStart(3, '0') + ' / ' + DAYS;
       $('#sh-stats').innerHTML = st('DELTA-v', s.dv.toFixed(2) + ' km/s', s.leak || s.dv < 0.5) + st('OXÍGENO', s.o2.toFixed(0) + ' %', s.o2 < 25) + st('ENERGÍA', s.bat.toFixed(0) + ' %', s.bat < 20) +
         st('ESCUDO', s.shield.toFixed(0) + ' %', s.shield < 60) + st('COMUNIC.', s.comms.toFixed(0) + ' %', s.comms < 35) + st('INSTRUM.', s.instr.filter((i) => i.ok).length + '/' + s.instr.length, s.instr.some((i) => !i.ok)) + st('REPUESTOS', s.spares, false);
     }
@@ -473,13 +461,11 @@
   function failC(cause) {
     mode = 'off';
     const s = S;
-    M.report('<h3>&lt; MISIÓN INTERRUMPIDA &gt;</h3><div class="who">CENTRO DE CONTROL DE MISIÓN</div>' +
-      '<p>Cadete, la nave no consiguió completar el viaje interplanetario.</p><p>El análisis de telemetría revela que uno o varios sistemas críticos quedaron fuera de sus parámetros operativos.</p>' +
-      '<div class="alert mb-2"><b>INFORME DE FALLO</b> · Segmento afectado: Espacial.<br>Causa: Gestión inadecuada de los recursos de la nave (' + cause + ', día ' + Math.floor(day(s)) + ').<br>' +
-      'Propelente restante: ' + Math.max(0, s.dv / (cfg.dv - DV_TMI) * 100).toFixed(0) + ' % · Reservas de oxígeno: ' + Math.max(0, s.o2).toFixed(0) + ' % · Potencia eléctrica: ' + kw(s) + ' kW · Integridad de sistemas: COMPROMETIDA.</div>' +
-      q('INSTRUCTOR', 'Durante un viaje interplanetario, cada recurso debe calcularse para toda la duración prevista. Una nave puede tener una trayectoria correcta y aun así fracasar si no dispone de energía, propelente o soporte vital suficiente.') +
-      '<p class="motto">LECCIÓN APRENDIDA: Equilibra la masa, el consumo energético y las reservas de soporte vital. Conserva siempre márgenes para situaciones imprevistas.</p>',
-      [{ l: 'Menú principal', fn: () => A.show('menu') }, { l: 'Repetir el viaje', fn: startVoyage }, { l: '[ Reintentar misión ]', fn: () => A.startShip('config') }]);
+    M.report('<div class="ux-big bad">✗ MISIÓN FALLIDA</div><div class="ux-hero">' + cause.toUpperCase() + ' · DÍA ' + Math.floor(day(s)) + '</div>' +
+      chips([chip('Δv', Math.max(0, s.dv / (cfg.dv - DV_TMI) * 100).toFixed(0) + ' %', s.dv <= 0 ? 'bad' : ''), chip('Oxígeno', Math.max(0, s.o2).toFixed(0) + ' %', s.o2 <= 0 ? 'bad' : ''),
+        chip('Energía', kw(s) + ' kW', s.bat <= 0 ? 'bad' : '')]) +
+      '<p class="ux-tip">Deja margen en oxígeno, energía y Δv.</p>',
+      [{ l: 'Menú', fn: () => A.show('menu') }, { l: 'Repetir el viaje', fn: startVoyage }, { l: 'Rediseñar la nave ▶', fn: () => A.startShip('config') }]);
   }
 
   function update(dt) {
@@ -521,12 +507,9 @@
       const voy = { o2: s.o2, bat: s.bat, dv: s.dv, shield: s.shield, comms: s.comms, right: s.right, wrong: s.wrong, crit: s.crit,
         instrOk: s.instr.filter((i) => i.ok).length, instrN: s.instr.length };
       A.run.voy = voy; A.store.set('aeon01.save', { phase: 'edl', run: A.run });
-      dlg('CONTROL DE MISIÓN — FINAL DEL VIAJE INTERPLANETARIO',
-        '<p>Cadete, los datos de navegación confirman que la nave ha llegado a las proximidades de Marte.</p><p>Las comunicaciones se mantienen dentro de los parámetros operativos.</p>' +
-        '<p>La tripulación está preparada y los sistemas de descenso han iniciado su secuencia de comprobación.</p><p>Hemos recorrido más de 470 millones de kilómetros.</p><p>Ahora comienza la fase más delicada de la expedición.</p>' +
-        '<p class="motto">PREPARA LA MANIOBRA DE ENTRADA, DESCENSO Y ATERRIZAJE.</p>' +
-        (P.seated ? '' : '<p>Vuelve al <b>puesto del piloto</b> y siéntate a los mandos para iniciar el descenso.</p>'),
-        P.seated ? [{ l: 'Iniciar el descenso', fn: goEDL }] : [{ l: 'Ir al puesto del piloto', fn: () => goTo('seat') }]);
+      dlg('FASE 2 · LLEGADA', '<div class="ux-big good">¡LLEGASTE A MARTE!</div><div class="ux-hero">Más de 470 millones de km recorridos.</div>' +
+        (P.seated ? '' : '<p class="ux-tip">Vuelve a los mandos para descender.</p>'),
+        P.seated ? [{ l: 'Iniciar descenso ▶', fn: goEDL }] : [{ l: 'Ir a los mandos ▶', fn: () => goTo('seat') }]);
     }
   }
 
@@ -988,6 +971,7 @@
     raf = 0;
     if (mode === 'off' || $('#screen-ship').classList.contains('hidden')) { mode = 'off'; return; }
     const dt = Math.min(0.05, (now - last) / 1000) * (A.ts || 1); last = now;
+    if (A.paused) { draw(now); raf = requestAnimationFrame(loop); return; }
     if (!paused) {
       movePlayer(dt);
       updateCrew(dt);
@@ -1023,7 +1007,7 @@
   window.addEventListener('keydown', (e) => {
     if (!live() || (e.target && e.target.tagName === 'INPUT')) return;
     const k = e.key.toLowerCase();
-    if (k === 'escape' && !paused) { if (mode === 'config' && open && open !== 'seat') { open = null; dirty = true; } else { mode = 'off'; A.show('menu'); } return; }
+    if (k === 'escape' && !paused) { if (mode === 'config' && open && open !== 'seat') { open = null; dirty = true; } else if (!e.repeat) A.togglePause(); return; }
     if (paused) return;
     if (k === 'a' || k === 'arrowleft') { keys.l = true; e.preventDefault(); }
     if (k === 'd' || k === 'arrowright') { keys.r = true; e.preventDefault(); }

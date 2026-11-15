@@ -25,30 +25,64 @@
   window.addEventListener('resize', fit); fit();
 
   // ---------- Sonido (WebAudio, se activa con el primer clic o tecla) ----------
-  // Todo pasa por `master`, que el botón de silencio (js/fx.js) pone a cero.
-  let actx = null, musicGain = null, master = null;
+  // Los efectos pasan por `master`, que el botón de silencio (js/fx.js) pone a cero.
+  // La música son tres canciones en assets/music (ver «Música por escena», más abajo).
+  let actx = null, master = null;
   function audio() {
     if (actx) { if (actx.state === 'suspended' && unlocked) actx.resume().catch(() => {}); return actx; }
     try {
       actx = new (window.AudioContext || window.webkitAudioContext)();
       master = actx.createGain(); master.connect(actx.destination);
-      musicGain = actx.createGain(); musicGain.connect(master);
-      [55, 82.5, 110.4].forEach((f, i) => {           // zumbido ambiental
-        const o = actx.createOscillator(), g = actx.createGain();
-        o.type = i ? 'sine' : 'triangle'; o.frequency.value = f; g.gain.value = 0.05;
-        o.connect(g); g.connect(musicGain); o.start();
-      });
       applyVolume();
     } catch (e) { actx = null; }
     return actx;
   }
   function applyVolume() {
-    if (musicGain) musicGain.gain.value = settings.music / 100;
     if (master) master.gain.setTargetAtTime(settings.muted ? 0 : 1, actx.currentTime, 0.03);
+    fadeMusic(true);
   }
   // El navegador solo deja sonar el audio tras un gesto del jugador: el primero lo desbloquea.
   let unlocked = false;
-  const unlock = () => { unlocked = true; const a = audio(); if (a && a.state === 'suspended') a.resume().catch(() => {}); };
+  const unlock = () => { unlocked = true; const a = audio(); if (a && a.state === 'suspended') a.resume().catch(() => {}); playScene(); };
+
+  // ---------- Música por escena ----------
+  // principal: menú, briefing, despegue y viaje · descenso: desde la entrada en Marte hasta el informe final
+  // personalizacion: solo en el hangar de personalización. Se funden al cambiar de escena.
+  // El volumen sale del deslizador «Música» de Ajustes; el botón de silencio también la apaga.
+  const TRACKS = { main: 'assets/music/principal.mp3', descent: 'assets/music/descenso.mp3', custom: 'assets/music/personalizacion.mp3' };
+  const players = {};
+  let scene = 'main';
+  function player(id) {
+    if (!players[id]) {
+      const a = new Audio(TRACKS[id]); a.loop = true; a.preload = 'auto'; a.volume = 0;
+      a.addEventListener('error', () => { a.dead = true; });     // sin el archivo, el juego sigue sin esa música
+      players[id] = a;
+    }
+    return players[id];
+  }
+  const musicVol = () => (settings.muted ? 0 : settings.music / 100);
+  function playScene() {
+    if (!unlocked || !scene) return;
+    const a = player(scene);
+    if (a.paused && !a.dead) a.play().catch(() => { /* el navegador aún no deja reproducir */ });
+  }
+  /** Cambia la música de fondo: 'main', 'descent', 'custom' o '' (silencio). La de descenso empieza siempre desde el principio. */
+  function music(id) {
+    if (id === scene) return;
+    scene = id;
+    if (id === 'descent' && players.descent) players.descent.currentTime = 0;
+    playScene();
+  }
+  /** Lleva cada canción hacia su volumen: la de la escena al del deslizador, las demás a cero (y se pausan). */
+  function fadeMusic(now) {
+    const v = musicVol();
+    Object.keys(players).forEach((id) => {
+      const a = players[id], want = id === scene ? v : 0, d = want - a.volume;
+      a.volume = Math.max(0, Math.min(1, now && id === scene ? want : a.volume + Math.sign(d) * Math.min(Math.abs(d), 0.04)));
+      if (id !== scene && a.volume <= 0.001 && !a.paused) a.pause();
+    });
+  }
+  setInterval(() => { fadeMusic(false); playScene(); }, 50);
   ['pointerdown', 'keydown'].forEach((t) => window.addEventListener(t, unlock, { capture: true, once: true }));
   /** Pitido táctil de interfaz: ataque corto (sin chasquido) y un leve barrido de tono. */
   function beep(freq, dur) {
@@ -154,6 +188,8 @@
       if (k === 'exit') screens[k].classList.toggle('flex', k === name);
     }
     menuActive = name === 'menu';
+    music(name === 'custom' ? 'custom' : name === 'exit' ? '' : 'main');   // js/edl.js pide 'descent' al empezar el descenso
+    if (name === 'menu') { const b = document.querySelector('[data-action="continue"]'); if (b) b.classList.toggle('dim', !store.get('aeon01.save', null)); }
   }
 
   // ---------- Modal ----------
@@ -180,8 +216,8 @@
   const actions = {
     new() {
       if (store.get('aeon01.save', null)) {
-        openModal('Nueva partida', '<p>Ya existe una misión guardada. Si empiezas de nuevo se sobrescribirá.</p>' +
-          '<div class="mt-6 flex gap-4 justify-end">' + btn('m-no', 'Cancelar') + btn('m-yes', 'Empezar') + '</div>');
+        openModal('Nueva partida', '<p class="font-display tracking-wider text-2xl">¿Borrar la partida guardada?</p>' +
+          '<div class="mt-6 flex gap-4 justify-end">' + btn('m-no', 'Cancelar') + btn('m-yes', 'Empezar de cero') + '</div>');
         $('#m-no').onclick = closeModal;
         $('#m-yes').onclick = () => { closeModal(); store.del('aeon01.save'); AEON.startBriefing(); };
       } else AEON.startBriefing();
@@ -189,16 +225,19 @@
     continue() {
       const save = store.get('aeon01.save', null);
       if (save && save.phase) AEON.resume(save);
-      else openModal('Continuar', '<p>No hay ninguna misión guardada todavía. Inicia una <b>Nueva partida</b> y tu progreso se guardará automáticamente.</p>');
+      else {
+        openModal('Continuar', '<p class="font-display tracking-wider text-2xl">Sin partida guardada.</p><div class="mt-6 flex justify-end">' + btn('m-yes', 'Nueva partida') + '</div>');
+        $('#m-yes').onclick = () => { closeModal(); AEON.startBriefing(); };
+      }
     },
     settings() {
       openModal('Ajustes',
-        '<div class="row"><span>Volumen de música</span><input id="s-music" type="range" min="0" max="100" value="' + settings.music + '"></div>' +
-        '<div class="row"><span>Volumen de efectos</span><input id="s-sfx" type="range" min="0" max="100" value="' + settings.sfx + '"></div>' +
-        '<div class="row"><label for="s-anim">Animaciones del menú</label><input id="s-anim" type="checkbox" class="w-6 h-6 accent-sky-400"' + (settings.anim ? ' checked' : '') + '></div>' +
-        '<div class="row"><span>Pantalla completa</span>' + btn('s-full', 'Alternar') + '</div>' +
+        '<div class="row"><span>Música</span><input id="s-music" type="range" min="0" max="100" value="' + settings.music + '"></div>' +
+        '<div class="row"><span>Efectos</span><input id="s-sfx" type="range" min="0" max="100" value="' + settings.sfx + '"></div>' +
+        '<div class="row"><label for="s-anim">Animaciones</label><input id="s-anim" type="checkbox" class="w-6 h-6 accent-sky-400"' + (settings.anim ? ' checked' : '') + '></div>' +
+        '<div class="row"><span>Pantalla completa</span>' + btn('s-full', 'Activar') + '</div>' +
         '<div class="row"><span>Borrar partida guardada</span>' + btn('s-wipe', 'Borrar') + '</div>');
-      $('#s-music').oninput = (e) => { settings.music = +e.target.value; audio(); applyVolume(); saveSettings(); };
+      $('#s-music').oninput = (e) => { settings.music = +e.target.value; unlocked = true; audio(); applyVolume(); playScene(); saveSettings(); };
       $('#s-sfx').oninput = (e) => { settings.sfx = +e.target.value; saveSettings(); };
       $('#s-sfx').onchange = () => beep(660, 0.1);
       $('#s-anim').onchange = (e) => { settings.anim = e.target.checked; applyShip(); saveSettings(); };
@@ -212,17 +251,13 @@
     },
     custom() { AEON.openCustom(); },          // pantalla propia: js/custom.js
     credits() {
-      openModal('Créditos',
-        '<p class="font-display tracking-[.2em] text-sky-300 text-base">AEON-01 · SPACE SIMULATOR</p>' +
-        '<p class="mt-3">Desarrollado por el <b>Equipo 7</b> para el hackatón Space Apps.</p>' +
-        '<ul class="mt-3 space-y-1 text-lg">' +
-        '<li>Dirección y diseño del juego — Equipo 7</li>' +
-        '<li>Programación — Equipo 7 con Claude</li>' +
-        '<li>Arte y sonido — generados por código (canvas, SVG y WebAudio)</li></ul>' +
-        '<p class="mt-4 text-base text-sky-200/70">Edita esta lista en <code>js/menu.js</code> para añadir los nombres del equipo.</p>');
+      // Para añadir los nombres del equipo, edita las líneas de abajo.
+      const cr = (k, v) => '<div class="mt-4"><div class="font-display text-[12px] tracking-[.3em] text-sky-300">' + k + '</div><div class="font-display text-2xl tracking-wider">' + v + '</div></div>';
+      openModal('Créditos', '<div class="text-center py-2"><div class="title-metal font-display font-black text-[64px] leading-none tracking-[.08em]">AEON-01</div>' +
+        cr('UN JUEGO DE', 'EQUIPO 7 · SPACE APPS') + cr('PROGRAMACIÓN', 'EQUIPO 7 + CLAUDE') + cr('ARTE Y SONIDO', 'GENERADOS POR CÓDIGO') + '</div>');
     },
     exit() {
-      openModal('Salir', '<p>¿Quieres cerrar AEON-01?</p><div class="mt-6 flex gap-4 justify-end">' + btn('m-no', 'Cancelar') + btn('m-yes', 'Salir') + '</div>');
+      openModal('Salir', '<p class="font-display tracking-wider text-2xl">¿Salir del juego?</p><div class="mt-6 flex gap-4 justify-end">' + btn('m-no', 'Cancelar') + btn('m-yes', 'Salir') + '</div>');
       $('#m-no').onclick = closeModal;
       $('#m-yes').onclick = () => { closeModal(); show('exit'); try { window.close(); } catch (e) { /* el navegador no lo permite */ } };
     }
@@ -234,6 +269,42 @@
   });
   $('#exit-back').addEventListener('click', () => show('menu'));
 
+  // ---------- Pausa y panel de partida ----------
+  // Desde que empieza la partida (briefing, cabina, nave y descenso) hay un panel pequeño arriba a la
+  // derecha con PAUSA y MENÚ. Esc también pausa. En pausa, cada bucle de juego deja de avanzar
+  // (AEON.paused); la música sigue sonando.
+  const pauseEl = $('#pause'), gm = $('#game-menu'), gmPause = $('#gm-pause');
+  const inGame = () => ['brief', 'launch', 'ship'].some((k) => !screens[k].classList.contains('hidden'));
+  function setPause(v) {
+    window.AEON.paused = v;
+    pauseEl.classList.toggle('hidden', !v); pauseEl.classList.toggle('flex', v);
+    gmPause.classList.toggle('on', v); gmPause.querySelector('span').textContent = v ? 'SEGUIR' : 'PAUSA';
+    if (v && window.AEON.exterior && window.AEON.exterior.on) window.AEON.exterior.toggle();
+    beep(v ? 330 : 520, 0.08);
+  }
+  function togglePause() { if (window.AEON.paused) setPause(false); else if (inGame()) setPause(true); }
+  /** Vuelve al menú principal desde cualquier punto de la partida (la partida guardada sigue disponible en Continuar). */
+  function goMenu() {
+    if (window.AEON.paused) setPause(false);
+    ['#report', '#modal'].forEach((sel) => { $(sel).classList.add('hidden'); $(sel).classList.remove('flex'); });
+    if (window.AEON.exterior && window.AEON.exterior.on) window.AEON.exterior.toggle();
+    beep(440, 0.1); show('menu');
+  }
+  $('#p-go').onclick = () => setPause(false);
+  $('#p-menu').onclick = goMenu;
+  gmPause.addEventListener('click', (e) => { e.preventDefault(); togglePause(); gmPause.blur(); });
+  $('#gm-menu').addEventListener('click', (e) => { e.preventDefault(); goMenu(); });
+  setInterval(() => gm.classList.toggle('hidden', !inGame()), 200);
+  // en pausa ninguna otra tecla llega al juego; Esc sale de la pausa
+  window.addEventListener('keydown', (e) => {
+    if (!window.AEON.paused) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    if (e.key === 'Escape' && !e.repeat) setPause(false);
+  }, true);
+
+  /** Tecla dibujada como icono, para textos de controles. */
+  const key = (k) => '<kbd class="kc">' + k + '</kbd>';
+
   // API compartida con el módulo de vuelo
-  window.AEON = { W, H, store, settings, saveSettings, applyShip, applyVolume, show, beep, audio, master: () => master, bg, actions, run: { tries: 0 }, startBriefing() {} };
+  window.AEON = { W, H, store, settings, saveSettings, applyShip, applyVolume, show, beep, audio, master: () => master, bg, actions, key, togglePause, music, paused: false, run: { tries: 0 }, startBriefing() {} };
 })();

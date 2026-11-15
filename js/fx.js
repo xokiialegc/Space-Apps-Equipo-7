@@ -165,7 +165,7 @@
 
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now; tt += dt;
-    const f = feed(), a = ctx();
+    const f = A.paused ? null : feed(), a = ctx();
     rumble = 0; stress = 0; alarmOn = false;
     let eng = 0, engF = 200, roar = 0;
     if (f) {

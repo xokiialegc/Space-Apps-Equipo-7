@@ -28,20 +28,21 @@
     Object.keys(L).forEach((k) => { $('#' + k).textContent = L[k]; });
     ['#holo', '#launch-end', '#l-msg-box'].forEach((s) => { $(s).classList.add('hidden'); $(s).classList.remove('flex'); });
     $('#l-count').textContent = ''; $('#heat').style.opacity = 0; $('#l-clock').textContent = 'EDL';
-    A.show('launch'); on = true; last = performance.now(); if (!raf) raf = requestAnimationFrame(loop);
+    A.show('launch'); A.music('descent'); on = true; last = performance.now(); if (!raf) raf = requestAnimationFrame(loop);
     card(1);
   };
 
   // ---------- Tarjeta holográfica de cada paso ----------
+  const K = (k) => A.key(k);
   const STEPS = {
-    1: ['< ALERTA: FASE DE DESCENSO INICIADA > · PASO 01 — ENTRADA ATMOSFÉRICA', 'Verifica la integridad del escudo térmico. La nave está experimentando un calentamiento intenso debido a la interacción con la atmósfera. <b>Mantén el ángulo de entrada en la zona verde con ◀ ▶ (A / D).</b>'],
-    2: ['PASO 02 — REDUCCIÓN DE VELOCIDAD', 'Los sistemas de desaceleración deben reducir la velocidad del vehículo. <b>Abre el paracaídas con P (o la pantalla DESCENSO) cuando la altitud esté en la zona verde.</b>'],
-    3: ['PASO 03 — ACTIVACIÓN DE RETROPROPULSORES', 'Verifica la disponibilidad de propelente y confirma la activación de los sistemas de descenso. <b>Mantén ESPACIO para frenar. Toca suelo a menos de 4 m/s.</b>'],
-    4: ['PASO 04 — ATERRIZAJE', '¡Atención, cadete! Estamos a pocos segundos de la superficie. Controla la velocidad vertical: <b>menos de 4 m/s al contacto</b>.']
+    1: ['PASO 1 · ENTRADA', () => 'Mantén la marca blanca en verde ' + K('A') + K('D')],
+    2: ['PASO 2 · PARACAÍDAS', () => 'Pulsa ' + K('P') + ' en la zona verde'],
+    3: ['PASO 3 · RETROCOHETES', () => 'Mantén ' + K('ESPACIO') + ' · toca suelo a menos de 4 m/s'],
+    4: ['¡SUELO CERCA!', () => 'Frena: menos de 4 m/s al contacto']
   };
   function card(n) {
     E.step = n;
-    $('#edl-step').textContent = STEPS[n][0]; $('#edl-txt').innerHTML = '<b>INSTRUCTOR:</b> ' + STEPS[n][1];
+    $('#edl-step').textContent = STEPS[n][0]; $('#edl-txt').innerHTML = '<span class="font-display text-[20px] tracking-wide">' + STEPS[n][1]() + '</span>';
     const ui = $('#edl-ui');
     if (n === 1) {
       ui.innerHTML = '<div class="flex items-center gap-3"><button id="e-l" class="opt" style="flex:none;width:56px;text-align:center">◀</button><div class="corr flex-1"><i id="e-zone"></i><u id="e-mark"></u></div><button id="e-r" class="opt" style="flex:none;width:56px;text-align:center">▶</button></div>';
@@ -60,8 +61,8 @@
     E.chute = E.h > CH_HI ? 'rip' : E.h >= CH_LO ? 'ok' : 'late';
     E.stage = 2.5; E.t = 0; E.h1 = E.h; E.v1 = E.v;
     if (A.fx) A.fx.event(E.chute === 'ok' ? 'chute' : 'chuteBad'); else A.beep(E.chute === 'ok' ? 880 : 200, 0.3);
-    $('#edl-step').textContent = { ok: 'PARACAÍDAS DESPLEGADO', rip: 'PARACAÍDAS DAÑADO: apertura demasiado pronto', late: 'APERTURA TARDÍA: frenado parcial' }[E.chute];
-    $('#edl-txt').innerHTML = '<b>INSTRUCTOR:</b> Supervisa la telemetría. La velocidad debe mantenerse dentro de los márgenes previstos.'; $('#edl-ui').innerHTML = '';
+    $('#edl-step').textContent = { ok: '✓ PARACAÍDAS ABIERTO', rip: '✗ PARACAÍDAS ROTO · DEMASIADO PRONTO', late: '⚠ APERTURA TARDÍA · FRENA MENOS' }[E.chute];
+    $('#edl-txt').innerHTML = '<span class="font-display text-[20px] tracking-wide">Vigila la velocidad</span>'; $('#edl-ui').innerHTML = '';
   }
 
   // ---------- Simulación ----------
@@ -76,7 +77,7 @@
       e.off = Math.max(0, Math.abs(e.a - e.z) - 0.22);
       e.shield -= e.heat * (1.2 + 14 * e.off) / cfg.shieldF * dt;
       fireLabel(e.off > 0 ? 'FUERA DE CORREDOR' : 'ESCUDO ACTIVO', e.off === 0);
-      if (e.shield <= 0) { e.shield = 0; return fail('El escudo térmico se consumió durante la entrada atmosférica.', 'NO ACTIVADOS'); }
+      if (e.shield <= 0) { e.shield = 0; return fail('ESCUDO AGOTADO EN LA ENTRADA', 'SIN USAR'); }
       if (u >= 1) { e.stage = 2; e.t = 0; e.heat = 0; card(2); fireLabel('PARACAÍDAS (P)', true); }
     } else if (e.stage === 2) {
       e.h = CH_TOP - 0.8 * e.t; e.v = 450 - 8 * e.t;      // a 11 km la velocidad es de unos 420 m/s, como en Perseverance
@@ -93,13 +94,13 @@
       e.h = e.hm / 1000; e.v = e.vm;
       fireLabel(e.fuel <= 0 ? 'SIN PROPELENTE' : e.firing ? 'RETRO ACTIVOS' : 'RETRO (ESPACIO)', !e.firing && e.fuel > 0);
       if (e.step === 3 && e.hm < 300) card(4);
-      if (e.step === 4) $('#edl-ui').innerHTML = '<div class="kv"><span>Retropropulsores: <b>' + (e.firing ? 'ACTIVOS' : 'EN ESPERA') + '</b></span><span>Velocidad: <b>' + e.vm.toFixed(1) + ' m/s</b></span><span>Altitud: <b>' + Math.max(0, e.hm).toFixed(0) + ' m</b></span><span>Combustible: <b>' + e.fuel.toFixed(0) + ' %</b></span></div>';
+      if (e.step === 4) $('#edl-ui').innerHTML = '<div class="kv"><span>Velocidad <b class="' + (e.vm > 4 ? 'text-red-400' : 'text-emerald-300') + '">' + e.vm.toFixed(1) + ' m/s</b></span><span>Altitud <b>' + Math.max(0, e.hm).toFixed(0) + ' m</b></span><span>Propelente <b class="' + (e.fuel < 20 ? 'text-red-400' : '') + '">' + e.fuel.toFixed(0) + ' %</b></span></div>';
       if (e.hm <= 0) {
         e.hm = 0; e.h = 0; e.touch = e.vm;
-        if (e.vm > 10) return fail('El vehículo llegó a la superficie a ' + e.vm.toFixed(0) + ' m/s.', e.fuel > 0 ? 'EMPUJE INSUFICIENTE' : 'SIN PROPELENTE');
+        if (e.vm > 10) return fail('IMPACTO A ' + e.vm.toFixed(0) + ' m/s', e.fuel > 0 ? 'POCO EMPUJE' : 'SIN PROPELENTE');
         e.hard = e.vm > 4; e.landed = true; e.stage = 5; e.t = 0; e.v = 0; e.firing = false; if (A.fx) A.fx.event(e.hard ? 'hardLanding' : 'touchdown'); A.beep(880, 0.6);
-        $('#edl-step').textContent = 'CONTROL DE MISIÓN'; $('#edl-ui').innerHTML = '';
-        $('#edl-txt').innerHTML = 'Contacto con la superficie confirmado' + (e.hard ? ' (aterrizaje brusco: ' + e.vm.toFixed(1) + ' m/s)' : '') + '.<br><span class="motto">¡ATERRIZAJE COMPLETADO!</span>';
+        $('#edl-step').textContent = e.hard ? '⚠ CONTACTO BRUSCO · ' + e.vm.toFixed(1) + ' m/s' : '✓ CONTACTO SUAVE'; $('#edl-ui').innerHTML = '';
+        $('#edl-txt').innerHTML = '<span class="motto">¡ATERRIZAJE COMPLETADO!</span>';
         fireLabel('EN SUPERFICIE', true);
       }
     } else if (e.stage === 5 && e.t > 3.2) { e.stage = 6; finalReport(); }
@@ -150,7 +151,7 @@
     raf = 0;
     if (!on || $('#screen-launch').classList.contains('hidden')) { on = false; return; }
     const dt = Math.min(0.05, (now - last) / 1000) * (A.ts || 1); last = now;
-    if (E.stage < 6) update(dt);
+    if (E.stage < 6 && !A.paused) update(dt);
     if (!on) return;
     A.sky.drawMars(E, dt, now); drawView(now); drawPanels();
     raf = requestAnimationFrame(loop);
@@ -160,22 +161,22 @@
   (A.flight = A.flight || {}).edl = () => (!on || !E || E.stage >= 6 || $('#screen-launch').classList.contains('hidden')) ? null : {
     kind: 'edl', stage: E.stage, h: E.h, hm: E.hm, v: E.v, heat: E.heat, a: E.a, off: E.off, shield: E.shield, fuel: E.fuel,
     firing: E.firing, thrust: E.firing ? 1 : 0, chute: E.chute, landed: E.landed,
-    msg: E.stage === 1 ? 'Mantén el ángulo en el corredor con A / D' : E.stage === 2 ? 'Abre el paracaídas con P entre ' + km1(CH_HI) + ' y ' + km1(CH_LO) + ' km'
-      : E.stage === 3 ? 'Mantén ESPACIO para frenar · contacto a menos de 4 m/s' : '',
-    alerts: [E.stage === 1 && E.off > 0 && 'FUERA DEL CORREDOR DE ENTRADA', E.shield < 40 && 'ESCUDO TÉRMICO ' + E.shield.toFixed(0) + ' %',
-      E.stage === 3 && E.vm > 10 && E.hm < 200 && 'VELOCIDAD DE DESCENSO EXCESIVA', E.stage === 3 && E.fuel < 20 && 'PROPELENTE BAJO'].filter(Boolean)
+    msg: E.stage === 1 ? 'A / D · marca en verde' : E.stage === 2 ? 'P · paracaídas entre ' + km1(CH_HI) + ' y ' + km1(CH_LO) + ' km'
+      : E.stage === 3 ? 'ESPACIO · frena a menos de 4 m/s' : '',
+    alerts: [E.stage === 1 && E.off > 0 && '¡FUERA DEL CORREDOR!', E.shield < 40 && '¡ESCUDO BAJO! ' + E.shield.toFixed(0) + ' %',
+      E.stage === 3 && E.vm > 10 && E.hm < 200 && '¡DEMASIADO RÁPIDO!', E.stage === 3 && E.fuel < 20 && '¡PROPELENTE BAJO!'].filter(Boolean)
   };
 
   // ---------- Resultados ----------
+  const chip = (l, v, cls) => '<div class="uxc' + (cls ? ' ' + cls : '') + '"><small>' + l + '</small><b>' + v + '</b></div>';
+  const grid = (arr, n) => '<div class="ux-grid" style="grid-template-columns:repeat(' + (n || arr.length) + ',1fr)">' + arr.join('') + '</div>';
+
   function fail(cause, retro) {
     E.stage = 9; $('#edl-card').classList.add('hidden'); $('#cockpit').style.transform = ''; if (A.fx) A.fx.event('crash'); else A.beep(140, 0.7);
-    M.report('<h3>&lt; MISIÓN INTERRUMPIDA &gt;</h3><div class="who">CENTRO DE CONTROL DE MISIÓN</div>' +
-      '<p>Cadete, hemos perdido la confirmación de un aterrizaje seguro.</p><p>Los últimos datos recibidos indican que el vehículo de descenso no pudo completar correctamente la secuencia de entrada, descenso y aterrizaje.</p>' +
-      '<div class="alert mb-2"><b>INFORME DE FALLO</b> · Segmento afectado: Espacial.<br>Causa: Protección térmica insuficiente, reservas de propelente inadecuadas o configuración incorrecta del sistema de descenso. ' + cause + '<br>' +
-      'Integridad del escudo térmico: ' + E.shield.toFixed(0) + ' % · Propelente disponible: ' + E.fuel.toFixed(0) + ' % · Estado de retropropulsores: ' + retro + ' · Estado de aterrizaje: NO CONFIRMADO.</div>' +
-      q('INSTRUCTOR', 'La llegada a Marte exige una planificación completa de la fase de descenso. No basta con alcanzar el planeta. La nave debe estar preparada para atravesar su atmósfera y completar el aterrizaje dentro de los parámetros establecidos.') +
-      '<p class="motto">LECCIÓN APRENDIDA: Verifica la integridad del escudo térmico, la capacidad de propulsión y las reservas necesarias antes de iniciar el descenso.</p>',
-      [{ l: 'Menú principal', fn: () => { on = false; A.show('menu'); } }, { l: 'Repetir el descenso', fn: () => A.startEDL(voy) }, { l: '[ Reintentar misión ]', fn: () => { on = false; A.startShip('config'); } }]);
+    M.report('<div class="ux-big bad">✗ DESCENSO FALLIDO</div><div class="ux-hero">' + cause + '</div>' +
+      grid([chip('Escudo', E.shield.toFixed(0) + ' %', E.shield <= 0 ? 'bad' : ''), chip('Propelente', E.fuel.toFixed(0) + ' %', E.fuel <= 0 ? 'bad' : ''), chip('Retrocohetes', retro, 'bad')]) +
+      '<p class="ux-tip">Cuida el escudo, abre el paracaídas en verde y guarda propelente.</p>',
+      [{ l: 'Menú', fn: () => { on = false; A.show('menu'); } }, { l: 'Repetir el descenso', fn: () => A.startEDL(voy) }, { l: 'Reintentar misión ▶', fn: () => { on = false; A.startShip('config'); } }]);
   }
 
   function finalReport() {
@@ -183,55 +184,29 @@
     const e = E, k = cfg, tries = A.run.tries || 1;
     const op = Math.max(0, voy.instrOk - (e.hard ? 1 : 0)), obj = Math.round(op / M.INSTR.length * 100);
     const kwNow = (k.kw * clamp(e.energy / 100, 0, 1)).toFixed(1);
-    const evL = tries > 1 ? 'SUPERADO (tras ' + tries + ' lanzamientos)' : 'SUPERADO';
-    const evS = (voy.crit < 6 && !e.hard && e.chute === 'ok') ? 'EXCELENTE' : 'SUPERADO' + (e.hard ? ' — aterrizaje brusco' : '') + (voy.crit >= 6 ? ' — recursos en estado crítico durante el viaje' : '');
-    const evT = (voy.right === 3 ? 'EXCELENTE' : voy.right === 2 ? 'SUPERADO' : 'DEFICIENTE') + ' (' + voy.right + '/3 decisiones correctas al primer intento)';
-    const evU = (obj >= 75 ? 'EXCELENTE' : obj >= 50 ? 'SUPERADO' : obj > 0 ? 'PARCIAL' : 'NO CUMPLIDO') + ' (' + op + ' instrumentos transmitiendo)';
+    const evL = tries > 1 ? ['SUPERADO', tries + ' intentos', 'good'] : ['SUPERADO', 'al primer intento', 'good'];
+    const evS = (voy.crit < 6 && !e.hard && e.chute === 'ok') ? ['EXCELENTE', 'nave intacta', 'good'] : ['SUPERADO', e.hard ? 'aterrizaje brusco' : voy.crit >= 6 ? 'recursos críticos' : 'paracaídas fuera de tiempo', ''];
+    const evT = [voy.right === 3 ? 'EXCELENTE' : voy.right === 2 ? 'SUPERADO' : 'DEFICIENTE', voy.right + '/3 decisiones', voy.right >= 2 ? 'good' : 'bad'];
+    const evU = [obj >= 75 ? 'EXCELENTE' : obj >= 50 ? 'SUPERADO' : obj > 0 ? 'PARCIAL' : 'NO CUMPLIDO', op + ' instrumentos', obj >= 50 ? 'good' : 'bad'];
     const eff = Math.round(0.35 * obj + 0.2 * e.fuel + 0.2 * e.shield + 0.15 * voy.o2 + 0.1 * voy.right / 3 * 100);
     const grade = eff >= 80 ? 'SOBRESALIENTE' : eff >= 65 ? 'NOTABLE' : eff >= 50 ? 'APROBADO' : 'INSUFICIENTE';
     const grad = obj >= 50 && eff >= 50;
-    const kv = (l, v) => '<div class="kv"><span>' + l + '</span><b>' + v + '</b></div>';
-    const seg = (t, qq, r) => '<div class="seg"><b>' + t + '</b>' + qq + '<div class="mt-1 text-emerald-300">Resultado: ' + r + '</div></div>';
+    const seg = (t, r) => '<div class="uxc ' + r[2] + '"><small>' + t + '</small><b>' + r[0] + '</b><span>' + r[1] + '</span></div>';
+    const home = () => { on = false; A.store.del('aeon01.save'); A.show('menu'); };
 
-    const page3 = () => M.report('<div class="who">INSTRUCTOR JEFE — CONTROL DE MISIÓN</div><h3>MENSAJE FINAL DEL INSTRUCTOR</h3>' +
-      '<p>Cadete, tu entrenamiento ha concluido.</p><p>Ahora comprendes que explorar el espacio es mucho más que construir una nave y elegir un destino.</p>' +
-      '<p>Es aprender a trabajar con recursos limitados, interpretar datos, resolver problemas y tomar decisiones bajo presión.</p>' +
-      '<p>Desde el lanzamiento hasta el análisis científico, cada segmento cumple una función indispensable.</p><p>Marte es solo el comienzo.</p>' +
-      '<p>El universo sigue esperando a quienes se atrevan a explorarlo.</p><p class="motto">FIN DEL ENTRENAMIENTO.</p>',
-      [{ l: '[ Volver al inicio ]', fn: () => { on = false; A.store.del('aeon01.save'); A.show('menu'); } }]);
+    const page2 = () => grad ? M.report('<div class="ux-big good">¡MISIÓN CUMPLIDA!</div><div class="ux-hero">Aterrizaste en Marte con la ciencia en marcha.</div>' +
+      '<div class="ok" style="font-size:22px;text-align:center">&lt; GRADUACIÓN AUTORIZADA &gt;</div><p class="motto mt-3 text-center">MARTE ES SOLO EL COMIENZO.</p>',
+      [{ l: 'Volver al inicio ▶', fn: home }])
+      : M.report('<div class="ux-big bad">MISIÓN PARCIAL</div><div class="ux-hero">Aterrizaste, pero la ciencia no llegó.</div>' +
+        grid([chip('Ciencia', obj + ' %', 'bad'), chip('Eficiencia', eff + ' %', eff >= 50 ? '' : 'bad')]) +
+        '<p class="ux-tip">Lleva más instrumentos operativos y gasta menos recursos.</p>',
+        [{ l: 'Volver al inicio', fn: home }, { l: 'Reintentar misión ▶', fn: () => { on = false; A.startShip('config'); } }]);
 
-    const page2 = () => grad ? M.report('<h3>&lt; MISIÓN COMPLETADA &gt;</h3><div class="who">CENTRO DE CONTROL DE MISIÓN — TIERRA</div>' +
-      '<p>Cadete, tenemos confirmación.</p><p>La nave ha aterrizado en Marte, los sistemas esenciales permanecen operativos y los instrumentos científicos han completado satisfactoriamente sus objetivos. Los datos recibidos confirman que la expedición ha cumplido los parámetros establecidos.</p>' +
-      '<p>Has demostrado dominio de los cuatro segmentos de una misión espacial. El vehículo de lanzamiento fue seleccionado correctamente. La nave mantuvo su estabilidad durante el viaje. El equipo terrestre gestionó las anomalías y los instrumentos científicos proporcionaron información valiosa.</p>' +
-      '<p>Pero tu mayor logro no fue simplemente alcanzar Marte. Fue conseguirlo respetando los límites de masa, presupuesto y recursos disponibles.</p>' +
-      q('INSTRUCTOR JEFE', 'Durante esta simulación aprendiste que una misión espacial no depende de una sola decisión, sino de cientos de decisiones coordinadas. Cada gramo cuenta. Cada kilovatio importa. Cada maniobra tiene consecuencias. ' +
-        'Hoy has demostrado que puedes pensar como un ingeniero, actuar como un operador de vuelo y evaluar una misión como un científico.') +
-      '<p>En nombre del Centro de Control de Misión:</p><p class="motto">¡FELICITACIONES, CADETE! Has completado el Programa de Simulación Orbital.<br>TU MISIÓN HA SIDO UN ÉXITO.</p><div class="ok">&lt; GRADUACIÓN AUTORIZADA &gt;</div>',
-      [{ l: 'Continuar', fn: page3 }])
-      : M.report('<h3>&lt; MISIÓN PARCIAL &gt;</h3><div class="who">CENTRO DE CONTROL DE MISIÓN — TIERRA</div>' +
-        '<p>Cadete, la nave ha aterrizado en Marte, pero la expedición no cumplió sus objetivos: objetivos científicos ' + obj + ' %, eficiencia de recursos ' + eff + ' %.</p>' +
-        q('INSTRUCTOR', 'El éxito no se mide únicamente por llegar al destino. Una nave sin instrumentos operativos puede llegar a Marte sin cumplir su objetivo científico. Revisa el diseño y la gestión de recursos, y vuelve a intentarlo.') +
-        '<div class="alert">Graduación no autorizada todavía.</div>',
-        [{ l: '[ Reintentar misión ]', fn: () => { on = false; A.startShip('config'); } }, { l: 'Continuar', fn: page3 }]);
-
-    M.report('<div class="who">5.2 · SEGMENTO DE USUARIO — CENTRO DE CONTROL DE MISIÓN · TIERRA</div>' +
-      '<p>La nave ha alcanzado Marte. Los instrumentos científicos han comenzado a transmitir los primeros datos de la expedición. Ahora, los científicos e investigadores en Tierra analizarán los resultados para determinar si se cumplieron los objetivos de la misión. ' +
-      'El éxito no se mide únicamente por llegar al destino: también debemos evaluar la cantidad, calidad y utilidad de la información obtenida.</p>' +
-      '<h3>REPORTE FINAL DE MISIÓN</h3>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 34px">' +
-      kv('Nombre de misión', A.settings.shipName || 'AEON-01') + kv('Destino', 'Marte') + kv('Estado', grad ? 'COMPLETADA' : 'PARCIAL') + kv('Masa total', k.mass + ' t') +
-      kv('Delta-v utilizado', (k.dv - voy.dv * e.fuel / 100).toFixed(2) + ' km/s') + kv('Propelente restante', e.fuel.toFixed(0) + ' %') +
-      kv('Integridad del escudo térmico', e.shield.toFixed(0) + ' %') + kv('Reservas de soporte vital', voy.o2.toFixed(0) + ' %') +
-      kv('Potencia eléctrica', kwNow + ' kW') + kv('Instrumentos científicos operativos', op + ' de ' + voy.instrN) + '</div>' +
-      '<div class="who mt-2">EVALUACIÓN DE LOS CUATRO SEGMENTOS</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
-      seg('SEGMENTO DE LANZAMIENTO', '¿El vehículo seleccionado permitió colocar la carga en la órbita prevista sin superar los límites de masa y presupuesto?', evL) +
-      seg('SEGMENTO ESPACIAL', '¿La nave mantuvo sus sistemas operativos durante el viaje y completó correctamente la maniobra de descenso?', evS) +
-      seg('SEGMENTO TERRESTRE', '¿Se mantuvo una supervisión adecuada de las comunicaciones, la telemetría y las anomalías de vuelo?', evT) +
-      seg('SEGMENTO DE USUARIO', '¿Los instrumentos científicos consiguieron transmitir información útil para los objetivos de investigación?', evU) + '</div>' +
-      '<div class="who mt-2">EFICIENCIA DE LA MISIÓN</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:0 34px">' +
-      kv('Presupuesto utilizado', k.budgetPct + ' %') + kv('Masa transportada', k.mass + ' t') + kv('Objetivos científicos completados', obj + ' %') + kv('Eficiencia de recursos', eff + ' %') + '</div>' +
-      '<p class="motto mt-2">Calificación final: ' + grade + '</p>',
-      [{ l: 'Continuar', fn: page2 }]);
+    M.report('<div class="who">INFORME FINAL · ' + (A.settings.shipName || 'AEON-01') + '</div><div class="ux-big ' + (grad ? 'good' : 'bad') + '">' + grade + ' · ' + eff + ' %</div>' +
+      grid([seg('Lanzamiento', evL), seg('Espacial', evS), seg('Terrestre', evT), seg('Usuario · ciencia', evU)], 4) +
+      grid([chip('Instrumentos', op + ' / ' + voy.instrN, op ? '' : 'bad'), chip('Propelente', e.fuel.toFixed(0) + ' %'), chip('Escudo', e.shield.toFixed(0) + ' %'),
+        chip('Oxígeno', voy.o2.toFixed(0) + ' %'), chip('Energía', kwNow + ' kW'), chip('Presupuesto', k.budgetPct + ' %')], 3),
+      [{ l: 'Continuar ▶', fn: page2 }]);
   }
 
   // ---------- Controles ----------
@@ -242,7 +217,7 @@
     if (k === 'd' || k === 'arrowright') { keys.r = true; e.preventDefault(); }
     if (k === 'p') deploy();
     if (e.code === 'Space') { keys.fire = true; e.preventDefault(); }
-    if (k === 'escape') { on = false; A.show('menu'); }
+    if (k === 'escape' && !e.repeat) A.togglePause();
   });
   window.addEventListener('keyup', (e) => {
     const k = e.key.toLowerCase();
