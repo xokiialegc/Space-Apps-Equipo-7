@@ -621,3 +621,21 @@ Prueba en Chrome: la canción correcta suena en el menú, el hangar, el briefing
 descenso; el deslizador y el silencio cambian el volumen; el panel aparece solo en partida, pausa
 y vuelve al menú. Sin los MP3, el juego no da errores.
 
+
+## Etapa 12 · Logos de NASA Space Apps (15-11-2026)
+
+### Pedido
+Añadir los logos del evento (zip `010-LOGOS`) al menú principal y al final del juego.
+
+### Qué se hizo
+- Del zip se usaron las versiones blancas, pensadas para fondo oscuro, recortadas y reducidas
+  (`assets/logos/`, 132 KB en total):
+  - `space-apps-challenge.png` y `space-apps-encarnacion.png` (horizontales): en el menú
+    principal, arriba a la derecha, separados por una línea fina.
+  - `space-apps-challenge-circular.png` y `space-apps-encarnacion-circular.png`: en la última
+    pantalla del juego («¡Misión cumplida!» o «Misión parcial»), bajo el mensaje final.
+- El resto del zip (PDF, SVG, versiones negras y en color) no se añadió al repositorio.
+
+### Pruebas
+En Chrome: los cuatro logos cargan, se ven en el menú y, tras un descenso completo, en la pantalla
+final. Sin errores de JavaScript.
