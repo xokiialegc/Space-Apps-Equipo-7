@@ -244,3 +244,54 @@ salas y por debajo de las puertas y del equipo de cada sala:
 
 ### Pruebas
 Las seis salas renderizadas en Chrome sin interfaz, sin errores de JavaScript del juego.
+
+## Etapa 7 · Hangar de lanzamiento: personalización del cohete (15-11-2026)
+
+### Pedido
+Que el botón «Personalizar» abra una pantalla propia en lugar del panel sobre el menú: fondo 2D
+con una plataforma de lanzamiento y el cohete elegido en el centro, título «AEON-01», carrusel de
+cohetes bajo el título, panel para cambiar el color principal en tiempo real y aplicar
+calcomanías sobre el fuselaje, y un botón «Menú Principal» que vuelva al inicio. Como referencia
+de distribución se adjuntó una captura del menú de un juego de carreras, y como naves, tres
+imágenes para pasar a 2D.
+
+### Qué se construyó
+1. **Cohetes en 2D** (`js/rockets.js`): tres cohetes dibujados por código, sin imágenes, con
+   volumen por degradado. **Apollo 11** (Saturno V: tres etapas, bandas negras, módulos de
+   servicio y de mando, torre de escape), **X** (nave de acero con cuatro aletas) y **Centella**
+   (avión espacial de ala delta, diseño propio).
+2. **Hangar de lanzamiento** (`js/custom.js`, pantalla `#screen-custom`): atardecer en el
+   complejo de lanzamiento con torre de servicio, brazos que llegan al fuselaje, focos, vapor de
+   los depósitos y luces de plataforma. Título y botón «Menú Principal» arriba; debajo, el
+   carrusel con miniatura, nombre, capacidad y coste de cada cohete.
+3. **Color principal**: librea original, ocho colores y un selector libre. Se aplica al instante
+   al cohete de la plataforma y a su miniatura, y también a la franja de la nave del menú y del
+   traje del cadete.
+4. **Calcomanías**: seis diseños propios (Emblema AEON, Equipo 7, Destino Marte, Estrella,
+   Galones, Rayo) y «Tu imagen», que carga un archivo del jugador reducido a 160 px. Hasta tres a
+   la vez, en posiciones fijas del fuselaje; la cuarta sustituye a la más antigua.
+5. **Cámara exterior del despegue** (`js/launch.js`): muestra el cohete elegido con su color.
+
+### Decisiones
+- **El cohete es el vehículo de lanzamiento.** El panel anterior tenía tres lanzadores (ARES-M,
+  ARES-H, TITAN-X) que fijaban capacidad y coste. Para no tener dos selectores de cohete, cada
+  cohete del carrusel ocupa uno: Centella 70 t / 900 M$, Apollo 11 100 t / 1 400 M$ y X 130 t /
+  2 100 M$. Las cifras y los identificadores internos no cambian, así que las partidas guardadas
+  siguen valiendo.
+- **Primera nave.** La imagen era un X-wing de Star Wars, un diseño con derechos de autor; no se
+  dibujó. Su casilla la ocupa Centella, un diseño original.
+- **Logotipo de la NASA.** No se incluyó como calcomanía: las condiciones de Space Apps prohíben
+  usar la insignia y otros identificadores de la NASA sin permiso expreso por escrito
+  (https://www.spaceappschallenge.org/navigator-terms-conditions/).
+- **Referencia de menú.** Se tomó solo la distribución (título, botón de menú, tira de casillas,
+  vehículo sobre plataforma); la tipografía, los colores y los paneles son los de AEON-01.
+- **Tamaños.** Los cohetes no están a escala entre sí: se dibujan para que los tres se vean bien
+  en la plataforma.
+
+### Pruebas
+Automatizadas en Chrome sin interfaz: abrir desde «Personalizar», carrusel con flechas en
+pantalla, teclado y clic, cambio de color medido en los píxeles del cohete, selector libre,
+calcomanías (aplicar, quitar, límite de tres), carga de una imagen propia, nombre, vuelta al menú
+con el botón y con Esc, conservación al recargar y cohete elegido en la verificación y la cámara
+del despegue. Sin errores de JavaScript. No se probó en un móvil físico.
+

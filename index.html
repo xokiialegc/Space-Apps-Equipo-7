@@ -178,6 +178,44 @@
     </div>
   </section>
 
+  <!-- ============ HANGAR DE LANZAMIENTO · PERSONALIZACIÓN DEL COHETE ============ -->
+  <section id="screen-custom" class="absolute inset-0 hidden bg-black">
+    <canvas id="pad" width="1600" height="900" class="absolute inset-0"></canvas>
+
+    <div class="absolute left-10 top-6 pointer-events-none">
+      <h1 class="title-metal font-display font-black text-[66px] leading-none tracking-[.08em]">AEON-01</h1>
+      <div class="font-display text-[13px] tracking-[.56em] text-sky-200 mt-1 pl-1">HANGAR DE LANZAMIENTO</div>
+    </div>
+    <button id="cu-back" class="cu-back absolute right-10 top-8"><span>◀</span> Menú Principal</button>
+    <div class="cu-line absolute"></div>
+
+    <!-- carrusel de cohetes -->
+    <div class="cu-strip absolute">
+      <button id="cu-prev" class="cu-arrow" aria-label="Cohete anterior">◀</button>
+      <div id="cu-cells" class="cu-cells"></div>
+      <button id="cu-next" class="cu-arrow" aria-label="Cohete siguiente">▶</button>
+    </div>
+
+    <div class="absolute left-10 pointer-events-none" style="bottom:30px">
+      <div id="cu-name" class="font-display font-black text-[46px] leading-none tracking-[.1em] text-white drop-shadow-[0_0_12px_rgba(25,180,255,.9)]"></div>
+      <div id="cu-sub" class="font-display text-[15px] tracking-[.34em] text-sky-300 mt-2 uppercase"></div>
+    </div>
+    <div class="absolute font-display text-[11px] tracking-[.22em] text-sky-300/70" style="left:640px;bottom:22px">← → CAMBIAR DE COHETE · ESC MENÚ PRINCIPAL</div>
+
+    <!-- opciones de personalización -->
+    <div id="cu-panel" class="holo absolute">
+      <div id="cu-info"></div>
+      <div class="cu-h">COLOR PRINCIPAL</div>
+      <div id="cu-colors" class="cu-colors"></div>
+      <div class="cu-h flex justify-between">CALCOMANÍAS <span id="cu-count" class="text-sky-200"></span></div>
+      <div id="cu-stickers" class="cu-stickers"></div>
+      <button id="cu-file-btn" class="cu-link">Cargar tu imagen</button>
+      <input id="cu-file" type="file" accept="image/*" style="display:none">
+      <div class="cu-h"><label for="cu-shipname">NOMBRE DE LA NAVE</label></div>
+      <input id="cu-shipname" class="txt-in" maxlength="10" style="width:100%">
+    </div>
+  </section>
+
   <!-- ============ FASE 1 · CABINA: VERIFICACIÓN Y DESPEGUE ============ -->
   <section id="screen-launch" class="absolute inset-0 hidden bg-black">
     <div id="cockpit" class="absolute inset-0">
@@ -310,6 +348,8 @@
 
 <script src="js/menu.js"></script>
 <script src="js/mission.js"></script>
+<script src="js/rockets.js"></script>
+<script src="js/custom.js"></script>
 <script src="js/sky.js"></script>
 <script src="js/launch.js"></script>
 <script src="js/ship.js"></script>
