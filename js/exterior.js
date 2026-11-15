@@ -282,7 +282,7 @@
       const i = RS.drop++;
       debris.push({ kind: 'stage', i, lo: i ? def.cuts[i - 1] : 0, hi: def.cuts[i], born: performance.now(), vr: rnd(-0.12, 0.12), vx: rnd(-12, 12) });
       say('SEPARACIÓN DE ETAPA ' + (i + 1));
-      if (on) A.beep(260, 0.25);
+      if (A.fx) A.fx.event('stage');          // golpe de cámara, zoom y detonación (js/fx.js)
     }
   }
   function drawLaunch(f, dt) {

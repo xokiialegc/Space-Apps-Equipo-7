@@ -148,7 +148,8 @@
     if (ok) $('#le-next').onclick = () => { stopLoop(); A.startShip('config'); };
     else $('#le-retry').onclick = () => A.startLaunch(cfg);
     $('#launch-end').classList.remove('hidden'); $('#launch-end').classList.add('flex');
-    A.beep(ok ? 880 : 160, 0.5);
+    if (A.fx) A.fx.event(ok ? 'success' : /SUBORBITAL/.test(title) ? 'fault' : 'crash');
+    else A.beep(ok ? 880 : 160, 0.5);
   }
 
   // ---------- Simulación ----------
@@ -294,10 +295,7 @@
     $('#lb-energy').style.width = st.energy + '%';
     $('#lb-energy').classList.toggle('danger', st.energy < 20);
     $('#l-fire').classList.toggle('is-held', firing);
-    // vibración de la cabina y resplandor por rozamiento
-    const rho = Math.exp(-st.h / H_SCALE);
-    $('#cockpit').style.transform = firing
-      ? 'translate(' + ((Math.random() - 0.5) * 4 * (0.4 + rho)).toFixed(1) + 'px,' + ((Math.random() - 0.5) * 4 * (0.4 + rho)).toFixed(1) + 'px)' : '';
+    // la vibración de la cabina la aplica js/fx.js (proporcional al empuje y a la densidad del aire)
     $('#heat').style.opacity = st.q > 0.6 ? Math.min(0.18, (st.q - 0.6) * 0.25) : 0;
   }
 

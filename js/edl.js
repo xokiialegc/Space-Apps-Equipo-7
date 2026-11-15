@@ -59,7 +59,7 @@
     if (E.stage !== 2 || E.chute) return;
     E.chute = E.h > CH_HI ? 'rip' : E.h >= CH_LO ? 'ok' : 'late';
     E.stage = 2.5; E.t = 0; E.h1 = E.h; E.v1 = E.v;
-    A.beep(E.chute === 'ok' ? 880 : 200, 0.3);
+    if (A.fx) A.fx.event(E.chute === 'ok' ? 'chute' : 'chuteBad'); else A.beep(E.chute === 'ok' ? 880 : 200, 0.3);
     $('#edl-step').textContent = { ok: 'PARACAÍDAS DESPLEGADO', rip: 'PARACAÍDAS DAÑADO: apertura demasiado pronto', late: 'APERTURA TARDÍA: frenado parcial' }[E.chute];
     $('#edl-txt').innerHTML = '<b>INSTRUCTOR:</b> Supervisa la telemetría. La velocidad debe mantenerse dentro de los márgenes previstos.'; $('#edl-ui').innerHTML = '';
   }
@@ -97,7 +97,7 @@
       if (e.hm <= 0) {
         e.hm = 0; e.h = 0; e.touch = e.vm;
         if (e.vm > 10) return fail('El vehículo llegó a la superficie a ' + e.vm.toFixed(0) + ' m/s.', e.fuel > 0 ? 'EMPUJE INSUFICIENTE' : 'SIN PROPELENTE');
-        e.hard = e.vm > 4; e.landed = true; e.stage = 5; e.t = 0; e.v = 0; e.firing = false; A.beep(880, 0.6);
+        e.hard = e.vm > 4; e.landed = true; e.stage = 5; e.t = 0; e.v = 0; e.firing = false; if (A.fx) A.fx.event(e.hard ? 'hardLanding' : 'touchdown'); A.beep(880, 0.6);
         $('#edl-step').textContent = 'CONTROL DE MISIÓN'; $('#edl-ui').innerHTML = '';
         $('#edl-txt').innerHTML = 'Contacto con la superficie confirmado' + (e.hard ? ' (aterrizaje brusco: ' + e.vm.toFixed(1) + ' m/s)' : '') + '.<br><span class="motto">¡ATERRIZAJE COMPLETADO!</span>';
         fireLabel('EN SUPERFICIE', true);
@@ -168,7 +168,7 @@
 
   // ---------- Resultados ----------
   function fail(cause, retro) {
-    E.stage = 9; $('#edl-card').classList.add('hidden'); $('#cockpit').style.transform = ''; A.beep(140, 0.7);
+    E.stage = 9; $('#edl-card').classList.add('hidden'); $('#cockpit').style.transform = ''; if (A.fx) A.fx.event('crash'); else A.beep(140, 0.7);
     M.report('<h3>&lt; MISIÓN INTERRUMPIDA &gt;</h3><div class="who">CENTRO DE CONTROL DE MISIÓN</div>' +
       '<p>Cadete, hemos perdido la confirmación de un aterrizaje seguro.</p><p>Los últimos datos recibidos indican que el vehículo de descenso no pudo completar correctamente la secuencia de entrada, descenso y aterrizaje.</p>' +
       '<div class="alert mb-2"><b>INFORME DE FALLO</b> · Segmento afectado: Espacial.<br>Causa: Protección térmica insuficiente, reservas de propelente inadecuadas o configuración incorrecta del sistema de descenso. ' + cause + '<br>' +
