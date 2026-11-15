@@ -560,3 +560,33 @@ reactiva el nodo maestro. Sin errores de JavaScript. El sonido no se pudo escuch
 automática, así que el volumen y la mezcla hay que ajustarlos de oído. Como siempre, sin
 conexión y con un sustituto mínimo de Tailwind. No se probó con jugadores reales ni en un móvil.
 
+
+## Etapa 10 · Textos e interfaz: lectura instantánea (15-11-2026)
+
+### Pedido
+Revisar todos los textos, tutoriales y pantallas con una regla: simplificar al máximo. Sin paredes
+de texto; frases cortas, comandos directos y códigos visuales; HUD limpio con alertas de una
+línea; pantallas de inicio, pausa y créditos limpias, con botones grandes. Sin tocar la jugabilidad.
+
+### Qué cambió
+- **Menú principal**: solo el título, la nave y seis botones grandes en una columna (Salir incluido).
+  Fuera la cabecera, la versión y el lema. «Continuar» aparece atenuado si no hay partida.
+- **Ajustes, créditos y salida**: etiquetas de una palabra; créditos en tres líneas grandes;
+  confirmaciones con una sola pregunta.
+- **Pausa nueva**: Esc o el botón ⏸ (arriba a la derecha) congela el despegue, la nave o el
+  descenso. Continuar o volver al menú. Antes, Esc salía al menú sin preguntar.
+- **Briefing**: de dos pantallas de párrafos a dos pantallas de tarjetas: la misión en una frase
+  con los 4 segmentos, y los 5 indicadores con su umbral de peligro.
+- **Cabina**: verificación con dos tarjetas que se ponen en verde o rojo; controles como teclas
+  dibujadas; mensajes de vuelo en mayúsculas, y en rojo parpadeante si son alerta
+  («¡MAX-Q! SUELTA EL EMPUJE», «¡COMBUSTIBLE BAJO!»).
+- **Nave**: introducciones de 3-4 líneas con teclas; consolas con una línea por sala; eventos
+  críticos con una frase, tarjetas de datos y dos opciones cortas; verificación del diseño como
+  rejilla de ✓ / ✗; alertas de una línea («¡OXÍGENO BAJO! 18 %»); tripulación compacta.
+- **Descenso**: cada paso en una línea con su tecla; informes finales con nota grande y
+  tarjetas; la página final y el mensaje del instructor se unieron en una sola.
+
+### Pruebas
+Recorrido automático en Chrome por menú, créditos, ajustes, briefing, verificación, despegue,
+pausa (la altitud y el día del viaje no avanzan en pausa), configuración, viaje con eventos,
+descenso fallido y descenso completo hasta «¡Misión cumplida!». Sin errores de JavaScript.

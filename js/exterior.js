@@ -38,7 +38,7 @@
     return null;
   }
   // con cualquiera de estos paneles a la vista, la cámara vuelve dentro
-  const BLOCK = ['#launch-end', '#report', '#ship-holo', '#modal', '#holo'];
+  const BLOCK = ['#launch-end', '#report', '#ship-holo', '#modal', '#holo', '#pause'];
   const blocked = () => BLOCK.some((s) => { const el = $(s); return el && el.getClientRects().length > 0; });   // visible de verdad (no basta la clase: su pantalla puede estar oculta)
   const available = () => !blocked() && !!feed();
 
@@ -616,13 +616,13 @@
         row(1, 'VELOCIDAD MEDIA', fmt(R.CRUISE_KM / (R.CRUISE_DAYS * 86400), 1), 'km/s respecto al Sol', 100, false);
       }
       row(2, 'COMBUSTIBLE · Δv', fmt(Math.max(0, f.dv), 2), 'km/s', f.dv0 > 0 ? f.dv / f.dv0 * 100 : 100, f.leak || f.dv < 0.5);
-      if (al.length && f.mode === 'voyage') m = 'Pulsa C para volver adentro y reparar el módulo en alarma.';
+      if (al.length && f.mode === 'voyage') m = 'C · volver adentro y reparar';
     }
     $('#ext-sub').textContent = sub;
     const key = al.join('|');
     if (key !== alertKey) {
       alertKey = key;
-      alertsEl.innerHTML = al.length ? '<div class="alrt-h">⚠ ALERTAS DE EMERGENCIA</div>' + al.map((t) => '<div class="alrt"><span>' + t + '</span></div>').join('') : '';
+      alertsEl.innerHTML = al.length ? '<div class="alrt-h">⚠ ALERTAS</div>' + al.map((t) => '<div class="alrt"><span>' + t + '</span></div>').join('') : '';
     }
     const ba = bannerAge();
     $('#ext-banner').textContent = ba < 3.2 ? banner.txt : '';

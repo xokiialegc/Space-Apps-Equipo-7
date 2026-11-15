@@ -44,64 +44,45 @@
   }
   function hideHolo() { holo.classList.add('hidden'); holo.classList.remove('flex'); }
 
+  const K = (k) => A.key(k);
   function pageCheck() {
     const k = cfg, done = { mass: false, cost: false };
-    showHolo('FASE 1 — PREPARACIÓN Y DESPEGUE', 'Segmento de lanzamiento · Verificación y puesta en órbita');
+    showHolo('FASE 1 · VERIFICACIÓN', 'Comprueba antes de despegar');
     hBody.innerHTML =
-      '<div class="quote"><div class="who">INSTRUCTOR</div>Cadete, la configuración de tu nave ya ha sido seleccionada desde el menú principal. ' +
-      'Ahora debemos verificar que el vehículo y su carga cumplen los requisitos necesarios para iniciar la expedición. Evalúa dos factores:</div>' +
-      '<div class="mb-2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">' +
-      '<div class="seg"><b>CAPACIDAD DE CARGA</b>Comprueba que la masa total de la nave no supere la capacidad máxima del vehículo de lanzamiento seleccionado.' +
-      '<div class="mt-1 mb-1 text-sky-200">Vehículo: ' + k.launcher.name + ' · Nave ' + k.pick.hull.n.toLowerCase() + ' con ' + k.instr.length + ' instrumentos</div>' +
-      btn('v-mass', '[ Verificar capacidad de carga ]') + '<div id="r-mass" class="mt-2"></div></div>' +
-      '<div class="seg"><b>COSTE DE LANZAMIENTO</b>Verifica que los servicios de lanzamiento y puesta en órbita se encuentren dentro del presupuesto disponible.' +
-      '<div class="mt-1 mb-1 text-sky-200">Presupuesto del programa: ' + k.budget + ' M$</div>' +
-      btn('v-cost', '[ Comprobar presupuesto ]') + '<div id="r-cost" class="mt-2"></div></div></div>' +
-      '<div class="quote"><div class="who">INSTRUCTOR — CONSEJO DE VUELO</div>La selección del vehículo ya está hecha. Tu responsabilidad ahora es comprobar que todo está preparado para el despegue. ' +
-      'Una misión segura comienza con una verificación rigurosa.</div>';
-    hFoot.innerHTML = btn('b-back', 'Atrás') + btn('b-go', '[ Autorizar lanzamiento ]', ' disabled');
+      '<div class="ux-hero">Dos comprobaciones y despegas.</div>' +
+      '<div class="ux-grid" style="grid-template-columns:1fr 1fr">' +
+      '<div class="uxc" id="c-mass"><small>Carga · ' + k.launcher.name + '</small><b>¿' + k.mass + ' t caben en ' + k.cap + ' t?</b><div class="mt-3">' + btn('v-mass', 'Verificar carga') + '</div></div>' +
+      '<div class="uxc" id="c-cost"><small>Presupuesto</small><b>¿' + k.cost + ' M$ de ' + k.budget + ' M$?</b><div class="mt-3">' + btn('v-cost', 'Verificar presupuesto') + '</div></div></div>';
+    hFoot.innerHTML = btn('b-back', '◀ Atrás') + btn('b-go', 'Autorizar lanzamiento ▶', ' disabled');
+    const mark = (id, good, txt) => { const el = $(id); el.classList.add(good ? 'good' : 'bad'); el.querySelector('b').textContent = (good ? '✓ ' : '✗ ') + txt; el.querySelector('.mt-3').remove(); };
     const refresh = () => {
       if (!(done.mass && done.cost)) return;
       if (k.massOk && k.costOk) $('#b-go').disabled = false;
       else A.mission.report(
-        '<h3>&lt; MISIÓN INTERRUMPIDA &gt;</h3><div class="who">CENTRO DE CONTROL DE MISIÓN</div>' +
-        '<p>Cadete, la expedición no pudo superar la fase de lanzamiento.</p><p>El análisis de telemetría indica que el vehículo seleccionado no cumplía los requisitos de capacidad de carga de la misión.</p>' +
-        '<div class="alert mb-2"><b>INFORME DE FALLO</b> · Segmento afectado: Lanzamiento.<br>Causa: Capacidad de carga insuficiente o planificación presupuestaria inadecuada.<br>' +
-        'Masa total: ' + k.mass + ' t · Capacidad del lanzador: ' + k.cap + ' t · Presupuesto: ' + k.cost + ' de ' + k.budget + ' M$.</div>' +
-        '<div class="quote"><div class="who">INSTRUCTOR</div>El error comenzó durante la planificación. Un vehículo de lanzamiento debe seleccionarse considerando la masa total de la carga y los requisitos orbitales. ' +
-        'Una misión no puede comenzar correctamente si sus capacidades no han sido verificadas.</div>' +
-        '<p class="motto">LECCIÓN APRENDIDA: Comprueba la capacidad del lanzador y optimiza la masa antes de autorizar el despegue.</p>',
-        [{ l: 'Ajustar sistemas a bordo', fn: () => { stopLoop(); A.startShip('config'); } }, { l: '[ Reintentar misión ]', fn: () => { stopLoop(); A.show('menu'); A.actions.custom(); } }]);
+        '<div class="ux-big bad">✗ LANZAMIENTO CANCELADO</div>' +
+        '<div class="ux-grid" style="grid-template-columns:repeat(3,1fr)">' +
+        '<div class="uxc' + (k.massOk ? '' : ' bad') + '"><small>Masa</small><b>' + k.mass + ' t</b></div>' +
+        '<div class="uxc"><small>Capacidad</small><b>' + k.cap + ' t</b></div>' +
+        '<div class="uxc' + (k.costOk ? '' : ' bad') + '"><small>Presupuesto</small><b>' + k.cost + ' / ' + k.budget + ' M$</b></div></div>' +
+        '<p class="ux-tip">Aligera la nave o elige un lanzador más grande.</p>',
+        [{ l: 'Ajustar la nave', fn: () => { stopLoop(); A.startShip('config'); } }, { l: 'Cambiar de cohete', fn: () => { stopLoop(); A.show('menu'); A.actions.custom(); } }]);
     };
-    click('#v-mass', () => {
-      done.mass = true;
-      $('#r-mass').innerHTML = k.massOk
-        ? '<div class="ok">✓ Masa total ' + k.mass + ' t de ' + k.cap + ' t admitidas. Margen: ' + (k.cap - k.mass) + ' t.</div>'
-        : '<div class="alert"><b>ALERTA:</b> Capacidad de carga del lanzador superada (' + k.mass + ' t de ' + k.cap + ' t).</div>';
-      refresh();
-    });
-    click('#v-cost', () => {
-      done.cost = true;
-      $('#r-cost').innerHTML = k.costOk
-        ? '<div class="ok">✓ Coste ' + k.cost + ' M$ de ' + k.budget + ' M$. Margen: ' + (k.budget - k.cost) + ' M$.</div>'
-        : '<div class="alert"><b>ALERTA:</b> Presupuesto superado (' + k.cost + ' M$ de ' + k.budget + ' M$).</div>';
-      refresh();
-    });
+    click('#v-mass', () => { done.mass = true; mark('#c-mass', k.massOk, k.massOk ? 'Carga OK · sobran ' + (k.cap - k.mass) + ' t' : 'Exceso: ' + (k.mass - k.cap) + ' t de más'); refresh(); });
+    click('#v-cost', () => { done.cost = true; mark('#c-cost', k.costOk, k.costOk ? 'Presupuesto OK · sobran ' + (k.budget - k.cost) + ' M$' : 'Faltan ' + (k.cost - k.budget) + ' M$'); refresh(); });
     click('#b-back', () => { stopLoop(); A.show('brief'); A.mission.telemetry(); });
     click('#b-go', pageConfirm);
   }
 
   function pageConfirm() {
-    showHolo('CONTROL DE MISIÓN', 'Confirmación de lanzamiento');
+    showHolo('CONTROL DE MISIÓN', 'Listo para despegar');
     hBody.innerHTML =
-      '<div class="ok">✓ Vehículo de lanzamiento confirmado. &nbsp; ✓ Carga útil verificada. &nbsp; ✓ Trayectoria inicial calculada.</div>' +
-      '<p>Todos los sistemas se encuentran dentro de los parámetros establecidos.</p>' +
-      '<p class="motto">Cadete, tienes autorización para iniciar la secuencia de lanzamiento.</p>' +
-      '<div class="quote"><div class="who">CÓMO PILOTAR EL DESPEGUE</div>Mantén <b>ESPACIO</b> (o la pantalla <b>IMPULSORES</b> a tu derecha) para encender los cohetes. ' +
-      'El monitor central muestra la cámara exterior con tu <b>combustible</b> y tu <b>energía</b>. En la atmósfera densa vigila la <b>presión dinámica</b> (monitor derecho): ' +
-      'si supera el 100 % la estructura se daña, así que suelta el impulso un momento. Pero no esperes demasiado: sin empuje la gravedad te frena y el combustible no sobra. ' +
-      'Objetivo: <b>7,8 km/s</b> por encima de <b>100 km</b> (monitor izquierdo).</div>';
-    hFoot.innerHTML = btn('b-back', 'Atrás') + btn('b-go', 'Iniciar secuencia de lanzamiento');
+      '<div class="ok">✓ Lanzador &nbsp; ✓ Carga &nbsp; ✓ Trayectoria</div>' +
+      '<div class="ux-hero">Meta: <b>7,8 km/s</b> por encima de <b>100 km</b>.</div>' +
+      '<div class="ux-ctrl">' +
+      '<div>' + K('ESPACIO') + 'Mantén para encender los motores</div>' +
+      '<div><span class="ic">⚠</span>¿Presión por encima de 100 %? Suelta un momento</div>' +
+      '<div><span class="ic" style="color:#7fdcff">⛽</span>El combustible no sobra: no te quedes parado</div></div>';
+    hFoot.innerHTML = btn('b-back', '◀ Atrás') + btn('b-go', 'Iniciar cuenta atrás ▶');
     click('#b-back', pageCheck);
     click('#b-go', () => A.startLaunch(cfg));
   }
@@ -116,7 +97,7 @@
   A.startLaunch = function (config) {
     cfg = config || cfg; st = fresh(); mode = 'launch'; held = false; lastTick = 99; A.run.tries = (A.run.tries || 0) + 1;
     resetOverlay(); hideHolo(); setFire('EN ESPERA', false);
-    msg('Secuencia de lanzamiento iniciada.');
+    msg('CUENTA ATRÁS');
     A.show('launch'); startLoop();
   };
 
@@ -131,7 +112,7 @@
   }
   function setFire(txt, ready) { $('#l-fire-txt').textContent = txt; $('#l-fire').classList.toggle('ready', !!ready); }
   function msg(t) {
-    $('#l-msg').textContent = t;
+    $('#l-msg').textContent = t; $('#l-msg-box').classList.toggle('hot', /^¡/.test(t));
     $('#l-msg-box').classList.toggle('hidden', !t); $('#l-msg-box').classList.toggle('flex', !!t);
   }
 
@@ -142,8 +123,8 @@
     setFire(ok ? 'APAGADO' : 'FALLO', false);
     $('#le-title').textContent = title; $('#le-text').innerHTML = text;
     const b = (id, l) => '<div class="neon-wrap"><button id="' + id + '" class="neon-btn neon-btn--sm">' + l + '</button></div>';
-    $('#le-btns').innerHTML = ok ? b('le-menu', 'Menú principal') + b('le-next', 'Segmento espacial →')
-                                 : b('le-menu', 'Menú principal') + b('le-retry', 'Repetir lanzamiento');
+    $('#le-btns').innerHTML = ok ? b('le-menu', 'Menú') + b('le-next', 'Ir a la nave ▶')
+                                 : b('le-menu', 'Menú') + b('le-retry', 'Reintentar ▶');
     $('#le-menu').onclick = () => { stopLoop(); A.show('menu'); };
     if (ok) $('#le-next').onclick = () => { stopLoop(); A.startShip('config'); };
     else $('#le-retry').onclick = () => A.startLaunch(cfg);
@@ -163,9 +144,9 @@
       cnt.textContent = n; $('#l-clock').textContent = 'T - ' + String(n).padStart(2, '0');
       firing = false; return;
     }
-    if (st.t < 2.5 && st.h < 0.5) { cnt.textContent = '¡DESPEGUE AUTORIZADO!'; cnt.style.fontSize = '54px'; cnt.style.top = '290px'; }
+    if (st.t < 2.5 && st.h < 0.5) { cnt.textContent = '¡DESPEGUE!'; cnt.style.fontSize = '54px'; cnt.style.top = '290px'; }
     else cnt.textContent = '';
-    if (lastTick !== 0) { lastTick = 0; A.beep(990, 0.4); msg('Mantén ESPACIO para encender los impulsores.'); }
+    if (lastTick !== 0) { lastTick = 0; A.beep(990, 0.4); msg('MANTÉN ESPACIO · MOTORES'); }
     $('#l-clock').textContent = 'T + ' + String(Math.floor(st.t)).padStart(3, '0') + ' s';
 
     firing = held && st.fuel > 0;
@@ -185,23 +166,23 @@
     else if (q < 0.8) st.stress = Math.max(0, st.stress - 2 * dt);
     setFire(st.fuel <= 0 ? 'SIN COMBUST.' : firing ? 'ENCENDIDOS' : 'LISTO', st.fuel > 0 && !firing);
 
-    if (q > 1) msg('⚠ Presión dinámica excesiva: reduce el impulso.');
-    else if (st.fuel <= 0) msg('Combustible agotado.');
-    else if (st.h >= H_SPACE && st.v < V_ORBIT) msg('Fuera de la atmósfera. Acelera hasta 7,8 km/s.');
-    else if (st.h > 45) msg('Aire tenue: impulso a fondo.');
-    else if (st.h > 0.2) msg('Ascenso. Vigila la presión dinámica.');
+    if (q > 1) msg('¡MAX-Q! SUELTA EL EMPUJE');
+    else if (st.fuel <= 0) msg('¡SIN COMBUSTIBLE!');
+    else if (st.fuel < 15) msg('¡COMBUSTIBLE BAJO!');
+    else if (st.h >= H_SPACE && st.v < V_ORBIT) msg('EN EL ESPACIO · ACELERA A 7,8 km/s');
+    else if (st.h > 45) msg('AIRE TENUE · EMPUJE A FONDO');
+    else if (st.h > 0.2) msg('ASCENSO · VIGILA LA PRESIÓN');
 
-    if (st.stress >= 100) return end(false, 'FALLO ESTRUCTURAL',
-      'La presión dinámica superó lo que el vehículo podía soportar a ' + st.h.toFixed(0) + ' km de altitud. En la atmósfera densa hay que modular el empuje.');
-    if (st.v >= V_ORBIT && st.h >= H_SPACE) return end(true, 'LANZAMIENTO EXITOSO',
-      '<b>Inserción orbital completada.</b><br>La nave ha alcanzado la órbita terrestre prevista. El vehículo de lanzamiento ha cumplido su función.<br><br>' +
-      'Cadete, hemos superado el primer segmento.<br>Ahora comienza tu responsabilidad como operador de la nave.<br>' +
-      '<span class="text-sky-300 text-lg">Combustible: ' + st.fuel.toFixed(0) + ' % · Energía: ' + st.energy.toFixed(0) + ' % · Integridad: ' + (100 - st.stress).toFixed(0) + ' %</span>');
-    if (st.maxH > 1 && st.h <= 0) return end(false, 'MISIÓN ABORTADA', 'La nave perdió velocidad y regresó a la superficie. Sin empuje, la gravedad siempre gana.');
+    if (st.stress >= 100) return end(false, '✗ FALLO ESTRUCTURAL',
+      'Demasiada presión a ' + st.h.toFixed(0) + ' km.<br><span class="text-sky-300">Suelta el empuje en el aire denso.</span>');
+    if (st.v >= V_ORBIT && st.h >= H_SPACE) return end(true, '✓ EN ÓRBITA',
+      '<span class="font-display text-2xl tracking-wider text-white">Fase 1 superada</span><br>' +
+      '<span class="text-sky-300 text-lg">Combustible ' + st.fuel.toFixed(0) + ' % · Energía ' + st.energy.toFixed(0) + ' % · Integridad ' + (100 - st.stress).toFixed(0) + ' %</span>');
+    if (st.maxH > 1 && st.h <= 0) return end(false, '✗ MISIÓN ABORTADA', 'La nave cayó.<br><span class="text-sky-300">Sin empuje, la gravedad gana.</span>');
     if (st.fuel <= 0) {
       st.out += dt;
-      if (st.out > 2.5) return end(false, 'TRAYECTORIA SUBORBITAL',
-        'El combustible se agotó a ' + st.v.toFixed(1) + ' km/s, por debajo de los 7,8 km/s necesarios para mantenerse en órbita. Cada segundo sin empuje dentro de la gravedad terrestre cuesta propelente.');
+      if (st.out > 2.5) return end(false, '✗ TRAYECTORIA SUBORBITAL',
+        'Sin combustible a ' + st.v.toFixed(1) + ' km/s (meta 7,8).<br><span class="text-sky-300">No pierdas tiempo sin empuje.</span>');
     }
   }
 
@@ -303,7 +284,7 @@
     raf = 0;
     if (mode === 'off' || $('#screen-launch').classList.contains('hidden')) { mode = 'off'; return; }
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    if (mode === 'launch') update(dt);
+    if (mode === 'launch' && !A.paused) update(dt);
     A.sky.draw(st, firing, mode, dt, now);
     drawView(dt, now); drawPanels();
     if (mode !== 'off') raf = requestAnimationFrame(loop);
@@ -315,10 +296,10 @@
   (A.flight = A.flight || {}).launch = () => (mode !== 'launch' || !st || $('#screen-launch').classList.contains('hidden')) ? null : {
     kind: 'launch', t: st.t, h: st.h, v: st.v, q: st.q || 0, fuel: st.fuel, thrust: firing ? 1 : 0,
     rocket: A.settings.launcher, msg: $('#l-msg').textContent,
-    alerts: [st.q > 1 && 'PRESIÓN DINÁMICA ' + (st.q * 100).toFixed(0) + ' % · reduce el impulso',
-      st.stress > 50 && 'INTEGRIDAD ESTRUCTURAL ' + Math.max(0, 100 - st.stress).toFixed(0) + ' %',
-      st.fuel < 15 && (st.fuel <= 0 ? 'COMBUSTIBLE AGOTADO' : 'COMBUSTIBLE BAJO'),
-      st.energy < 20 && 'ENERGÍA BAJA ' + st.energy.toFixed(0) + ' %'].filter(Boolean)
+    alerts: [st.q > 1 && '¡MAX-Q! ' + (st.q * 100).toFixed(0) + ' %',
+      st.stress > 50 && '¡ESTRUCTURA DAÑADA! ' + Math.max(0, 100 - st.stress).toFixed(0) + ' %',
+      st.fuel < 15 && (st.fuel <= 0 ? '¡SIN COMBUSTIBLE!' : '¡COMBUSTIBLE BAJO!'),
+      st.energy < 20 && '¡ENERGÍA BAJA! ' + st.energy.toFixed(0) + ' %'].filter(Boolean)
   };
 
   // ---------- Controles ----------
@@ -326,7 +307,7 @@
   window.addEventListener('keydown', (e) => {
     if (mode !== 'launch') return;
     if (isFireKey(e)) { held = true; e.preventDefault(); }
-    if (e.key === 'Escape') { stopLoop(); A.show('menu'); }
+    if (e.key === 'Escape' && !e.repeat) A.togglePause();
   });
   window.addEventListener('keyup', (e) => { if (isFireKey(e)) held = false; });
   const fb = $('#l-fire');

@@ -154,6 +154,7 @@
       if (k === 'exit') screens[k].classList.toggle('flex', k === name);
     }
     menuActive = name === 'menu';
+    if (name === 'menu') { const b = document.querySelector('[data-action="continue"]'); if (b) b.classList.toggle('dim', !store.get('aeon01.save', null)); }
   }
 
   // ---------- Modal ----------
@@ -180,8 +181,8 @@
   const actions = {
     new() {
       if (store.get('aeon01.save', null)) {
-        openModal('Nueva partida', '<p>Ya existe una misión guardada. Si empiezas de nuevo se sobrescribirá.</p>' +
-          '<div class="mt-6 flex gap-4 justify-end">' + btn('m-no', 'Cancelar') + btn('m-yes', 'Empezar') + '</div>');
+        openModal('Nueva partida', '<p class="font-display tracking-wider text-2xl">¿Borrar la partida guardada?</p>' +
+          '<div class="mt-6 flex gap-4 justify-end">' + btn('m-no', 'Cancelar') + btn('m-yes', 'Empezar de cero') + '</div>');
         $('#m-no').onclick = closeModal;
         $('#m-yes').onclick = () => { closeModal(); store.del('aeon01.save'); AEON.startBriefing(); };
       } else AEON.startBriefing();
@@ -189,14 +190,17 @@
     continue() {
       const save = store.get('aeon01.save', null);
       if (save && save.phase) AEON.resume(save);
-      else openModal('Continuar', '<p>No hay ninguna misión guardada todavía. Inicia una <b>Nueva partida</b> y tu progreso se guardará automáticamente.</p>');
+      else {
+        openModal('Continuar', '<p class="font-display tracking-wider text-2xl">Sin partida guardada.</p><div class="mt-6 flex justify-end">' + btn('m-yes', 'Nueva partida') + '</div>');
+        $('#m-yes').onclick = () => { closeModal(); AEON.startBriefing(); };
+      }
     },
     settings() {
       openModal('Ajustes',
-        '<div class="row"><span>Volumen de música</span><input id="s-music" type="range" min="0" max="100" value="' + settings.music + '"></div>' +
-        '<div class="row"><span>Volumen de efectos</span><input id="s-sfx" type="range" min="0" max="100" value="' + settings.sfx + '"></div>' +
-        '<div class="row"><label for="s-anim">Animaciones del menú</label><input id="s-anim" type="checkbox" class="w-6 h-6 accent-sky-400"' + (settings.anim ? ' checked' : '') + '></div>' +
-        '<div class="row"><span>Pantalla completa</span>' + btn('s-full', 'Alternar') + '</div>' +
+        '<div class="row"><span>Música</span><input id="s-music" type="range" min="0" max="100" value="' + settings.music + '"></div>' +
+        '<div class="row"><span>Efectos</span><input id="s-sfx" type="range" min="0" max="100" value="' + settings.sfx + '"></div>' +
+        '<div class="row"><label for="s-anim">Animaciones</label><input id="s-anim" type="checkbox" class="w-6 h-6 accent-sky-400"' + (settings.anim ? ' checked' : '') + '></div>' +
+        '<div class="row"><span>Pantalla completa</span>' + btn('s-full', 'Activar') + '</div>' +
         '<div class="row"><span>Borrar partida guardada</span>' + btn('s-wipe', 'Borrar') + '</div>');
       $('#s-music').oninput = (e) => { settings.music = +e.target.value; audio(); applyVolume(); saveSettings(); };
       $('#s-sfx').oninput = (e) => { settings.sfx = +e.target.value; saveSettings(); };
@@ -212,17 +216,13 @@
     },
     custom() { AEON.openCustom(); },          // pantalla propia: js/custom.js
     credits() {
-      openModal('Créditos',
-        '<p class="font-display tracking-[.2em] text-sky-300 text-base">AEON-01 · SPACE SIMULATOR</p>' +
-        '<p class="mt-3">Desarrollado por el <b>Equipo 7</b> para el hackatón Space Apps.</p>' +
-        '<ul class="mt-3 space-y-1 text-lg">' +
-        '<li>Dirección y diseño del juego — Equipo 7</li>' +
-        '<li>Programación — Equipo 7 con Claude</li>' +
-        '<li>Arte y sonido — generados por código (canvas, SVG y WebAudio)</li></ul>' +
-        '<p class="mt-4 text-base text-sky-200/70">Edita esta lista en <code>js/menu.js</code> para añadir los nombres del equipo.</p>');
+      // Para añadir los nombres del equipo, edita las líneas de abajo.
+      const cr = (k, v) => '<div class="mt-4"><div class="font-display text-[12px] tracking-[.3em] text-sky-300">' + k + '</div><div class="font-display text-2xl tracking-wider">' + v + '</div></div>';
+      openModal('Créditos', '<div class="text-center py-2"><div class="title-metal font-display font-black text-[64px] leading-none tracking-[.08em]">AEON-01</div>' +
+        cr('UN JUEGO DE', 'EQUIPO 7 · SPACE APPS') + cr('PROGRAMACIÓN', 'EQUIPO 7 + CLAUDE') + cr('ARTE Y SONIDO', 'GENERADOS POR CÓDIGO') + '</div>');
     },
     exit() {
-      openModal('Salir', '<p>¿Quieres cerrar AEON-01?</p><div class="mt-6 flex gap-4 justify-end">' + btn('m-no', 'Cancelar') + btn('m-yes', 'Salir') + '</div>');
+      openModal('Salir', '<p class="font-display tracking-wider text-2xl">¿Salir del juego?</p><div class="mt-6 flex gap-4 justify-end">' + btn('m-no', 'Cancelar') + btn('m-yes', 'Salir') + '</div>');
       $('#m-no').onclick = closeModal;
       $('#m-yes').onclick = () => { closeModal(); show('exit'); try { window.close(); } catch (e) { /* el navegador no lo permite */ } };
     }
@@ -234,6 +234,32 @@
   });
   $('#exit-back').addEventListener('click', () => show('menu'));
 
+  // ---------- Pausa ----------
+  // Esc (o el botón de arriba a la derecha) congela la fase en curso: cabina, nave o descenso.
+  // Cada bucle de juego deja de avanzar mientras AEON.paused es true.
+  const pauseEl = $('#pause'), pauseBtn = $('#pause-btn');
+  const inGame = () => { const F = window.AEON.flight || {}; return ['launch', 'edl', 'ship'].some((k) => F[k] && F[k]()); };
+  function setPause(v) {
+    window.AEON.paused = v;
+    pauseEl.classList.toggle('hidden', !v); pauseEl.classList.toggle('flex', v);
+    if (v && window.AEON.exterior && window.AEON.exterior.on) window.AEON.exterior.toggle();
+    beep(v ? 330 : 520, 0.08);
+  }
+  function togglePause() { if (window.AEON.paused) setPause(false); else if (inGame()) setPause(true); }
+  $('#p-go').onclick = () => setPause(false);
+  $('#p-menu').onclick = () => { setPause(false); show('menu'); };
+  pauseBtn.addEventListener('click', (e) => { e.preventDefault(); togglePause(); pauseBtn.blur(); });
+  setInterval(() => pauseBtn.classList.toggle('hidden', !(window.AEON.paused || inGame())), 250);
+  // en pausa ninguna otra tecla llega al juego; Esc sale de la pausa
+  window.addEventListener('keydown', (e) => {
+    if (!window.AEON.paused) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    if (e.key === 'Escape' && !e.repeat) setPause(false);
+  }, true);
+
+  /** Tecla dibujada como icono, para textos de controles. */
+  const key = (k) => '<kbd class="kc">' + k + '</kbd>';
+
   // API compartida con el módulo de vuelo
-  window.AEON = { W, H, store, settings, saveSettings, applyShip, applyVolume, show, beep, audio, master: () => master, bg, actions, run: { tries: 0 }, startBriefing() {} };
+  window.AEON = { W, H, store, settings, saveSettings, applyShip, applyVolume, show, beep, audio, master: () => master, bg, actions, key, togglePause, paused: false, run: { tries: 0 }, startBriefing() {} };
 })();

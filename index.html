@@ -109,20 +109,6 @@
       </svg>
     </div>
 
-    <!-- Cabecera -->
-    <div class="absolute left-10 top-8 flex items-center gap-3">
-      <svg width="74" height="74" viewBox="-40 -40 80 80">
-        <circle r="30" fill="#0a2a66" stroke="#dbe9ff" stroke-width="2"/>
-        <ellipse rx="38" ry="11" fill="none" stroke="#ff5a3c" stroke-width="3" transform="rotate(-28)"/>
-        <circle cx="9" cy="-8" r="6" fill="#ff7a4a"/>
-        <g fill="#fff"><circle cx="-14" cy="-10" r="1.4"/><circle cx="-6" cy="12" r="1.2"/><circle cx="14" cy="14" r="1.2"/><circle cx="-18" cy="6" r="1"/></g>
-      </svg>
-      <div class="leading-tight">
-        <div class="font-display text-[15px] tracking-[.3em] text-white">MISIÓN MARTE</div>
-        <div class="text-[13px] tracking-[.35em] text-sky-300/80">SPACE APPS · EQUIPO 7</div>
-      </div>
-    </div>
-
     <div class="absolute top-7 left-0 right-0 text-center pointer-events-none">
       <h1 class="title-metal font-display font-black text-[84px] leading-none tracking-[.08em]">AEON-01</h1>
       <div class="mt-2 flex items-center justify-center gap-4">
@@ -132,10 +118,8 @@
       </div>
     </div>
 
-    <div class="absolute right-10 top-9 font-display text-sm tracking-[.25em] text-sky-300/90 border border-sky-400/40 px-3 py-1" style="top:56px">v1.0.0</div>
-
     <!-- Botones -->
-    <nav class="absolute left-10 top-[230px] flex flex-col gap-[18px]">
+    <nav class="menu-nav absolute flex flex-col">
       <div class="neon-wrap"><button class="neon-btn" data-action="new">
         <svg viewBox="0 0 24 24" class="ico"><path d="M12 2c3 2.5 4.5 6 4.5 10v4l2.5 3h-4l-1 3h-4l-1-3H5l2.5-3v-4C7.500 8 9 4.500 12 2z"/><circle cx="12" cy="10" r="1.800"/></svg>
         <span>Nueva partida</span></button></div>
@@ -151,20 +135,18 @@
       <div class="neon-wrap"><button class="neon-btn" data-action="credits">
         <svg viewBox="0 0 24 24" class="ico"><circle cx="9" cy="8" r="3.200"/><path d="M3 20c0-4 3-6 6-6s6 2 6 6"/><circle cx="17.500" cy="9" r="2.400"/><path d="M16.500 14c3 0 5 2 5 5"/></svg>
         <span>Créditos</span></button></div>
+
+      <div class="neon-wrap"><button class="neon-btn" data-action="exit">
+        <svg viewBox="0 0 24 24" class="ico"><path d="M12 3v9"/><path d="M6.500 6.500a8 8 0 1 0 11 0"/></svg>
+        <span>Salir</span></button></div>
     </nav>
-
-    <div class="absolute left-10 bottom-9 neon-wrap"><button class="neon-btn neon-btn--sm" data-action="exit">
-      <svg viewBox="0 0 24 24" class="ico"><path d="M12 3v9"/><path d="M6.500 6.500a8 8 0 1 0 11 0"/></svg>
-      <span>Salir</span></button></div>
-
-    <div class="absolute right-10 bottom-10 font-display text-[15px] tracking-[.42em] text-white/90 drop-shadow-[0_0_10px_rgba(25,180,255,.9)]">EXPLORE · DISCOVER · GO FURTHER</div>
   </section>
 
   <!-- ============ BRIEFING DEL INSTRUCTOR ============ -->
   <section id="screen-brief" class="absolute inset-0 hidden">
     <canvas id="brief-bg" width="1600" height="900" class="absolute inset-0 opacity-50"></canvas>
     <div class="absolute inset-0 flex items-center justify-center">
-      <div class="panel w-[1280px] h-[800px] flex flex-col">
+      <div class="panel w-[1280px] flex flex-col" style="max-height:800px">
         <div class="flex items-center gap-4">
           <svg width="54" height="54" viewBox="0 0 48 48" fill="none" stroke="#7fdcff" stroke-width="2"><circle cx="24" cy="22" r="15"/><path d="M13 22a11 9 0 0 1 22 0v3a11 6 0 0 1-22 0z" fill="#0a2a66"/><path d="M12 38c3-4 21-4 24 0"/></svg>
           <div>
@@ -174,7 +156,7 @@
           <div id="brief-step" class="ml-auto font-display text-sm tracking-[.25em] text-sky-300/80"></div>
         </div>
         <div class="h-px bg-gradient-to-r from-neon to-transparent my-4"></div>
-        <div id="brief-body" class="brief flex-1 overflow-y-auto pr-3"></div>
+        <div id="brief-body" class="brief overflow-y-auto pr-3"></div>
         <div id="brief-foot" class="pt-4 flex items-center justify-between gap-4"></div>
       </div>
     </div>
@@ -273,13 +255,13 @@
         <div id="edl-txt" class="text-[17px] leading-snug mt-1"></div>
         <div id="edl-ui" class="mt-2"></div>
       </div>
-      <div id="holo" class="holo absolute flex flex-col" style="left:230px;top:12px;width:1140px;height:468px">
+      <div id="holo" class="holo absolute flex flex-col" style="left:230px;top:12px;width:1140px;max-height:468px">
         <div class="flex items-baseline gap-4 whitespace-nowrap">
           <div id="holo-who" class="font-display text-[15px] tracking-[.18em] text-sky-200"></div>
           <div id="holo-sub" class="text-[13px] tracking-[.2em] text-sky-300/90 uppercase"></div>
         </div>
         <div class="h-px bg-gradient-to-r from-neon to-transparent my-2"></div>
-        <div id="holo-body" class="brief brief--holo flex-1 overflow-y-auto pr-2"></div>
+        <div id="holo-body" class="brief brief--holo overflow-y-auto pr-2"></div>
         <div id="holo-foot" class="pt-2 flex items-center justify-between gap-4"></div>
       </div>
     </div>
@@ -346,6 +328,16 @@
   <button id="snd-btn" class="snd-btn absolute" style="z-index:36;right:10px;top:8px" aria-label="Silenciar el sonido">
     <svg viewBox="0 0 24 24" class="ico" style="width:20px;height:20px"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="snd-on" d="M16 9a4 4 0 0 1 0 6M18.500 6.500a8 8 0 0 1 0 11"/><path class="snd-off" d="M16 9l5 6M21 9l-5 6"/></svg>
   </button>
+  <!-- pausa (Esc o botón): js/menu.js -->
+  <button id="pause-btn" class="snd-btn absolute hidden" style="z-index:36;right:56px;top:8px" aria-label="Pausa (Esc)" title="Pausa (Esc)">
+    <svg viewBox="0 0 24 24" class="ico" style="width:20px;height:20px"><path d="M8 5v14M16 5v14"/></svg>
+  </button>
+  <div id="pause" class="absolute inset-0 hidden flex-col items-center justify-center gap-5" style="z-index:45">
+    <div class="title-metal font-display font-black text-[86px] leading-none tracking-[.12em]">PAUSA</div>
+    <div class="neon-wrap mt-4"><button id="p-go" class="neon-btn"><svg viewBox="0 0 24 24" class="ico"><path d="M7 4l13 8-13 8z"/></svg><span>Continuar</span></button></div>
+    <div class="neon-wrap"><button id="p-menu" class="neon-btn"><svg viewBox="0 0 24 24" class="ico"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg><span>Menú principal</span></button></div>
+    <div class="font-display text-[13px] tracking-[.3em] text-sky-300/80 mt-3"><kbd class="kc">ESC</kbd> CONTINUAR</div>
+  </div>
   <button id="cam-btn" class="cam-btn absolute hidden" style="z-index:35" title="Cámara exterior (tecla C)">
     <svg viewBox="0 0 24 24" class="ico" style="width:20px;height:20px"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3z"/></svg><span>C · CÁMARA EXTERIOR</span>
   </button>
@@ -353,7 +345,7 @@
   <!-- ============ PANTALLA DE SALIDA ============ -->
   <section id="screen-exit" class="absolute inset-0 hidden flex-col items-center justify-center bg-black gap-6">
     <div class="title-metal font-display font-black text-6xl tracking-[.08em]">AEON-01</div>
-    <p class="text-2xl text-sky-200/80 tracking-widest">Sesión finalizada. Ya puedes cerrar esta pestaña.</p>
+    <p class="font-display text-xl text-sky-200/80 tracking-[.3em]">SESIÓN CERRADA</p>
     <div class="neon-wrap"><button id="exit-back" class="neon-btn neon-btn--sm">Volver al menú</button></div>
   </section>
 
