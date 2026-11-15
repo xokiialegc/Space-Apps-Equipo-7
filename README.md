@@ -38,6 +38,10 @@ Abre `index.html` en un navegador (o publica la carpeta en GitHub Pages / cualqu
    se repara allí mismo, junto al panel; el panel de alertas lleva andando hasta el módulo
    afectado. Tres eventos críticos de Control de Misión con decisión A/B. Al llegar a Marte hay
    que volver al puesto del piloto.
+   **Tripulación:** dos compañeros, Vera Kalani (ingeniera de vuelo) e Iker Solano (técnico de
+   sistemas), recorren la nave por su cuenta. Cuando salta una alarma, el que está más cerca la
+   detecta, avisa por radio, camina hasta el módulo y la repara. Los eventos críticos siguen
+   siendo decisión del cadete.
 6. **Fase 3 · Descenso en Marte** — de vuelta en la cabina: entrada atmosférica, paracaídas,
    retropropulsores y aterrizaje.
 7. **Reporte final** — evaluación de los cuatro segmentos, eficiencia, calificación y cierre.
@@ -54,7 +58,8 @@ js/rockets.js   Cohetes en 2D dibujados por código, color principal y calcoman�
 js/custom.js    Hangar de lanzamiento: pantalla de personalización del cohete
 js/sky.js       Vista animada por las ventanas: cielo → espacio
 js/launch.js    Fase 1 en la cabina: verificación (holograma), cuenta atrás y despegue
-js/ship.js      Interior de la nave en mapa lateral (casco con tuberías, cables y paneles): movimiento libre, configuración (3.2) y viaje (Fase 2)
+js/avatars.js   Tripulación y retratos (avatares) del cadete y de los NPC
+js/ship.js      Interior de la nave en mapa lateral (casco con tuberías, cables y paneles): movimiento libre, configuración (3.2), viaje (Fase 2) y tripulación con IA de reparación
 js/edl.js       Fase 3: descenso en Marte, reporte final y resultados
 docs/PROCESO.md Bitácora del proceso de desarrollo
 ```
@@ -64,3 +69,10 @@ El progreso y los ajustes se guardan en `localStorage` del navegador.
 En el interior también se puede jugar con ratón o pantalla táctil: los botones `◀ A` y `D ▶` se
 mantienen pulsados para caminar, el indicador de acción hace de tecla `E`, y el minimapa y el
 panel de alertas llevan al cadete andando hasta el puesto elegido.
+
+## Avatares
+
+Cada personaje tiene un retrato que aparece en la barra de tripulación (arriba a la izquierda,
+con lo que está haciendo cada uno), en los diálogos, en los mensajes de radio y como icono
+flotante sobre cada tripulante. Los retratos se dibujan por código. Para usar imágenes propias,
+guárdalas en `assets/avatars/` y escribe su ruta en `FILES`, al principio de `js/avatars.js`.
