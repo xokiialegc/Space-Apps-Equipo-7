@@ -1,8 +1,13 @@
-/* AEON-01 — Interior de la nave en primera persona (2D).
-   Modo 'config' (3.2 Segmento Espacial): cada sala configura un componente.
-   Modo 'voyage' (Fase 2): viaje de ~7 meses comprimido; cada recurso se vigila y se repone
-   en su sala, el panel de alertas lleva directo a la sala afectada y Control de Misión
-   plantea tres eventos críticos. */
+/* AEON-01 — Interior de la nave: mapa lateral continuo (2D).
+   La nave es un único plano en corte, de proa (izquierda) a popa (derecha), con seis salas
+   unidas por puertas. El cadete se mueve libremente con A/D o ←/→ y la cámara lo sigue.
+   Todo se hace por proximidad: hay que acercarse al panel y pulsar E o Espacio cuando
+   aparece el indicador.
+   Modo 'config' (3.2 Segmento Espacial): la consola de cada sala configura un componente.
+   Modo 'voyage' (Fase 2): viaje de ~7 meses comprimido; cada recurso se repone en su módulo,
+   el panel de alertas lleva andando hasta el módulo afectado y Control de Misión plantea
+   tres eventos críticos.
+   Modo 'arrived': hay que volver al puesto del piloto para iniciar el descenso. */
 (function () {
   'use strict';
   const A = window.AEON, M = A.mission, W = 1600, H = 900;
@@ -10,27 +15,51 @@
   const cv = $('#ship'), c = cv.getContext('2d');
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
+  // ---------- Geometría del mapa (coordenadas de mundo = píxeles del escenario) ----------
+  const TOP = 150, CEIL = 205, FLOOR = 690, BOT = 765;   // casco superior, techo, suelo, casco inferior
+  const DOOR = 440;                                       // dintel de las puertas
   const ROOMS = [
-    { id: 'bridge', name: 'Puente de mando', res: 'Nave principal · navegación · comunicaciones', hue: [50, 120, 210] },
-    { id: 'life', name: 'Soporte vital', res: 'Oxígeno', hue: [40, 170, 120] },
-    { id: 'power', name: 'Sala de energía', res: 'Potencia eléctrica', hue: [220, 170, 40] },
-    { id: 'prop', name: 'Propulsión', res: 'Delta-v / combustible', hue: [220, 110, 50] },
-    { id: 'hangar', name: 'Hangar del lander', res: 'Lander · escudo térmico', hue: [200, 80, 80] },
-    { id: 'lab', name: 'Laboratorio', res: 'Instrumentos científicos', hue: [150, 100, 225] }
+    { id: 'bridge', name: 'Puente de mando', short: 'PUENTE', res: 'Pilotaje · navegación · comunicaciones', hue: [50, 120, 210], w: 1150 },
+    { id: 'life', name: 'Soporte vital', short: 'SOPORTE', res: 'Oxígeno', hue: [40, 170, 120], w: 1000 },
+    { id: 'lab', name: 'Laboratorio', short: 'LABORAT.', res: 'Instrumentos científicos', hue: [150, 100, 225], w: 1050 },
+    { id: 'hangar', name: 'Hangar del lander', short: 'HANGAR', res: 'Lander · escudo térmico', hue: [200, 80, 80], w: 1050 },
+    { id: 'power', name: 'Sala de energía', short: 'ENERGÍA', res: 'Potencia eléctrica', hue: [220, 170, 40], w: 1000 },
+    { id: 'prop', name: 'Propulsión', short: 'MOTORES', res: 'Delta-v / combustible', hue: [220, 110, 50], w: 1050 }
   ];
+  let SHIP_W = 0; ROOMS.forEach((r) => { r.x0 = SHIP_W; SHIP_W += r.w; });
   const ri = (id) => ROOMS.findIndex((r) => r.id === id);
+  const at = (id, f) => { const r = ROOMS[ri(id)]; return r.x0 + r.w * f; };
+  const roomAt = (x) => { let i = 0; ROOMS.forEach((r, j) => { if (x >= r.x0) i = j; }); return i; };
+
+  // Puestos con los que se interactúa por proximidad
+  const SEAT_X = 175;                                     // asiento del piloto (mira a proa)
+  const ST = [
+    { id: 'seat', room: 'bridge', x: 215, label: 'PUESTO DEL PILOTO' },
+    { id: 'bridge', room: 'bridge', x: 965, label: 'COMUNICACIONES', cfgLabel: 'NAVE PRINCIPAL' },
+    { id: 'life', room: 'life', x: at('life', 0.8), label: 'SOPORTE VITAL' },
+    { id: 'lab', room: 'lab', x: at('lab', 0.82), label: 'INSTRUMENTOS' },
+    { id: 'hangar', room: 'hangar', x: at('hangar', 0.82), label: 'LANDER Y ESCUDO' },
+    { id: 'power', room: 'power', x: at('power', 0.8), label: 'RED ELÉCTRICA' },
+    { id: 'prop', room: 'prop', x: at('prop', 0.8), label: 'PROPULSIÓN' }
+  ];
+  const station = (id) => ST.find((s) => s.id === id);
+  const X_MIN = 262, X_MAX = SHIP_W - 85, REACH = 125, SPEED = 470;
   const T_TOTAL = 150, DAYS = 210, DV_TMI = 3.6;
 
-  let mode = 'off', room = 0, move = null, queue = [], S = null, cfg = null, last = 0, raf = 0;
-  let paused = false, serv = false, conKey = '', alertKey = '', hud = 0;
+  let mode = 'off', S = null, cfg = null, last = 0, raf = 0;
+  let paused = false, serv = false, open = null, dirty = true, conKey = '', alertKey = '', actKey = '', hud = 0;
+  const P = { x: SEAT_X, vx: 0, face: -1, ph: 0, seated: true, auto: null, work: false, full: '' };   // el cadete
+  const cam = { x: 0 };
+  const keys = { l: false, r: false };
+  const doors = ROOMS.map(() => 0);                       // apertura 0-1 de la puerta de entrada de cada sala
 
   // ---------- Diálogo superpuesto a la vista ----------
   function dlg(who, html, buttons) {
-    paused = true; serv = false;
+    paused = true; serv = false; keys.l = keys.r = false;
     $('#sd-who').textContent = who; $('#sd-body').innerHTML = html; $('#sd-body').scrollTop = 0;
     $('#sd-btns').innerHTML = buttons.map((b, i) => '<div class="neon-wrap"><button data-i="' + i + '" class="neon-btn neon-btn--sm" style="min-width:150px;height:auto;min-height:44px;white-space:normal;padding:8px 16px;max-width:900px">' + b.l + '</button></div>').join('');
     $('#sd-btns').querySelectorAll('button').forEach((b) => b.onclick = () => {
-      A.beep(440, 0.1); $('#ship-holo').classList.add('hidden'); $('#ship-holo').classList.remove('flex'); paused = false; last = performance.now();
+      A.beep(440, 0.1); $('#ship-holo').classList.add('hidden'); $('#ship-holo').classList.remove('flex'); paused = false; last = performance.now(); dirty = true;
       buttons[+b.dataset.i].fn();
     });
     $('#ship-holo').classList.remove('hidden'); $('#ship-holo').classList.add('flex');
@@ -40,7 +69,7 @@
 
   // ---------- Eventos críticos de la Fase 2 ----------
   const EV = [
-    { at: 22, room: 'bridge', tag: '&lt; ALERTA DE TELEMETRÍA &gt;', title: 'EVENTO CRÍTICO 01 — PÉRDIDA PARCIAL DE COMUNICACIONES', who: 'ESTACIÓN TERRESTRE — COMUNICACIÓN', short: 'Comunicaciones degradadas',
+    { at: 22, st: 'bridge', tag: '&lt; ALERTA DE TELEMETRÍA &gt;', title: 'EVENTO CRÍTICO 01 — PÉRDIDA PARCIAL DE COMUNICACIONES', who: 'ESTACIÓN TERRESTRE — COMUNICACIÓN', short: 'Comunicaciones degradadas',
       body: 'Atención, Control de Misión. Estamos detectando una degradación en la señal de comunicación con la nave. La recepción de telemetría es intermitente. Algunos paquetes de datos no están llegando correctamente.',
       tel: () => ['Señal de comunicación: 42 %', 'Telemetría: Parcial', 'Navegación: Sin anomalías confirmadas', 'Estado de la nave: Operativo'],
       cm: 'Cadete, debemos recuperar la recepción de datos antes de perder visibilidad sobre los sistemas de la nave.',
@@ -48,7 +77,7 @@
       good: ['Comunicación de respaldo establecida. La recepción de telemetría mejora progresivamente.', 'Buena decisión, cadete. Hemos recuperado visibilidad sobre la nave.'],
       bad: ['La pérdida de datos continúa. El equipo terrestre no puede verificar adecuadamente el estado de los sistemas.', 'La supervisión de la misión está comprometida. Debemos recuperar la comunicación antes de continuar.'],
       start(s) { s.comms = 42; }, onGood(s) { s.comms = 92; }, onBad(s) { s.comms = Math.max(15, s.comms - 10); } },
-    { at: 66, room: 'power', tag: '&lt; ALERTA DE RADIACIÓN &gt;', title: 'EVENTO CRÍTICO 02 — TORMENTA SOLAR', who: 'CENTRO DE CONTROL DE MISIÓN', short: 'Tormenta solar',
+    { at: 66, st: 'power', tag: '&lt; ALERTA DE RADIACIÓN &gt;', title: 'EVENTO CRÍTICO 02 — TORMENTA SOLAR', who: 'CENTRO DE CONTROL DE MISIÓN', short: 'Tormenta solar',
       body: 'Atención, cadete. Los instrumentos de monitoreo espacial han detectado un incremento de actividad solar. La radiación puede afectar los componentes electrónicos y aumentar la exposición de la tripulación.',
       tel: (s) => ['Actividad solar: Elevada', 'Exposición a radiación: En aumento', 'Sistemas electrónicos: Operativos', 'Potencia eléctrica: ' + kw(s) + ' kW'],
       cm: 'Debemos proteger los sistemas sensibles y conservar la energía disponible.',
@@ -56,7 +85,7 @@
       good: ['Protocolo de protección activado. Los sistemas esenciales permanecen operativos y la tripulación dispone de protección adicional.', 'Excelente respuesta. La seguridad de la tripulación es prioritaria. Hemos reducido los riesgos operativos.'],
       bad: ['El consumo eléctrico permanece elevado y los sistemas continúan expuestos a condiciones desfavorables.', 'La gestión energética y la protección de la tripulación son insuficientes. Reevalúa tus prioridades.'],
       start() {}, onGood(s) { s.bat = Math.max(5, s.bat - 4); }, onBad(s) { s.bat = Math.max(5, s.bat - 20); const i = s.instr.find((x) => x.ok); if (i) i.ok = false; } },
-    { at: 108, room: 'bridge', tag: '&lt; ALERTA DE NAVEGACIÓN &gt;', title: 'EVENTO CRÍTICO 03 — DESVIACIÓN DE TRAYECTORIA', who: 'CENTRO DE CONTROL DE MISIÓN', short: 'Desviación de trayectoria',
+    { at: 108, st: 'seat', tag: '&lt; ALERTA DE NAVEGACIÓN &gt;', title: 'EVENTO CRÍTICO 03 — DESVIACIÓN DE TRAYECTORIA', who: 'CENTRO DE CONTROL DE MISIÓN', short: 'Desviación de trayectoria',
       body: 'Cadete, hemos detectado una desviación respecto a la trayectoria interplanetaria prevista. Los datos de navegación indican que la nave podría llegar a Marte fuera de los parámetros establecidos.',
       tel: (s) => ['Desviación de trayectoria: Elevada', 'Propelente disponible: ' + s.dv.toFixed(2) + ' km/s', 'Navegación: Operativa', 'Tiempo estimado de llegada: ' + Math.max(0, Math.round(DAYS - day(s))) + ' días'],
       cm: 'Debemos evaluar la trayectoria y determinar si es necesaria una corrección. Recuerda que cada maniobra consume propelente. No podemos desperdiciar nuestras reservas.',
@@ -78,12 +107,15 @@
   function result(e, good) {
     const r = good ? e.good : e.bad;
     dlg(good ? 'RESULTADO — DECISIÓN CORRECTA' : 'RESULTADO — DECISIÓN INCORRECTA', '<div class="' + (good ? 'ok' : 'alert mb-2') + '">' + r[0] + '</div>' + q('CONTROL DE MISIÓN', r[1]) +
-      (good ? '' : '<p>La anomalía sigue activa: tendrás que volver a decidir.</p>'), [{ l: 'Continuar', fn: () => { conKey = ''; } }]);
+      (good ? '' : '<p>La anomalía sigue activa: tendrás que volver a decidir.</p>'), [{ l: 'Continuar', fn: () => {} }]);
   }
 
   // ---------- Arranques ----------
   function begin(m) {
-    mode = m; room = 0; move = null; queue = []; serv = false; paused = false; conKey = ''; alertKey = '';
+    mode = m; serv = false; paused = false; dirty = true; conKey = alertKey = actKey = ''; keys.l = keys.r = false;
+    P.x = SEAT_X; P.vx = 0; P.face = -1; P.ph = 0; P.seated = true; P.auto = null; P.work = false; P.full = '';   // se empieza sentado a los mandos
+    open = m === 'config' ? 'seat' : null;
+    doors.fill(0); cam.x = camTarget();
     A.show('ship'); last = performance.now(); if (!raf) raf = requestAnimationFrame(loop);
   }
 
@@ -96,7 +128,8 @@
     dlg('INSTRUCTOR — SEGMENTO ESPACIAL', '<h3>3.2 · CONFIGURACIÓN DE LA NAVE INTERPLANETARIA</h3>' +
       '<p>Con la nave en órbita, comienza la configuración de los sistemas que harán posible el viaje a Marte.</p>' +
       '<p>Debes seleccionar y equilibrar los componentes de la expedición. Cada módulo consume masa, presupuesto y, en algunos casos, energía.</p>' +
-      '<p>Recorre la nave con <b>A / D</b> (o las puertas laterales): cada sala controla un componente. Cuando termines, confirma el diseño en el <b>Puente de mando</b>.</p>',
+      '<p>Estás en el <b>puesto del piloto</b>. Pulsa <b>E</b> para levantarte y recorre la nave con <b>A / D</b> o <b>← / →</b>: la cámara te sigue de una sala a otra.</p>' +
+      '<p>Acércate a la consola de cada sala y pulsa <b>E</b> (o <b>Espacio</b>) cuando aparezca el indicador para configurar su componente. Cuando termines, vuelve a sentarte a los mandos y confirma el diseño.</p>',
       [{ l: 'Recorrer la nave', fn: () => {} }]);
   };
 
@@ -113,25 +146,31 @@
       '<p>Desde el Centro de Control de Misión, las estaciones terrestres reciben telemetría, verifican las comunicaciones y supervisan el comportamiento de la nave. Durante el viaje, pueden aparecer anomalías que exijan decisiones inmediatas.</p>' +
       '<p>Recuerda: el Segmento Terrestre no controla físicamente la nave de forma continua. Analiza los datos recibidos, evalúa las condiciones y transmite instrucciones cuando es necesario.</p>' +
       '<p class="motto">Tu capacidad para interpretar la información será puesta a prueba.</p>' +
-      '<p>A bordo: vigila los indicadores de abajo. Cuando algo entre en estado crítico aparecerá en el <b>panel de alertas</b> (arriba a la derecha): púlsalo para ir directo a la sala y mantén <b>E</b> para reponerlo.</p>',
+      '<p>A bordo: vigila los indicadores de abajo y las luces de alarma de cada módulo. Lo crítico aparece en el <b>panel de alertas</b> (arriba a la derecha): púlsalo para ir andando hasta el módulo, o camina tú con <b>A / D</b>. ' +
+      'Junto al panel averiado, mantén <b>E</b> (o <b>Espacio</b>) para repararlo. Al llegar a Marte tendrás que volver al puesto del piloto.</p>',
       [{ l: 'Iniciar transferencia', fn: () => {} }]);
   }
+  function goEDL() { const voy = A.run.voy; mode = 'off'; A.startEDL(voy); }
 
-  // ---------- Consola de cada sala ----------
+  // ---------- Consola de cada sala (configuración) ----------
   const TXT = {
     bridge: ['1. NAVE PRINCIPAL', 'Es el módulo central de transporte y operación. Contiene los sistemas de navegación, propulsión, comunicaciones y soporte vital.', 'Prioriza una arquitectura equilibrada. La nave debe ser capaz de transportar a la tripulación y mantener sus sistemas durante todo el viaje.', 'hull', (o) => o.mass + ' t · ' + o.cost + ' M$ · ' + o.spares + ' repuestos'],
     prop: ['PROPULSIÓN · DELTA-v', 'Los tanques de propelente fijan el delta-v: salir de la órbita, corregir el rumbo y frenar en Marte.', 'El combustible es tu capacidad de maniobra. Cada corrección tiene un coste.', 'prop', (o) => o.dv + ' km/s · ' + o.mass + ' t · ' + o.cost + ' M$'],
     life: ['SOPORTE VITAL · OXÍGENO', 'Reservas de oxígeno y depuración de CO₂ para la tripulación. El viaje dura unos siete meses (' + DAYS + ' días).', 'Calcula las reservas para la duración prevista y conserva un margen de seguridad.', 'life', (o) => o.days + ' días · ' + o.mass + ' t · ' + o.cost + ' M$'],
     power: ['POTENCIA ELÉCTRICA', 'Paneles y baterías que alimentan navegación, comunicaciones, control térmico, soporte vital e instrumentos.', 'Sin energía, los sistemas dejan de responder. Evita sobrecargar la red eléctrica.', 'power', (o) => o.kw + ' kW · ' + o.mass + ' t · ' + o.cost + ' M$']
   };
+  const kvRow = (l, v, bad) => '<div class="kv"><span>' + l + '</span><b class="' + (bad ? 'text-red-400' : 'text-emerald-300') + '">' + v + '</b></div>';
   function optBtns(key, fmt) {
     const sh = M.ship();
     return '<div class="flex gap-2">' + M.COMP[key].map((o, i) => '<button class="opt' + (sh[key] === i ? ' on' : '') + '" data-k="' + key + '" data-v="' + i + '"><b>' + o.n + '</b><br>' + fmt(o) + '</button>').join('') + '</div>';
   }
   function consoleConfig(id) {
-    const sh = M.ship(); let h = '';
+    const sh = M.ship(), k = cfg; let h = '';
     if (TXT[id]) { const t = TXT[id]; h = '<h4>' + t[0] + '</h4><p>' + t[1] + '</p>' + '<div class="quote"><b>INSTRUCTOR:</b> ' + t[2] + '</div>' + optBtns(t[3], t[4]); }
-    if (id === 'bridge') h += '<button id="c-confirm" class="serv mt-3">VERIFICAR Y CONFIRMAR DISEÑO</button>';
+    if (id === 'seat') h = '<h4>PUESTO DEL PILOTO</h4><p>Desde los mandos se verifica el diseño y se inicia la transferencia a Marte. Levántate con <b>E</b> y recorre la nave: cada sala tiene la consola de su componente.</p>' +
+      '<div class="my-2">' + kvRow('Masa total', k.mass + ' / ' + k.cap + ' t', !k.massOk) + kvRow('Presupuesto', k.budgetPct + ' %', !k.costOk) + kvRow('Delta-v', k.dv + ' km/s', !k.dvOk) +
+      kvRow('Potencia', k.kw + ' / ' + k.demand + ' kW', !k.powerOk) + kvRow('Instrumentos', k.instr.length + ' / ' + k.landerCap, !k.capOk) + '</div>' +
+      '<button id="c-confirm" class="serv mt-1">VERIFICAR Y CONFIRMAR DISEÑO</button>';
     if (id === 'hangar') h = '<h4>2. MÓDULO DE ATERRIZAJE (LANDER)</h4><p>Vehículo destinado a transportar la carga científica y realizar el descenso hasta la superficie marciana.</p>' +
       optBtns('lander', (o) => o.cap + ' instr. · ' + o.mass + ' t · ' + o.cost + ' M$') +
       '<h4 class="mt-3">3. ESCUDO TÉRMICO</h4><div class="quote"><b>INSTRUCTOR:</b> No sacrifiques protección térmica para ahorrar masa. Una nave que no puede soportar la entrada atmosférica no llegará intacta a su destino.</div>' +
@@ -142,46 +181,49 @@
       '<p class="mt-2">El lander admite ' + cfg.landerCap + ' instrumentos.</p>';
     return h;
   }
-  const SERV = {
-    bridge: ['COMUNICACIONES Y NAVEGACIÓN', 'REAPUNTAR ANTENA', (s) => s.comms < 99],
-    life: ['SOPORTE VITAL', 'REGENERAR OXÍGENO (usa energía)', (s) => s.o2 < 99 && s.bat > 6],
-    power: ['RED ELÉCTRICA', 'REORIENTAR PANELES SOLARES', (s) => s.bat < 99],
-    prop: ['PROPULSIÓN', 'SELLAR FUGA DE PROPELENTE', (s) => s.leak],
-    hangar: ['ESCUDO TÉRMICO', 'REPARAR LOSETAS (1 repuesto)', (s) => s.shield < 99 && s.spares > 0],
-    lab: ['INSTRUMENTOS', 'RECALIBRAR INSTRUMENTO (1 repuesto)', (s) => s.instr.some((i) => !i.ok) && s.spares > 0]
-  };
-  function statHtml(id) {
-    const s = S, k = (l, v, bad) => '<div class="kv"><span>' + l + '</span><b class="' + (bad ? 'text-red-400' : 'text-emerald-300') + '">' + v + '</b></div>';
-    if (id === 'bridge') return k('Señal de comunicación', s.comms.toFixed(0) + ' %', s.comms < 35) + k('Trayectoria', s.dev ? 'DESVIADA' : 'NOMINAL', s.dev) + k('Llegada a Marte en', Math.max(0, Math.round(DAYS - day(s))) + ' días', false);
-    if (id === 'life') return k('Oxígeno', s.o2.toFixed(0) + ' %', s.o2 < 25) + k('Reserva instalada', cfg.days + ' días', false);
-    if (id === 'power') return k('Baterías', s.bat.toFixed(0) + ' %', s.bat < 20) + k('Potencia disponible', kw(s) + ' kW', s.bat < 20) + k('Demanda', cfg.demand + ' kW', false);
-    if (id === 'prop') return k('Delta-v disponible', s.dv.toFixed(2) + ' km/s', s.dv < 0.5) + k('Circuito de propelente', s.leak ? 'FUGA' : 'ESTANCO', s.leak);
-    if (id === 'hangar') return k('Integridad del escudo', s.shield.toFixed(0) + ' %', s.shield < 60) + k('Repuestos', s.spares, s.spares === 0);
-    return s.instr.map((i) => k(i.name, i.ok ? 'OPERATIVO' : 'FALLO', !i.ok)).join('') + k('Repuestos', s.spares, s.spares === 0) || k('Sin instrumentos', '—', true);
-  }
   function renderConsole() {
-    const id = ROOMS[room].id, el = $('#console');
-    const key = mode + id + (mode === 'config' ? JSON.stringify(M.ship()) + A.settings.launcher : '');
-    if (key !== conKey) {
-      conKey = key;
-      if (mode === 'config') {
-        el.innerHTML = consoleConfig(id);
-        el.querySelectorAll('[data-k]').forEach((b) => b.onclick = () => { M.ship()[b.dataset.k] = +b.dataset.v; changed(); });
-        el.querySelectorAll('[data-ins]').forEach((b) => b.onclick = () => { const a = M.ship().instr, i = a.indexOf(b.dataset.ins); if (i < 0) a.push(b.dataset.ins); else a.splice(i, 1); changed(); });
-        if ($('#c-confirm')) $('#c-confirm').onclick = confirmDesign;
-      } else {
-        el.innerHTML = '<h4>' + SERV[id][0] + '</h4><div id="c-stat" class="my-2"></div><button id="c-serv" class="serv">' + SERV[id][1] + ' — mantén E</button>';
-        const b = $('#c-serv');
-        b.addEventListener('pointerdown', (e) => { e.preventDefault(); serv = true; });
-        ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => b.addEventListener(t, () => { serv = false; }));
-      }
-    }
-    if (mode === 'voyage' && $('#c-stat')) {
-      $('#c-stat').innerHTML = statHtml(id);
-      const can = SERV[id][2](S); $('#c-serv').disabled = !can; $('#c-serv').classList.toggle('is-held', serv && can);
-    }
+    const el = $('#console'), id = mode === 'config' && !paused ? open : null;
+    el.style.display = id ? '' : 'none';
+    if (!id) { conKey = ''; return; }
+    const key = id + JSON.stringify(M.ship()) + A.settings.launcher;
+    if (key === conKey) return;
+    conKey = key;
+    el.innerHTML = consoleConfig(id);
+    el.querySelectorAll('[data-k]').forEach((b) => b.onclick = () => { M.ship()[b.dataset.k] = +b.dataset.v; changed(); });
+    el.querySelectorAll('[data-ins]').forEach((b) => b.onclick = () => { const a = M.ship().instr, i = a.indexOf(b.dataset.ins); if (i < 0) a.push(b.dataset.ins); else a.splice(i, 1); changed(); });
+    if ($('#c-confirm')) $('#c-confirm').onclick = confirmDesign;
   }
-  function changed() { A.saveSettings(); cfg = M.calc(); S.dv = cfg.dv; A.beep(520, 0.06); conKey = ''; }
+  function changed() { A.saveSettings(); cfg = M.calc(); S.dv = cfg.dv; A.beep(520, 0.06); dirty = true; if (document.activeElement) document.activeElement.blur(); }
+
+  // ---------- Reparaciones del viaje: [acción, se puede, motivo si no, progreso 0-1] ----------
+  const SERV = {
+    bridge: ['REAPUNTAR ANTENA', (s) => s.comms < 99, () => 'SEÑAL NOMINAL', (s) => s.comms / 100],
+    life: ['REGENERAR OXÍGENO (usa energía)', (s) => s.o2 < 99 && s.bat > 6, (s) => (s.o2 >= 99 ? 'OXÍGENO AL MÁXIMO' : 'SIN ENERGÍA PARA REGENERAR'), (s) => s.o2 / 100],
+    power: ['REORIENTAR PANELES SOLARES', (s) => s.bat < 99, () => 'BATERÍAS CARGADAS', (s) => s.bat / 100],
+    prop: ['SELLAR FUGA DE PROPELENTE', (s) => s.leak, () => 'CIRCUITO ESTANCO', (s) => s.seal / 2.5],
+    hangar: ['REPARAR LOSETAS (1 repuesto)', (s) => s.shield < 99 && s.spares > 0, (s) => (s.shield >= 99 ? 'ESCUDO ÍNTEGRO' : 'SIN REPUESTOS'), (s) => s.rep / 1.4],
+    lab: ['RECALIBRAR INSTRUMENTO (1 repuesto)', (s) => s.instr.some((i) => !i.ok) && s.spares > 0, (s) => (s.instr.some((i) => !i.ok) ? 'SIN REPUESTOS' : 'INSTRUMENTOS OPERATIVOS'), (s) => s.cal / 2.5]
+  };
+  /** Lecturas que flotan sobre cada puesto: [etiqueta, valor, ¿mal?]. */
+  function lines(id) {
+    const s = S, k = cfg;
+    if (mode === 'config') {
+      if (id === 'seat') { const all = k.massOk && k.costOk && k.dvOk && k.powerOk && k.capOk && k.days >= DAYS + 30; return [['Masa', k.mass + ' / ' + k.cap + ' t', !k.massOk], ['Presupuesto', k.budgetPct + ' %', !k.costOk], ['Diseño', all ? 'LISTO' : 'REVISAR', !all]]; }
+      if (id === 'bridge') return [['Nave principal', k.pick.hull.n.toUpperCase()], ['Repuestos', String(k.spares)]];
+      if (id === 'life') return [['Reserva de oxígeno', k.days + ' días', k.days < DAYS + 30]];
+      if (id === 'power') return [['Potencia', k.kw + ' kW'], ['Demanda', k.demand + ' kW', !k.powerOk]];
+      if (id === 'prop') return [['Tanques', k.pick.prop.n.toUpperCase()], ['Delta-v', k.dv + ' km/s', !k.dvOk]];
+      if (id === 'hangar') return [['Lander', k.pick.lander.n.toUpperCase()], ['Escudo térmico', k.pick.shield.n.toUpperCase()]];
+      return [['Instrumentos', k.instr.length + ' / ' + k.landerCap, !k.capOk]];
+    }
+    if (id === 'seat') return mode === 'arrived' ? [['Órbita de Marte', 'ALCANZADA'], ['Descenso', 'LISTO']] : [['Trayectoria', s.dev ? 'DESVIADA' : 'NOMINAL', !!s.dev], ['Llegada a Marte en', Math.max(0, Math.round(DAYS - day(s))) + ' días']];
+    if (id === 'bridge') return [['Señal de comunicación', s.comms.toFixed(0) + ' %', s.comms < 35]];
+    if (id === 'life') return [['Oxígeno', s.o2.toFixed(0) + ' %', s.o2 < 25], ['Reserva instalada', k.days + ' días']];
+    if (id === 'power') return [['Baterías', s.bat.toFixed(0) + ' %', s.bat < 20], ['Potencia disponible', kw(s) + ' kW', s.bat < 20], ['Demanda', k.demand + ' kW']];
+    if (id === 'prop') return [['Delta-v disponible', s.dv.toFixed(2) + ' km/s', s.dv < 0.5], ['Circuito de propelente', s.leak ? 'FUGA' : 'ESTANCO', s.leak]];
+    if (id === 'hangar') return [['Integridad del escudo', s.shield.toFixed(0) + ' %', s.shield < 60], ['Repuestos', String(s.spares), s.spares === 0]];
+    return s.instr.map((i) => [i.name, i.ok ? 'OPERATIVO' : 'FALLO', !i.ok]).concat([['Repuestos', String(s.spares), s.spares === 0]]);
+  }
 
   function confirmDesign() {
     const k = cfg = M.calc();
@@ -192,7 +234,7 @@
     const all = checks.every((x) => x[0]);
     const list = '<div class="who">CONSEJO DE CONFIGURACIÓN</div><ul>' + checks.map((x) => '<li style="padding-left:0">' + ok(x[0]) + x[1] + '</li>').join('') + '</ul>';
     if (!all) return dlg('CONTROL DE MISIÓN — VERIFICACIÓN DE DISEÑO', list + q('INSTRUCTOR', 'Una nave demasiado pesada puede no despegar. Una nave mal equipada puede no aterrizar. Y una nave sin instrumentos adecuados puede llegar a Marte sin cumplir su objetivo científico. Diseña con inteligencia, cadete.') +
-      '<div class="alert">El diseño no cumple todos los requisitos. Ajusta los componentes marcados.</div>', [{ l: 'Seguir configurando', fn: () => {} }]);
+      '<div class="alert">El diseño no cumple todos los requisitos. Levántate y ajusta los componentes marcados en su sala.</div>', [{ l: 'Seguir configurando', fn: () => {} }]);
     dlg('CONTROL DE MISIÓN — CONFIRMACIÓN DE CONFIGURACIÓN', list + '<div class="ok"><b>Configuración de la nave registrada.</b></div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 30px">' +
       [['Masa total', k.mass + ' t'], ['Presupuesto utilizado', k.budgetPct + ' %'], ['Capacidad de propelente', k.dv + ' km/s'], ['Integridad térmica', '100 %'], ['Soporte vital', '100 %'], ['Potencia eléctrica', k.kw + ' kW']]
@@ -201,40 +243,130 @@
       [{ l: 'Seguir configurando', fn: () => {} }, { l: '[ INICIAR VIAJE A MARTE ]', fn: startVoyage }]);
   }
 
-  // ---------- Movimiento por la nave ----------
-  function step(dir) { if (!move && !paused) { move = { to: (room + dir + ROOMS.length) % ROOMS.length, dir, p: 0 }; serv = false; A.beep(300, 0.05); } }
-  function goTo(target) {
-    if (paused || target === room) return;
-    const n = ROOMS.length, fwd = (target - room + n) % n, dir = fwd <= n / 2 ? 1 : -1, cnt = dir > 0 ? fwd : n - fwd;
-    queue = []; for (let i = 0; i < cnt; i++) queue.push(dir);
+  // ---------- Movimiento libre del cadete ----------
+  function sit() { P.seated = true; P.x = SEAT_X; P.vx = 0; P.face = -1; P.auto = null; if (mode === 'config') open = 'seat'; }
+  function stand() { P.seated = false; P.x = X_MIN + 4; P.vx = 0; P.face = 1; if (open === 'seat') open = null; }
+  /** Va andando hasta un puesto (panel de alertas, minimapa). Cualquier tecla de movimiento lo cancela. */
+  function goTo(id) {
+    if (paused) return;
+    const st = station(id); if (!st) return;
+    if (P.seated) { if (id === 'seat') return; stand(); }
+    if (open && open !== id) open = null;
+    P.auto = clamp(st.id === 'seat' ? X_MIN + 8 : st.x - 52, X_MIN, X_MAX); dirty = true;
   }
-  $('#nav-l').onclick = () => step(-1); $('#nav-r').onclick = () => step(1);
+  function movePlayer(dt) {
+    let dir = 0;
+    if (!P.seated) {
+      if (keys.l !== keys.r) { dir = keys.r ? 1 : -1; P.auto = null; }
+      else if (P.auto != null) {
+        const d = P.auto - P.x;
+        if (Math.abs(d) < 8) { P.x = P.auto; P.vx = 0; P.auto = null; const st = current(); P.face = st && st.x < P.x ? -1 : 1; }
+        else dir = Math.sign(d) * clamp(Math.abs(d) / 70, 0.25, 1);
+      }
+    }
+    P.vx += (dir * SPEED - P.vx) * (1 - Math.exp(-dt * 12));
+    if (!dir && Math.abs(P.vx) < 3) P.vx = 0;
+    const nx = clamp(P.x + P.vx * dt, P.seated ? SEAT_X : X_MIN, X_MAX);
+    if (nx !== P.x + P.vx * dt) P.vx = 0;
+    P.x = nx;
+    if (dir) P.face = dir > 0 ? 1 : -1;
+    P.ph += Math.abs(P.vx) * dt * 0.02;
+    const cur = current();
+    if (open && open !== 'seat' && (!cur || cur.id !== open)) { open = null; dirty = true; }   // alejarse cierra la consola
+    ROOMS.forEach((r, i) => {                                // las puertas se abren al acercarse
+      if (!i) return;
+      const near = Math.abs(P.x - r.x0) < 250, o = doors[i];
+      doors[i] = clamp(o + (near ? 1 : -1) * dt * 4.5, 0, 1);
+      if (near && o === 0) A.beep(260, 0.05);
+    });
+  }
+  function camTarget() {
+    const panel = mode === 'config' && open ? 330 : 0;       // deja sitio a la consola abierta
+    return clamp(P.x - W / 2 + P.face * 70 * Math.min(1, Math.abs(P.vx) / SPEED) + panel, -300, SHIP_W - 1300 + panel);
+  }
+
+  // ---------- Interacción por proximidad ----------
+  /** Puesto al alcance del cadete (el asiento, si está sentado). */
+  function current() {
+    if (P.seated) return ST[0];
+    let best = null, bd = REACH;
+    ST.forEach((s) => { const d = Math.abs(P.x - s.x); if (d < bd) { bd = d; best = s; } });
+    return best;
+  }
+  /** Acción disponible ahora: { l: texto, fn | hold, can, prog, hot }. */
+  function action() {
+    const st = current(); if (!st) return null;
+    const seatAct = () => (P.seated ? { l: 'LEVANTARSE DEL ASIENTO', fn: stand, can: true } : { l: 'SENTARSE A LOS MANDOS', fn: sit, can: true });
+    if (mode === 'arrived') return st.id === 'seat' ? { l: P.seated ? 'INICIAR EL DESCENSO A MARTE' : 'SENTARSE Y PILOTAR EL DESCENSO', fn: goEDL, can: true } : null;
+    if (mode === 'voyage') {
+      const i = S.ev.findIndex((e) => e.on && !e.done && e.st === st.id);
+      if (i >= 0) { const e = S.ev[i]; return S.t > e.cool ? { l: 'ATENDER EVENTO CRÍTICO 0' + (i + 1), fn: () => openEvent(e, i), can: true, hot: true } : { l: 'SISTEMAS REINICIANDO…', can: false }; }
+      if (st.id === 'seat') return seatAct();
+      const sv = SERV[st.id], can = sv[1](S) && P.full !== st.id;
+      return { l: can ? sv[0] : sv[2](S), hold: true, can, prog: clamp(sv[3](S), 0, 1) };
+    }
+    if (st.id === 'seat') return seatAct();
+    return open === st.id ? { l: 'CERRAR CONSOLA', fn: () => { open = null; }, can: true } : { l: 'ABRIR CONSOLA · ' + (st.cfgLabel || st.label), fn: () => { open = st.id; P.auto = null; }, can: true };
+  }
+  function press() {
+    if (paused || (mode !== 'config' && mode !== 'voyage' && mode !== 'arrived')) return;
+    const a = action();
+    if (!a) return;
+    if (a.hold) { serv = true; return; }
+    if (a.can && a.fn) { A.beep(520, 0.07); a.fn(); dirty = true; } else A.beep(160, 0.08);
+  }
+  function renderAct() {
+    const el = $('#sh-act'), a = paused ? null : action();
+    if (!a) { if (actKey !== '-') { el.style.display = 'none'; actKey = '-'; } return; }
+    const held = serv && a.hold && a.can, pr = a.hold && a.can ? Math.round(a.prog * 50) : -1;
+    const key = a.l + a.can + held + pr + (a.hot ? 1 : 0);
+    if (key === actKey) return;
+    actKey = key;
+    el.style.display = 'flex';
+    el.className = 'actp absolute' + (a.can ? '' : ' off') + (held ? ' is-held' : '') + (a.hot ? ' hot' : '');
+    el.innerHTML = '<kbd>E</kbd><span>' + (a.hold && a.can ? 'MANTÉN · ' : '') + a.l + '</span>' + (pr >= 0 ? '<i style="width:' + pr * 2 + '%"></i>' : '');
+  }
+  (function () {
+    const b = $('#sh-act');
+    b.addEventListener('pointerdown', (e) => { e.preventDefault(); press(); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => b.addEventListener(t, () => { serv = false; }));
+    [['#nav-l', 'l'], ['#nav-r', 'r']].forEach((n) => {       // botones para ratón y pantalla táctil
+      const el = $(n[0]);
+      el.addEventListener('pointerdown', (e) => { e.preventDefault(); if (!paused) keys[n[1]] = true; });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => el.addEventListener(t, () => { keys[n[1]] = false; }));
+    });
+  })();
 
   // ---------- Alertas ----------
+  /** Lista de [puesto, texto]. */
   function alerts() {
+    if (mode === 'arrived') return [['seat', 'Llegada a Marte: vuelve al puesto del piloto']];
     if (mode !== 'voyage') return [];
     const s = S, a = [];
-    s.ev.forEach((e, i) => { if (e.on && !e.done) a.push(['bridge' === e.room ? 0 : ri(e.room), 'EVENTO CRÍTICO 0' + (i + 1) + ' · ' + e.short]); });
-    if (s.o2 < 25) a.push([1, 'Oxígeno crítico: ' + s.o2.toFixed(0) + ' %']);
-    if (s.bat < 20) a.push([2, 'Potencia eléctrica crítica: ' + s.bat.toFixed(0) + ' %']);
-    if (s.leak) a.push([3, 'Fuga de propelente: perdiendo delta-v']);
-    if (s.shield < 60) a.push([4, 'Escudo térmico dañado: ' + s.shield.toFixed(0) + ' %']);
-    if (s.comms < 35 && !s.ev[0].on) a.push([0, 'Señal de comunicación débil: ' + s.comms.toFixed(0) + ' %']);
-    if (s.instr.some((i) => !i.ok)) a.push([5, 'Instrumento científico en fallo']);
+    s.ev.forEach((e, i) => { if (e.on && !e.done) a.push([e.st, 'EVENTO CRÍTICO 0' + (i + 1) + ' · ' + e.short]); });
+    if (s.o2 < 25) a.push(['life', 'Oxígeno crítico: ' + s.o2.toFixed(0) + ' %']);
+    if (s.bat < 20) a.push(['power', 'Potencia eléctrica crítica: ' + s.bat.toFixed(0) + ' %']);
+    if (s.leak) a.push(['prop', 'Fuga de propelente: perdiendo delta-v']);
+    if (s.shield < 60) a.push(['hangar', 'Escudo térmico dañado: ' + s.shield.toFixed(0) + ' %']);
+    if (s.comms < 35 && !s.ev[0].on) a.push(['bridge', 'Señal de comunicación débil: ' + s.comms.toFixed(0) + ' %']);
+    if (s.instr.some((i) => !i.ok)) a.push(['lab', 'Instrumento científico en fallo']);
     return a;
   }
+  /** Averías y eventos activos (lo que enciende las luces de alarma). */
+  const faults = () => (mode === 'voyage' ? alerts() : []);
   function renderHud() {
-    const al = alerts(), key = JSON.stringify(al.map((x) => x[1].replace(/\d+ %/, ''))) + room;
-    const hot = new Set(al.map((x) => x[0]));
+    const al = alerts(), cur = current(), room = roomAt(P.x), hot = new Set(al.map((x) => ri(station(x[0]).room)));
+    const rel = (id) => (cur && cur.id === id ? 'AQUÍ' : station(id).x < P.x ? '← IR' : 'IR →');
+    const key = JSON.stringify(al.map((x) => x[1].replace(/\d+ %/, '') + rel(x[0]))) + room + mode;
     if (key !== alertKey) {
       alertKey = key;
-      $('#alerts').innerHTML = al.length ? '<div class="alrt-h">⚠ PANEL DE ALERTAS</div>' + al.map((x) => '<button class="alrt" data-r="' + x[0] + '"><span>' + x[1] + '</span><b>' + (x[0] === room ? 'AQUÍ' : 'IR →') + '</b></button>').join('') : '';
-      $('#alerts').querySelectorAll('button').forEach((b) => b.onclick = () => goTo(+b.dataset.r));
-      $('#sh-map').innerHTML = ROOMS.map((r, i) => '<button class="mapb' + (i === room ? ' on' : '') + (hot.has(i) ? ' alarm' : '') + '" data-r="' + i + '">' + r.name.split(' ')[0].toUpperCase() + '</button>').join('');
-      $('#sh-map').querySelectorAll('button').forEach((b) => b.onclick = () => goTo(+b.dataset.r));
-      const n = ROOMS.length, l = (room - 1 + n) % n, r = (room + 1) % n;
-      $('#nav-l').innerHTML = '<small>◀ A</small>' + ROOMS[l].name; $('#nav-r').innerHTML = '<small>D ▶</small>' + ROOMS[r].name;
-      $('#nav-l').classList.toggle('alarm', hot.has(l)); $('#nav-r').classList.toggle('alarm', hot.has(r));
+      $('#alerts').innerHTML = al.length ? '<div class="alrt-h">⚠ PANEL DE ALERTAS</div>' + al.map((x) => '<button class="alrt" data-s="' + x[0] + '"><span>' + x[1] + '</span><b>' + rel(x[0]) + '</b></button>').join('') : '';
+      $('#alerts').querySelectorAll('button').forEach((b) => b.onclick = () => { goTo(b.dataset.s); b.blur(); });
+      $('#sh-map').innerHTML = ROOMS.map((r, i) => '<button class="mapb' + (i === room ? ' on' : '') + (hot.has(i) ? ' alarm' : '') + '" style="flex:' + r.w + ' 1 0" data-s="' + (i ? r.id : 'seat') + '">' + r.short + '</button>').join('') + '<i id="map-me"></i>';
+      $('#sh-map').querySelectorAll('button').forEach((b) => b.onclick = () => { goTo(b.dataset.s); b.blur(); });
+      const l = ROOMS[room - 1], r = ROOMS[room + 1];
+      $('#nav-l').innerHTML = '<small>◀ A</small>' + (l ? l.name : 'Proa'); $('#nav-r').innerHTML = '<small>D ▶</small>' + (r ? r.name : 'Popa');
+      $('#nav-l').classList.toggle('alarm', [...hot].some((i) => i < room)); $('#nav-r').classList.toggle('alarm', [...hot].some((i) => i > room));
       $('#sh-room').textContent = ROOMS[room].name; $('#sh-res').textContent = ROOMS[room].res;
     }
     const st = (l, v, bad) => '<div class="stat' + (bad ? ' bad' : '') + '"><label>' + l + '</label><b>' + v + '</b></div>';
@@ -245,7 +377,7 @@
         st('OXÍGENO', k.days + ' días', false) + st('POTENCIA', k.kw + '/' + k.demand + ' kW', !k.powerOk) + st('ESCUDO', k.pick.shield.n, false) + st('INSTRUM.', k.instr.length + '/' + k.landerCap, !k.capOk);
     } else {
       const s = S;
-      $('#sh-phase').textContent = 'FASE 2 · VIAJE INTERPLANETARIO · DÍA ' + String(Math.min(DAYS, Math.floor(day(s)))).padStart(3, '0') + ' / ' + DAYS;
+      $('#sh-phase').textContent = mode === 'arrived' ? 'FASE 2 · VIAJE INTERPLANETARIO · LLEGADA A MARTE' : 'FASE 2 · VIAJE INTERPLANETARIO · DÍA ' + String(Math.min(DAYS, Math.floor(day(s)))).padStart(3, '0') + ' / ' + DAYS;
       $('#sh-stats').innerHTML = st('DELTA-v', s.dv.toFixed(2) + ' km/s', s.leak || s.dv < 0.5) + st('OXÍGENO', s.o2.toFixed(0) + ' %', s.o2 < 25) + st('ENERGÍA', s.bat.toFixed(0) + ' %', s.bat < 20) +
         st('ESCUDO', s.shield.toFixed(0) + ' %', s.shield < 60) + st('COMUNIC.', s.comms.toFixed(0) + ' %', s.comms < 35) + st('INSTRUM.', s.instr.filter((i) => i.ok).length + '/' + s.instr.length, s.instr.some((i) => !i.ok)) + st('REPUESTOS', s.spares, false);
     }
@@ -265,19 +397,25 @@
   }
 
   function update(dt) {
-    const s = S, id = ROOMS[room].id, lv = M.ship();
+    const s = S, lv = M.ship(), cur = current(), id = cur ? cur.id : '';
     s.t += dt;
     s.o2 -= [0.85, 0.68, 0.55][lv.life] * dt;
     s.bat -= Math.max(0.1, 0.42 + 0.07 * s.instr.length - [0, 0.14, 0.26][lv.power]) * dt;
     s.comms -= 0.22 * dt;
     if (!s.leak && s.leakAt && s.t > s.leakAt) { s.leak = true; s.leakAt = 0; s.seal = 0; A.beep(180, 0.4); }
-    if (s.leak) s.dv -= 0.022 * dt;
+    if (s.leak) s.dv -= 0.013 * dt;
     if (s.hits.length && s.t > s.hits[0]) { s.hits.shift(); s.shield -= 13 + Math.random() * 6; s.flash = 1; A.beep(120, 0.3); }
     if (s.glitchAt && s.t > s.glitchAt) { s.glitchAt = 0; const i = s.instr.find((x) => x.ok); if (i) { i.ok = false; A.beep(200, 0.2); } }
     s.ev.forEach((e) => { if (!e.on && s.t > e.at) { e.on = true; e.start(s); A.beep(700, 0.5); } });
     if (s.o2 < 25 || s.bat < 20) s.crit += dt;
 
-    if (serv && !move && SERV[id][2](s)) {                       // reponer en la sala actual
+    // reparar: junto al panel, parado y manteniendo la tecla de acción
+    const busy = s.ev.some((e) => e.on && !e.done && e.st === id);
+    if (!serv) P.full = '';
+    else if (SERV[id] && !busy && !SERV[id][1](s)) P.full = id;      // ya no hay nada que reponer: soltar para volver a empezar
+    P.work = serv && !!SERV[id] && !busy && P.full !== id && Math.abs(P.vx) < 40;
+    if (P.work) {
+      P.face = cur.x >= P.x ? 1 : -1;
       if (id === 'life') { s.o2 += 14 * dt; s.bat -= 2.5 * dt; }
       if (id === 'power') s.bat += 12 * dt;
       if (id === 'bridge') s.comms += 16 * dt;
@@ -292,155 +430,83 @@
     if (s.bat <= 0) return failC('nave sin energía');
     if (s.dv <= 0) return failC('propelente agotado');
 
-    const e = s.ev.find((x) => x.on && !x.done && ri(x.room) === room && s.t > x.cool);
-    if (e && !move) return openEvent(e, s.ev.indexOf(e));
-
     if (s.t >= T_TOTAL && s.ev.every((x) => x.done)) {
-      mode = 'arrived';
+      mode = 'arrived'; P.work = false; serv = false;
       const voy = { o2: s.o2, bat: s.bat, dv: s.dv, shield: s.shield, comms: s.comms, right: s.right, wrong: s.wrong, crit: s.crit,
         instrOk: s.instr.filter((i) => i.ok).length, instrN: s.instr.length };
       A.run.voy = voy; A.store.set('aeon01.save', { phase: 'edl', run: A.run });
       dlg('CONTROL DE MISIÓN — FINAL DEL VIAJE INTERPLANETARIO',
         '<p>Cadete, los datos de navegación confirman que la nave ha llegado a las proximidades de Marte.</p><p>Las comunicaciones se mantienen dentro de los parámetros operativos.</p>' +
         '<p>La tripulación está preparada y los sistemas de descenso han iniciado su secuencia de comprobación.</p><p>Hemos recorrido millones de kilómetros.</p><p>Ahora comienza la fase más delicada de la expedición.</p>' +
-        '<p class="motto">PREPARA LA MANIOBRA DE ENTRADA, DESCENSO Y ATERRIZAJE.</p>',
-        [{ l: 'Ir a la cabina', fn: () => { mode = 'off'; A.startEDL(voy); } }]);
+        '<p class="motto">PREPARA LA MANIOBRA DE ENTRADA, DESCENSO Y ATERRIZAJE.</p>' +
+        (P.seated ? '' : '<p>Vuelve al <b>puesto del piloto</b> y siéntate a los mandos para iniciar el descenso.</p>'),
+        P.seated ? [{ l: 'Iniciar el descenso', fn: goEDL }] : [{ l: 'Ir al puesto del piloto', fn: () => goTo('seat') }]);
     }
   }
 
-  // ---------- Dibujo de las salas (perspectiva 2D en primera persona) ----------
+  // ---------- Equipo de cada sala (se dibuja sobre la pared del fondo) ----------
   const poly = (pts, fill) => { c.fillStyle = fill; c.beginPath(); pts.forEach((p, i) => (i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]))); c.closePath(); c.fill(); };
   const dust = []; for (let i = 0; i < 40; i++) dust.push([Math.random() * W, Math.random() * H, Math.random() * 6.28]);
   const wstars = []; for (let i = 0; i < 90; i++) wstars.push([Math.random(), Math.random(), Math.random() * 1.6 + 0.4]);
 
-  // ---------- Detalle estructural del casco (issue #2) ----------
-  // Tuberías metálicas, bandejas y mazos de cables y paneles técnicos sobre paredes y techo.
-  // No cambia la composición ni la perspectiva: usa la misma caja de la sala (f = profundidad
-  // 0..1, v = altura 0..1 en la pared, u = ancho 0..1 en techo y suelo) y se dibuja por debajo
-  // de las puertas y del equipo de cada sala. Es estático, así que se pinta una vez por sala.
+  // ---------- Detalle estructural del casco (issue #2), llevado al mapa lateral ----------
+  // Tuberías metálicas con bridas, bandeja y mazo de cables, paneles técnicos junto a las puertas,
+  // zócalo de paneles y guía de luz en el suelo, sobre la pared del fondo de cada sala y por
+  // debajo de su equipo. El metal es gris azulado neutro; el color de la sala solo aparece en un
+  // cable, los testigos y la guía. Es estático: se pinta una vez por sala en un lienzo aparte.
+  const METAL = ['#27303d', '#56637a', '#a9b6c8', '#6b788c', '#1c232e'];                                 // sombra → brillo → sombra
   const LAYERS = {};
   function detailLayer(r, col) {
     if (LAYERS[r.id]) return LAYERS[r.id];
-    const cvs = document.createElement('canvas'); cvs.width = W; cvs.height = H;
+    const w = r.w, h = FLOOR - CEIL, cvs = document.createElement('canvas'); cvs.width = w; cvs.height = h;
     const g = cvs.getContext('2d');
-    const wall = (s) => (f, v) => [s > 0 ? 380 * f : W - 380 * f, 190 * f + (H - 440 * f) * v];
-    const ceil = (f, u) => [380 * f + (W - 760 * f) * u, 190 * f];
-    const floor = (f, u) => [380 * f + (W - 760 * f) * u, H - 250 * f];
-    const quad = (P, f0, f1, a0, a1, fill) => { g.fillStyle = fill; g.beginPath(); [P(f0, a0), P(f1, a0), P(f1, a1), P(f0, a1)].forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.closePath(); g.fill(); };
-    const line = (P, f0, a0, f1, a1, stroke, w) => { const a = P(f0, a0), b = P(f1, a1); g.strokeStyle = stroke; g.lineWidth = w; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); };
-    const METAL = ['#27303d', '#56637a', '#a9b6c8', '#6b788c', '#1c232e'];                               // sombra → brillo → sombra
-    const CABLES = ['#2b3442', col(1, 0.95), '#c9a23a', '#8d99ab', '#1a2029', '#b9c4d2'];
-    // tubería en perspectiva: cinco bandas planas que simulan el brillo del metal
-    const pipe = (P, f0, f1, a0, a1) => { const d = (a1 - a0) / 5; METAL.forEach((m, i) => quad(P, f0, f1, a0 + d * i, a0 + d * (i + 1) + d * 0.08, m)); };
-    // abrazadera o brida que rodea una tubería
-    const clamp2 = (P, f, a0, a1, wf) => { const m = (a1 - a0) * 0.18; quad(P, f - wf, f + wf, a0 - m, a1 + m, '#141a23'); quad(P, f - wf * 0.45, f + wf * 0.45, a0 - m, a1 + m, '#7d8a9d'); };
+    const CABLES = ['#2b3442', col(1, 0.95), '#c9a23a', '#8d99ab'];
+    const hpipe = (y0, y1) => { const lg = g.createLinearGradient(0, y0, 0, y1); METAL.forEach((m, i) => lg.addColorStop(i / 4, m)); g.fillStyle = lg; g.fillRect(0, y0, w, y1 - y0); };
+    // tubería gruesa con bridas y tubería fina con abrazaderas, de mamparo a mamparo
+    hpipe(17, 31); hpipe(35, 42);
+    for (let x = 70; x < w; x += 140) { g.fillStyle = '#141a23'; g.fillRect(x - 9, 13, 18, 22); g.fillStyle = '#7d8a9d'; g.fillRect(x - 4, 13, 8, 22); }
+    for (let x = 35; x < w; x += 105) { g.fillStyle = '#141a23'; g.fillRect(x - 4, 33, 8, 11); }
     // bandeja portacables con su mazo ordenado y bridas
-    const tray = (P, f0, f1, a0, a1, n) => {
-      quad(P, f0, f1, a0, a1, '#0b1018');
-      const d = (a1 - a0) / (n + 1);
-      for (let i = 0; i < n; i++) quad(P, f0, f1, a0 + d * (i + 0.6), a0 + d * (i + 1.25), CABLES[i % CABLES.length]);
-      line(P, f0, a0, f1, a0, '#6f7c8f', 2); line(P, f0, a1, f1, a1, '#3c4656', 2);
-      for (let f = f0 + 0.06; f < f1 - 0.02; f += 0.115) { line(P, f, a0, f, a1, '#05080d', 5); line(P, f, a0, f, a1, '#93a0b3', 1.5); }
-    };
-
-    // --- techo: juntas de panel, bandejas de cables y conductos ---
-    [0.27, 0.73].forEach((u) => line(ceil, 0, u, 1, u, 'rgba(0,0,0,.35)', 2));
-    [0.16, 0.8].forEach((f) => line(ceil, f, 0.02, f, 0.98, 'rgba(255,255,255,.05)', 2));
-    [[0.05, 0.15], [0.85, 0.95]].forEach((u) => tray(ceil, 0, 1, u[0], u[1], 6));
-    [[0.18, 0.215], [0.785, 0.82]].forEach((u) => { pipe(ceil, 0, 1, u[0], u[1]); [0.3, 0.6, 0.86].forEach((f) => clamp2(ceil, f, u[0], u[1], 0.012)); });
-    [[0.235, 0.25], [0.75, 0.765]].forEach((u) => pipe(ceil, 0, 1, u[0], u[1]));
-
-    // --- paredes laterales: tuberías altas, mazo de cables y paneles técnicos ---
-    [1, -1].forEach((s) => {
-      const P = wall(s);
-      pipe(P, 0, 1, 0.035, 0.078); pipe(P, 0, 1, 0.096, 0.121);
-      [0.3, 0.6].forEach((f) => clamp2(P, f, 0.035, 0.078, 0.016));                                      // bridas en las costillas
-      [0.12, 0.45, 0.78, 0.93].forEach((f) => clamp2(P, f, 0.096, 0.121, 0.008));
-      tray(P, 0, 1, 0.138, 0.178, 4);
-      [[0.035, 0.235], [0.765, 0.965]].forEach((seg) => {                                                // paneles a ambos lados de la puerta
-        const [a, b] = seg, m = (b - a);
-        quad(P, a, b, 0.25, 0.6, 'rgba(255,255,255,.035)');
-        [[a, 0.25, b, 0.25], [a, 0.6, b, 0.6], [a, 0.25, a, 0.6], [b, 0.25, b, 0.6]].forEach((l) => line(P, l[0], l[1], l[2], l[3], 'rgba(0,0,0,.45)', 2));
-        line(P, a, 0.252, b, 0.252, 'rgba(255,255,255,.10)', 1);
-        for (let i = 0; i < 5; i++) line(P, a + m * 0.14, 0.3 + i * 0.022, a + m * 0.6, 0.3 + i * 0.022, 'rgba(0,0,0,.5)', 2);    // rejilla de ventilación
-        quad(P, a + m * 0.7, a + m * 0.88, 0.295, 0.33, col(1, 0.75));                                   // testigo de estado
-        quad(P, a + m * 0.14, a + m * 0.88, 0.46, 0.55, 'rgba(0,0,0,.28)');                              // registro de mantenimiento
-        [[0.2, 0.48], [0.82, 0.48], [0.2, 0.53], [0.82, 0.53]].forEach((b2) => { const p = P(a + m * b2[0], b2[1]); g.fillStyle = '#8693a6'; g.fillRect(p[0] - 1.5, p[1] - 1.5, 3, 3); });
-        quad(P, a, b, 0.66, 0.9, 'rgba(255,255,255,.025)');
-        [[a, 0.66, b, 0.66], [a, 0.9, b, 0.9], [a, 0.66, a, 0.9], [b, 0.66, b, 0.9]].forEach((l) => line(P, l[0], l[1], l[2], l[3], 'rgba(0,0,0,.4)', 2));
-        pipe(P, a, b, 0.925, 0.955); clamp2(P, a + m * 0.5, 0.925, 0.955, 0.008);                         // conducto bajo junto al suelo
-      });
+    g.fillStyle = '#0b1018'; g.fillRect(0, 46, w, 17);
+    CABLES.forEach((cb, i) => { g.fillStyle = cb; g.fillRect(0, 48.5 + i * 3.5, w, 2.4); });
+    g.fillStyle = '#6f7c8f'; g.fillRect(0, 45, w, 1.5); g.fillStyle = '#3c4656'; g.fillRect(0, 63, w, 1.5);
+    for (let x = 50; x < w; x += 96) { g.fillStyle = '#05080d'; g.fillRect(x - 2.5, 45, 5, 19); g.fillStyle = '#93a0b3'; g.fillRect(x - 0.75, 45, 1.5, 19); }
+    // paneles técnicos a los lados de las puertas: rejilla, testigo de estado y registro de mantenimiento
+    (r.id === 'bridge' ? [w - 100] : [34, w - 100]).forEach((x) => {
+      g.fillStyle = 'rgba(255,255,255,.035)'; g.fillRect(x, 282, 66, 128);
+      g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 2; g.strokeRect(x, 282, 66, 128);
+      g.fillStyle = 'rgba(255,255,255,.10)'; g.fillRect(x, 283, 66, 1);
+      for (let i = 0; i < 5; i++) { g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(x + 9, 295 + i * 7, 32, 3); }
+      g.fillStyle = col(1, 0.75); g.fillRect(x + 46, 295, 12, 9);
+      g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x + 9, 346, 48, 50);
+      [[13, 350], [50, 350], [13, 389], [50, 389]].forEach((p) => { g.fillStyle = '#8693a6'; g.fillRect(x + p[0], p[1], 3, 3); });
     });
-
-    // --- mamparo del fondo: continúan tuberías y cables, y juntas de panel sutiles ---
-    for (let x = 520; x < 1220; x += 140) { g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(x, 197, 2, 446); g.fillStyle = 'rgba(255,255,255,.04)'; g.fillRect(x + 2, 197, 1, 446); }
-    g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(380, 288, 840, 2); g.fillRect(380, 586, 840, 2);
-    const hpipe = (y0, y1) => { const lg2 = g.createLinearGradient(0, y0, 0, y1); METAL.forEach((m, i) => lg2.addColorStop(i / 4, m)); g.fillStyle = lg2; g.fillRect(380, y0, 840, y1 - y0); };
-    hpipe(206, 226); hpipe(234, 246);
-    for (let x = 450; x < 1220; x += 140) { g.fillStyle = '#141a23'; g.fillRect(x - 9, 202, 18, 28); g.fillStyle = '#7d8a9d'; g.fillRect(x - 4, 202, 8, 28); }
-    for (let x = 415; x < 1220; x += 105) { g.fillStyle = '#141a23'; g.fillRect(x - 4, 232, 8, 16); }
-    g.fillStyle = '#0b1018'; g.fillRect(380, 254, 840, 18);
-    for (let i = 0; i < 4; i++) { g.fillStyle = CABLES[i]; g.fillRect(380, 256 + i * 4, 840, 2.6); }
-    g.fillStyle = '#6f7c8f'; g.fillRect(380, 253, 840, 1.5); g.fillStyle = '#3c4656'; g.fillRect(380, 272, 840, 1.5);
-    for (let x = 430; x < 1220; x += 96) { g.fillStyle = '#05080d'; g.fillRect(x - 2.5, 253, 5, 20); g.fillStyle = '#93a0b3'; g.fillRect(x - 0.75, 253, 1.5, 20); }
-    for (let x = 396; x < 1200; x += 140) {                                                              // zócalo de paneles técnicos
-      g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x, 598, 108, 34);
-      g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = 1; g.strokeRect(x + 0.5, 598.5, 108, 34);
-      for (let i = 0; i < 4; i++) { g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(x + 10, 605 + i * 6, 52, 2.5); }
-      g.fillStyle = col(1, 0.8); g.fillRect(x + 74, 606, 22, 5); g.fillStyle = '#8693a6'; g.fillRect(x + 74, 618, 9, 5); g.fillRect(x + 87, 618, 9, 5);
+    // zócalo de paneles técnicos
+    for (let x = 22; x + 108 < w; x += 140) {
+      g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x, 437, 108, 32);
+      g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = 1; g.strokeRect(x + 0.5, 437.5, 108, 32);
+      for (let i = 0; i < 4; i++) { g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(x + 10, 443 + i * 6, 52, 2.5); }
+      g.fillStyle = col(1, 0.8); g.fillRect(x + 74, 444, 22, 5); g.fillStyle = '#8693a6'; g.fillRect(x + 74, 456, 9, 5); g.fillRect(x + 87, 456, 9, 5);
     }
-
-    // --- suelo: placas del pasillo y guías de luz junto a las paredes ---
-    [0.36, 0.64].forEach((u) => line(floor, 0, u, 1, u, 'rgba(255,255,255,.05)', 2));
-    [0.035, 0.965].forEach((u) => { line(floor, 0, u, 1, u, col(1, 0.22), 7); line(floor, 0, u, 1, u, col(1.2, 0.8), 2); });
-
-    // --- iluminación ambiental técnica: baño limpio desde el techo y regletas en las aristas ---
-    const amb = g.createLinearGradient(0, 0, 0, H); amb.addColorStop(0, 'rgba(190,220,255,.07)'); amb.addColorStop(0.5, 'rgba(190,220,255,.02)'); amb.addColorStop(1, 'rgba(0,0,0,.10)');
-    g.fillStyle = amb; g.fillRect(0, 0, W, H);
-    [[0, 0, 380, 190], [W, 0, 1220, 190]].forEach((l) => { g.strokeStyle = 'rgba(200,228,255,.30)'; g.lineWidth = 2; g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(l[2], l[3]); g.stroke(); });
+    // guía de luz junto al suelo
+    g.fillStyle = col(1, 0.22); g.fillRect(0, h - 13, w, 8); g.fillStyle = col(1.2, 0.8); g.fillRect(0, h - 8, w, 2);
+    // iluminación ambiental técnica: baño frío y limpio desde el techo
+    const amb = g.createLinearGradient(0, 0, 0, h); amb.addColorStop(0, 'rgba(190,220,255,.08)'); amb.addColorStop(0.5, 'rgba(190,220,255,.02)'); amb.addColorStop(1, 'rgba(0,0,0,.10)');
+    g.fillStyle = amb; g.fillRect(0, 0, w, h);
     return (LAYERS[r.id] = cvs);
-  }
-
-  function shell(r, t) {
-    const [R, G, B] = r.hue, col = (k, a) => 'rgba(' + (R * k | 0) + ',' + (G * k | 0) + ',' + (B * k | 0) + ',' + (a == null ? 1 : a) + ')';
-    c.fillStyle = '#05080d'; c.fillRect(0, 0, W, H);
-    poly([[0, 0], [W, 0], [1220, 190], [380, 190]], '#161d29');
-    poly([[0, H], [W, H], [1220, 650], [380, 650]], '#0c1118');
-    poly([[0, 0], [380, 190], [380, 650], [0, H]], '#1b2331');
-    poly([[W, 0], [1220, 190], [1220, 650], [W, H]], '#1b2331');
-    const wg = c.createLinearGradient(0, 190, 0, 650); wg.addColorStop(0, '#263143'); wg.addColorStop(1, '#19212e');
-    c.fillStyle = wg; c.fillRect(380, 190, 840, 460);
-    c.strokeStyle = 'rgba(0,0,0,.45)'; c.lineWidth = 3;
-    [0.3, 0.6, 1].forEach((f) => c.strokeRect(380 * f, 190 * f, W - 760 * f, H - 440 * f));           // costillas del casco
-    [[0, 0, 380, 190], [W, 0, 1220, 190], [0, H, 380, 650], [W, H, 1220, 650]].forEach((l) => { c.beginPath(); c.moveTo(l[0], l[1]); c.lineTo(l[2], l[3]); c.stroke(); });
-    for (let i = 1; i < 8; i++) { const x = i * 200; c.beginPath(); c.moveTo(x, H); c.lineTo(380 + x * 0.525, 650); c.stroke(); }    // rejilla del suelo
-    const pulse = 0.75 + 0.25 * Math.sin(t * 2);
-    poly([[500, 60], [1100, 60], [1040, 110], [560, 110]], col(1.1, 0.85 * pulse));                       // luz de techo
-    const lg = c.createRadialGradient(800, 90, 20, 800, 300, 700); lg.addColorStop(0, col(1, 0.22)); lg.addColorStop(1, col(1, 0));
-    c.fillStyle = lg; c.fillRect(0, 0, W, H);
-    c.drawImage(detailLayer(r, col), 0, 0);                                                              // tuberías, cables y paneles (issue #2)
-    c.fillStyle = col(1, 0.9); c.fillRect(380, 190, 840, 7); c.fillRect(380, 643, 840, 7);
-    // puertas laterales
-    [[0.26, 0.74, 1], [0.26, 0.74, -1]].forEach((d) => {
-      const X = (f) => (d[2] > 0 ? 380 * f : W - 380 * f), top = (f) => 190 * f + (H - 440 * f) * 0.2, bot = (f) => H - 250 * f;
-      poly([[X(d[0]), top(d[0])], [X(d[1]), top(d[1])], [X(d[1]), bot(d[1])], [X(d[0]), bot(d[0])]], '#070b11');
-      c.strokeStyle = col(1.1, 0.9); c.lineWidth = 4; c.stroke();
-      c.fillStyle = col(1, 0.12); c.fill();
-    });
-    return col;
   }
 
   function centerpiece(id, col, t) {
     const s = S, lv = M.ship();
     if (id === 'bridge') {                                   // ventanal + pantalla de navegación
       c.save(); c.beginPath(); c.roundRect(470, 225, 660, 250, 24); c.fillStyle = '#01030a'; c.fill(); c.clip();
-      wstars.forEach((p) => { c.fillStyle = 'rgba(220,235,255,' + (0.4 + 0.5 * Math.abs(Math.sin(t * p[2] + p[0] * 9))) + ')'; c.fillRect(470 + ((p[0] * 660 + t * (mode === 'voyage' ? 14 : 2) * p[2]) % 660), 225 + p[1] * 250, p[2], p[2]); });
+      wstars.forEach((p) => { c.fillStyle = 'rgba(220,235,255,' + (0.4 + 0.5 * Math.abs(Math.sin(t * p[2] + p[0] * 9))) + ')'; c.fillRect(470 + ((p[0] * 660 + t * (mode === 'config' ? 2 : 14) * p[2]) % 660), 225 + p[1] * 250, p[2], p[2]); });
       if (mode === 'config') { const g = c.createLinearGradient(0, 400, 0, 480); g.addColorStop(0, '#7cc4ff'); g.addColorStop(0.3, '#1a62c0'); g.addColorStop(1, '#062258'); c.fillStyle = g; c.beginPath(); c.arc(800, 1330, 920, 0, 7); c.fill(); }
       else { const p = clamp(s.t / T_TOTAL, 0, 1), rr = 6 + p * p * 70, g = c.createRadialGradient(990 - rr * 0.3, 330 - rr * 0.3, 1, 990, 330, rr); g.addColorStop(0, '#ffb07a'); g.addColorStop(1, '#8a3216'); c.fillStyle = g; c.beginPath(); c.arc(990, 330, rr, 0, 7); c.fill(); }
       c.restore(); c.strokeStyle = col(1.1); c.lineWidth = 5; c.beginPath(); c.roundRect(470, 225, 660, 250, 24); c.stroke();
       c.fillStyle = '#04101f'; c.fillRect(560, 500, 480, 120); c.strokeRect(560, 500, 480, 120);
       c.strokeStyle = 'rgba(127,220,255,.8)'; c.lineWidth = 2; c.beginPath(); c.moveTo(590, 595); c.quadraticCurveTo(800, 480, 1010, 540); c.stroke();
-      const p = mode === 'voyage' ? clamp(s.t / T_TOTAL, 0, 1) : 0, bx = 590 + 420 * p, by = (1 - p) * (1 - p) * 595 + 2 * (1 - p) * p * 480 + p * p * 540 + (s.dev ? Math.sin(t * 5) * 6 - 14 : 0);
+      const p = mode === 'config' ? 0 : clamp(s.t / T_TOTAL, 0, 1), bx = 590 + 420 * p, by = (1 - p) * (1 - p) * 595 + 2 * (1 - p) * p * 480 + p * p * 540 + (s.dev ? Math.sin(t * 5) * 6 - 14 : 0);
       c.fillStyle = s.dev ? '#ff5a3c' : '#fff'; c.beginPath(); c.arc(bx, by, 6, 0, 7); c.fill();
       c.fillStyle = '#3c8cff'; c.beginPath(); c.arc(590, 595, 9, 0, 7); c.fill(); c.fillStyle = '#e0683a'; c.beginPath(); c.arc(1010, 540, 7, 0, 7); c.fill();
       const bars = Math.round(s.comms / 20); for (let i = 0; i < 5; i++) { c.fillStyle = i < bars ? '#3cff9e' : '#243'; c.fillRect(960 + i * 13, 606 - i * 5, 9, 8 + i * 5); }
@@ -452,7 +518,7 @@
         c.fillStyle = s.o2 < 25 ? '#ff5a3c' : '#3cdfb0'; c.fillRect(x, 570 - hgt + Math.sin(t * 3 + i) * 3, 80, hgt + 10); c.restore();
         c.strokeStyle = col(1.2); c.lineWidth = 3; c.beginPath(); c.roundRect(x, 250, 80, 330, 38); c.stroke();
       }
-      c.save(); c.translate(960, 340); c.fillStyle = '#0c1620'; c.beginPath(); c.arc(0, 0, 95, 0, 7); c.fill(); c.rotate(t * (serv ? 9 : 2.5));
+      c.save(); c.translate(960, 340); c.fillStyle = '#0c1620'; c.beginPath(); c.arc(0, 0, 95, 0, 7); c.fill(); c.rotate(t * (P.work ? 9 : 2.5));
       c.fillStyle = col(1.1, 0.9); for (let i = 0; i < 5; i++) { c.rotate(6.283 / 5); c.beginPath(); c.ellipse(45, 0, 42, 13, 0.4, 0, 7); c.fill(); } c.restore();
       c.strokeStyle = col(1.2); c.lineWidth = 4; c.beginPath(); c.arc(960, 340, 95, 0, 7); c.stroke();
       c.fillStyle = '#3a2a1c'; c.fillRect(850, 540, 240, 50);
@@ -495,7 +561,7 @@
     if (id === 'lab') {                                      // bastidores de instrumentos
       const sel = lv.instr;
       M.INSTR.forEach((ins, i) => {
-        const x = 450 + i * 180, on = sel.includes(ins.id), st = mode === 'voyage' ? s.instr.find((z) => z.id === ins.id) : null, fault = st && !st.ok;
+        const x = 450 + i * 180, on = sel.includes(ins.id), st = mode !== 'config' ? s.instr.find((z) => z.id === ins.id) : null, fault = st && !st.ok;
         c.fillStyle = on ? '#101a2a' : '#0b0f15'; c.fillRect(x, 250, 150, 350); c.strokeStyle = on ? col(1.2) : '#2a3342'; c.lineWidth = 3; c.strokeRect(x, 250, 150, 350);
         if (!on) { c.strokeStyle = '#2a3342'; c.beginPath(); c.moveTo(x, 250); c.lineTo(x + 150, 600); c.moveTo(x + 150, 250); c.lineTo(x, 600); c.stroke(); return; }
         c.fillStyle = '#04101f'; c.fillRect(x + 15, 270, 120, 90);
@@ -508,26 +574,235 @@
     }
   }
 
-  function drawRoom(i, ox, t) {
-    const r = ROOMS[i]; c.save(); c.translate(ox, Math.sin(t * 0.8) * 5);
-    const col = shell(r, t);
-    c.save(); c.translate(390, 420); c.scale(0.62, 0.62); c.translate(-390, -420); centerpiece(r.id, col, t); c.restore();   // equipo a la izquierda, consola a la derecha
+  // ---------- Dibujo del mapa lateral ----------
+  const mk = (h) => (k, a) => 'rgba(' + (h[0] * k | 0) + ',' + (h[1] * k | 0) + ',' + (h[2] * k | 0) + ',' + (a == null ? 1 : a) + ')';
+  const seg = (x1, y1, x2, y2, w, col) => { c.strokeStyle = col; c.lineWidth = w; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); };
+  const rr = (x, y, w, h, r, fill) => { c.fillStyle = fill; c.beginPath(); c.roundRect(x, y, w, h, r); c.fill(); };
+
+  /** Casco exterior: planchas de techo y suelo, popa con motores, antena y panel solar. */
+  function hull(t, x1, x2) {
+    c.fillStyle = '#1d2533'; c.fillRect(x1, TOP, x2 - x1, CEIL - TOP);
+    c.fillStyle = '#0d1219'; c.fillRect(x1, FLOOR, x2 - x1, BOT - FLOOR);
+    c.strokeStyle = 'rgba(0,0,0,.4)'; c.lineWidth = 2;
+    for (let x = Math.ceil(x1 / 150) * 150; x < x2; x += 150) { c.beginPath(); c.moveTo(x, TOP); c.lineTo(x, CEIL); c.moveTo(x + 60, FLOOR + 26); c.lineTo(x + 60, BOT); c.stroke(); }
+    c.fillStyle = '#0b1018'; c.fillRect(x1, TOP + 8, x2 - x1, 15);                           // bandeja de cables del techo
+    ['#2b3442', '#8d99ab', '#c9a23a', '#b9c4d2'].forEach((cb, i) => { c.fillStyle = cb; c.fillRect(x1, TOP + 10 + i * 3.2, x2 - x1, 2.2); });
+    for (let x = Math.ceil(x1 / 96) * 96; x < x2; x += 96) { c.fillStyle = '#05080d'; c.fillRect(x - 2, TOP + 7, 4, 17); }
+    const pg = c.createLinearGradient(0, TOP + 29, 0, TOP + 42); METAL.forEach((m, i) => pg.addColorStop(i / 4, m));
+    c.fillStyle = pg; c.fillRect(x1, TOP + 29, x2 - x1, 13);                                // conducto metálico con bridas
+    for (let x = Math.ceil(x1 / 170) * 170 + 40; x < x2; x += 170) { c.fillStyle = '#141a23'; c.fillRect(x - 8, TOP + 26, 16, 19); c.fillStyle = '#7d8a9d'; c.fillRect(x - 3.5, TOP + 26, 7, 19); }
+    c.fillStyle = '#05080d'; for (let x = Math.ceil(x1 / 34) * 34; x < x2; x += 34) c.fillRect(x, FLOOR + 9, 20, 5);       // rejilla del suelo
+    c.fillStyle = 'rgba(255,255,255,.14)'; c.fillRect(x1, FLOOR, x2 - x1, 2);
+    seg(x1, TOP, x2, TOP, 3, '#4c5a72'); seg(x1, BOT, x2, BOT, 3, '#3b475c');
+    for (let x = Math.ceil(x1 / 420) * 420; x < x2; x += 420) { c.fillStyle = Math.sin(t * 3 + x) > 0.3 ? '#ff5a3c' : '#4a1a12'; c.fillRect(x, BOT - 3, 10, 6); }
+
+    if (x2 > SHIP_W - 60) {                                  // popa: mamparo, bloque de motores y toberas
+      const X = SHIP_W, fire = mode === 'voyage';
+      c.fillStyle = '#1c2330'; c.fillRect(X, TOP, 34, BOT - TOP); c.fillRect(X + 34, TOP + 46, 60, BOT - TOP - 92);
+      [300, 458, 616].forEach((y, i) => {
+        const g = c.createLinearGradient(X + 94, 0, X + 230, 0); g.addColorStop(0, '#5a6678'); g.addColorStop(1, '#161b24');
+        poly([[X + 94, y - 36], [X + 230, y - 60], [X + 230, y + 60], [X + 94, y + 36]], g);
+        if (fire) {
+          const L = 230 + 60 * Math.sin(t * 31 + i * 2) + 30 * Math.sin(t * 7 + i), f = c.createLinearGradient(X + 225, 0, X + 225 + L, 0);
+          f.addColorStop(0, 'rgba(235,250,255,.95)'); f.addColorStop(0.25, 'rgba(70,190,255,.7)'); f.addColorStop(1, 'rgba(30,90,255,0)');
+          c.fillStyle = f; c.beginPath(); c.moveTo(X + 228, y - 52); c.quadraticCurveTo(X + 228 + L * 0.7, y - 30, X + 228 + L, y); c.quadraticCurveTo(X + 228 + L * 0.7, y + 30, X + 228, y + 52); c.fill();
+        }
+      });
+    }
+    if (x1 < 900 && x2 > 500) {                              // antena de comunicaciones (se mueve al reapuntarla)
+      const a = -0.5 + (P.work && current() && current().id === 'bridge' ? Math.sin(t * 5) * 0.35 : Math.sin(t * 0.4) * 0.05);
+      seg(700, TOP, 700, TOP - 52, 6, '#55627a');
+      c.save(); c.translate(700, TOP - 56); c.rotate(a); c.fillStyle = '#c9d4e2'; c.beginPath(); c.ellipse(0, 0, 44, 12, 0, 0, 7); c.fill(); seg(0, 0, 0, -26, 3, '#c9d4e2'); c.restore();
+    }
+    const px = at('power', 0.5);
+    if (x1 < px + 300 && x2 > px - 300) {                    // panel solar (gira al reorientarlo)
+      const a = P.work && current() && current().id === 'power' ? Math.sin(t * 4) * 0.25 : -0.12;
+      seg(px, TOP, px, TOP - 46, 6, '#55627a');
+      c.save(); c.translate(px, TOP - 50); c.rotate(a); c.fillStyle = '#143a78'; c.fillRect(-190, -9, 380, 18); c.strokeStyle = '#6fb6ff'; c.lineWidth = 1.5; c.strokeRect(-190, -9, 380, 18);
+      for (let i = -150; i < 190; i += 38) { c.beginPath(); c.moveTo(i, -9); c.lineTo(i, 9); c.stroke(); } c.restore();
+    }
+  }
+
+  /** Proa: morro con parabrisas y tablero de mandos del piloto. */
+  function bow(t) {
+    poly([[0, TOP], [-150, TOP + 70], [-270, 400], [-300, 470], [-270, 560], [-120, BOT - 20], [0, BOT]], '#222b3a');
+    poly([[0, CEIL], [-118, 292], [-212, 432], [-212, FLOOR], [0, FLOOR]], '#1a2333');
+    const g = c.createLinearGradient(-270, 400, -118, 292); g.addColorStop(0, 'rgba(40,110,200,.75)'); g.addColorStop(1, 'rgba(150,225,255,.55)');
+    poly([[-150, TOP + 70], [-270, 400], [-212, 432], [-118, 292]], '#02040a'); poly([[-150, TOP + 70], [-270, 400], [-212, 432], [-118, 292]], g);
+    seg(-150, TOP + 70, -270, 400, 3, '#9fe0ff');
+    poly([[-212, 566], [-120, 548], [58, 548], [100, 602], [100, FLOOR], [-212, FLOOR]], '#101722');       // tablero de mandos
+    for (let i = 0; i < 4; i++) { c.fillStyle = 'rgba(70,170,255,' + (0.55 + 0.3 * Math.sin(t * 2 + i * 1.7)) + ')'; c.fillRect(-100 + i * 40, 554, 30, 12); }
+    c.fillStyle = '#3cff9e'; c.fillRect(64, 566, 8, 5); c.fillStyle = '#ffd23c'; c.fillRect(74, 580, 8, 5);
+    seg(80, 580, 108, 572, 6, '#55627a'); rr(100, 564, 20, 14, 5, '#8fa0b8');                               // palanca de mando
+    c.fillStyle = '#2a3445'; c.fillRect(104, FLOOR - 14, 52, 6);                                          // reposapiés
+  }
+
+  /** Pared de fondo, luces y equipo de una sala. */
+  function roomBack(r, i, t, hot) {
+    const col = mk(r.hue), x = r.x0, w = r.w, [R, G, B] = r.hue;
+    const g = c.createLinearGradient(0, CEIL, 0, FLOOR);
+    g.addColorStop(0, 'rgb(' + (36 + R * 0.05 | 0) + ',' + (47 + G * 0.05 | 0) + ',' + (64 + B * 0.05 | 0) + ')'); g.addColorStop(1, 'rgb(' + (22 + R * 0.03 | 0) + ',' + (29 + G * 0.03 | 0) + ',' + (41 + B * 0.03 | 0) + ')');
+    c.fillStyle = g; c.fillRect(x, CEIL, w, FLOOR - CEIL);
+    c.fillStyle = 'rgba(0,0,0,.2)'; c.fillRect(x, 612, w, FLOOR - 612);
+    c.strokeStyle = 'rgba(0,0,0,.32)'; c.lineWidth = 2;
+    for (let px = x + 125; px < x + w - 20; px += 125) { c.beginPath(); c.moveTo(px, CEIL); c.lineTo(px, FLOOR); c.stroke(); }
+    c.beginPath(); c.moveTo(x, 612); c.lineTo(x + w, 612); c.stroke();
+    c.drawImage(detailLayer(r, col), x, CEIL);                // tuberías, cables y paneles (issue #2)
+    const pulse = hot ? 0.55 + 0.45 * Math.sin(t * 9) : 0.8 + 0.2 * Math.sin(t * 2 + i), lc = hot ? (k, a) => 'rgba(255,' + (70 * k | 0) + ',' + (50 * k | 0) + ',' + a + ')' : col;
+    [0.27, 0.73].forEach((f) => {                             // luces de techo con su cono
+      const lx = x + w * f, cg = c.createLinearGradient(0, CEIL, 0, FLOOR); cg.addColorStop(0, lc(1, 0.2 * pulse)); cg.addColorStop(1, lc(1, 0));
+      poly([[lx - 70, CEIL + 14], [lx + 70, CEIL + 14], [lx + 250, FLOOR], [lx - 250, FLOOR]], cg);
+      c.fillStyle = lc(1.15, 0.95 * pulse); c.fillRect(lx - 70, CEIL + 5, 140, 10);
+    });
+    c.fillStyle = col(1, 0.9); c.fillRect(x, CEIL, w, 5); c.fillRect(x, FLOOR - 5, w, 5);
+    c.font = '700 21px Orbitron, sans-serif'; c.fillStyle = col(1.25, 0.6); c.textAlign = 'left';
+    c.fillText('0' + (i + 1) + ' · ' + r.name.toUpperCase(), x + 46, CEIL + 86);
+    c.font = '600 13px Orbitron, sans-serif'; c.fillStyle = 'rgba(190,225,255,.45)';
+    if (i) c.fillText('◀ ' + ROOMS[i - 1].name.toUpperCase(), x + 46, CEIL + 106);
+    if (ROOMS[i + 1]) { c.textAlign = 'right'; c.fillText(ROOMS[i + 1].name.toUpperCase() + ' ▶', x + w - 46, CEIL + 86); c.textAlign = 'left'; }
+    const cx = r.id === 'bridge' ? x + w * 0.5 : x + w * 0.4, sc = 0.8;                                    // equipo en la pared del fondo
+    c.save(); c.translate(cx - 800 * sc, 462 - 430 * sc); c.scale(sc, sc); centerpiece(r.id, col, t); c.restore();
+    const bx = x + w * 0.5;                                   // baliza de alarma
+    rr(bx - 16, CEIL + 5, 32, 10, 3, '#0c1118');
+    if (hot) {
+      const a = t * 7;
+      c.save(); c.beginPath(); c.rect(x, CEIL, w, FLOOR - CEIL); c.clip(); c.translate(bx, CEIL + 22); c.rotate(a); c.fillStyle = 'rgba(255,60,40,.22)';
+      [0, Math.PI].forEach((o) => { c.beginPath(); c.moveTo(0, 0); c.arc(0, 0, 260, o - 0.28, o + 0.28); c.closePath(); c.fill(); });
+      c.restore();
+    }
+    c.fillStyle = hot ? (Math.sin(t * 9) > 0 ? '#ff3c2c' : '#7a1810') : '#1f6f4c'; c.beginPath(); c.arc(bx, CEIL + 22, 11, 0, 7); c.fill();
+    if (hot) { c.fillStyle = 'rgba(255,40,30,' + (0.08 + 0.07 * Math.sin(t * 6)) + ')'; c.fillRect(x, CEIL, w, FLOOR - CEIL); }
+  }
+
+  /** Consola de un puesto con su lectura flotante. */
+  function drawStation(st, t, near, hot) {
+    const x = st.x, col = mk(ROOMS[ri(st.room)].hue), L = lines(st.id), label = (mode === 'config' && st.cfgLabel) || st.label;
+    if (st.id !== 'seat') {
+      poly([[x - 32, FLOOR], [x - 22, FLOOR - 94], [x + 22, FLOOR - 94], [x + 32, FLOOR]], '#121a26');
+      poly([[x - 54, FLOOR - 94], [x - 44, FLOOR - 142], [x + 44, FLOOR - 142], [x + 54, FLOOR - 94]], near ? '#2a3a55' : '#1b2535');
+      c.fillStyle = hot ? (Math.sin(t * 9) > 0 ? '#ff4a36' : '#5a1810') : col(1.1, 0.9); c.fillRect(x - 36, FLOOR - 135, 72, 26);
+      c.fillStyle = 'rgba(0,0,0,.35)'; for (let i = 0; i < 4; i++) c.fillRect(x - 32 + i * 18, FLOOR - 130 + (i % 2) * 8, 12, 4);
+      for (let i = 0; i < 3; i++) { c.fillStyle = Math.sin(t * 3 + i * 2 + x) > 0 ? '#3cff9e' : '#1b5c3e'; c.fillRect(x - 20 + i * 16, FLOOR - 104, 8, 5); }
+      if (near) { c.strokeStyle = 'rgba(127,220,255,' + (0.6 + 0.4 * Math.sin(t * 5)) + ')'; c.lineWidth = 3; c.strokeRect(x - 56, FLOOR - 146, 112, 148); }
+    }
+    const w = 268, h = 32 + L.length * 22, px = x - w / 2, py = 478 - h, bad = hot || L.some((l) => l[2]);
+    c.globalAlpha = near ? 1 : 0.8;
+    c.fillStyle = bad ? 'rgba(72,12,8,.78)' : 'rgba(6,26,56,.78)'; c.fillRect(px, py, w, h);
+    c.strokeStyle = bad ? '#ff5a3c' : 'rgba(110,210,255,.85)'; c.lineWidth = 1.5; c.strokeRect(px + 0.5, py + 0.5, w - 1, h - 1);
+    c.textAlign = 'left'; c.font = '700 12px Orbitron, sans-serif'; c.fillStyle = bad ? '#ffb4a3' : '#7fdcff'; c.fillText(label, px + 10, py + 19);
+    L.forEach((l, i) => {
+      const y = py + 41 + i * 22;
+      c.textAlign = 'left'; c.font = '500 16px Rajdhani, sans-serif'; c.fillStyle = '#d6ecff'; c.fillText(l[0], px + 10, y);
+      c.textAlign = 'right'; c.font = '700 13px Orbitron, sans-serif'; c.fillStyle = l[2] ? '#ff8f7a' : '#9dffcf'; c.fillText(l[1], px + w - 10, y);
+    });
+    c.textAlign = 'left'; c.globalAlpha = 1;
+    if (st.id !== 'seat') seg(x, py + h, x, FLOOR - 142, 1.5, bad ? 'rgba(255,90,60,.6)' : 'rgba(110,210,255,.5)');
+    if (near && !paused) {                                    // tecla de acción junto al panel
+      const kx = x, ky = py - 26 + Math.sin(t * 5) * 4;
+      rr(kx - 17, ky - 17, 34, 34, 7, '#eaf6ff'); c.fillStyle = '#061a38'; c.font = '900 18px Orbitron, sans-serif'; c.textAlign = 'center'; c.fillText('E', kx, ky + 7); c.textAlign = 'left';
+    }
+  }
+
+  function drawSeat() {
+    const x = SEAT_X;
+    c.fillStyle = '#0e141d'; c.fillRect(x + 2, FLOOR - 40, 18, 40); c.fillRect(x - 18, FLOOR - 6, 60, 6);
+    c.save(); c.translate(x + 36, FLOOR - 46); c.rotate(0.1); rr(-8, -132, 22, 136, 8, '#2b3648'); rr(-10, -162, 26, 36, 9, '#34425a'); c.fillStyle = A.settings.accent; c.fillRect(-8, -100, 22, 5); c.restore();
+    rr(x - 30, FLOOR - 54, 78, 16, 7, '#2b3648');
+  }
+
+  /** El cadete: camina, espera, trabaja o va sentado a los mandos. */
+  function astronaut(t) {
+    const K = 0.9, mv = clamp(Math.abs(P.vx) / SPEED, 0, 1), sw = Math.sin(P.ph) * mv, acc = A.settings.accent;
+    const lit = '#e8eef5', dim = '#a3b0c0', boot = '#465168';
+    const bob = Math.abs(Math.cos(P.ph)) * 5 * mv + Math.sin(t * 2.2) * 1.5 * (1 - mv);
+    c.save();
+    if (P.seated) c.translate(SEAT_X + 2, FLOOR - 58); else c.translate(P.x, FLOOR - 84 * K - bob * K);
+    c.scale(P.face * K, K); c.lineCap = 'round'; c.lineJoin = 'round';
+    const leg = (a, col, fwd) => {                            // origen en la cadera
+      if (P.seated) { seg(0, 2, 42, 4, 20, col); seg(42, 4, 44, 44, 18, col); seg(44, 46, 58, 46, 14, boot); return; }
+      const kx = Math.sin(a) * 42 + fwd, ky = Math.cos(a) * 42, fx = Math.sin(a) * 84, fy = 84 - Math.max(0, fwd) * 0.9;
+      seg(0, 0, kx, ky, 20, col); seg(kx, ky, fx, fy, 18, col); seg(fx - 2, fy - 2, fx + 15, fy - 2, 14, boot);
+    };
+    const arm = (a, col) => {                                 // origen en el hombro
+      if (P.seated) { seg(2, -66, 30, -52, 15, col); seg(30, -52, 62, -60, 13, col); return; }
+      if (P.work && col === lit) {
+        seg(2, -66, 30, -52, 15, col); seg(30, -52, 56, -62 + Math.sin(t * 22) * 3, 13, col);
+        c.fillStyle = 'rgba(255,230,140,' + (0.5 + Math.random() * 0.5) + ')'; c.beginPath(); c.arc(64, -62, 4 + Math.random() * 7, 0, 7); c.fill();
+        return;
+      }
+      const ex = Math.sin(a) * 30, ey = -66 + Math.cos(a) * 30, hx = Math.sin(a + 0.25) * 58, hy = -66 + Math.cos(a + 0.25) * 58;
+      seg(2, -66, ex, ey, 15, col); seg(ex, ey, hx + 4, hy, 13, col);
+    };
+    const idle = (1 - mv) * 0.09;
+    leg(-sw * 0.55 - idle, dim, sw < 0 ? -sw * 12 : 0); arm(sw * 0.6, dim);
+    c.save(); c.rotate(P.seated ? -0.06 : 0.07 * mv);
+    rr(-40, -82, 22, 62, 7, '#b4c0cf');                         // mochila de soporte vital
+    rr(-24, -84, 48, 88, 15, lit); c.fillStyle = '#aab7c6'; c.fillRect(-24, -8, 48, 8);
+    c.fillStyle = acc; c.fillRect(-24, -44, 48, 6);
+    rr(4, -68, 17, 20, 4, '#c3cedb'); c.fillStyle = '#3cff9e'; c.fillRect(8, -63, 5, 4);
+    c.fillStyle = '#f4f8fb'; c.beginPath(); c.arc(2, -110, 30, 0, 7); c.fill();                               // casco
+    const vg = c.createLinearGradient(-4, -128, 30, -92); vg.addColorStop(0, '#2a6aa6'); vg.addColorStop(0.5, '#0b1626'); vg.addColorStop(1, '#04080f');
+    c.fillStyle = vg; c.beginPath(); c.ellipse(12, -110, 19, 19, 0, 0, 7); c.fill();
+    c.strokeStyle = 'rgba(200,235,255,.75)'; c.lineWidth = 2.5; c.beginPath(); c.arc(11, -111, 13, 3.6, 4.7); c.stroke();
     c.restore();
+    leg(sw * 0.55 + idle, lit, sw > 0 ? sw * 12 : 0); arm(-sw * 0.6, lit);
+    c.restore();
+    c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(P.seated ? SEAT_X + 6 : P.x, FLOOR + 3, 40, 6, 0, 0, 7); c.fill();
+  }
+
+  /** Mamparo entre dos salas, con su puerta corredera. */
+  function bulkhead(i, t, hot) {
+    const x = ROOMS[i].x0, o = doors[i], col = mk(ROOMS[i].hue);
+    c.fillStyle = '#10151d'; c.fillRect(x - 30, CEIL, 60, DOOR - CEIL);
+    c.fillStyle = '#2c3749'; c.fillRect(x - 30, CEIL, 5, DOOR - CEIL); c.fillRect(x + 25, CEIL, 5, DOOR - CEIL);
+    c.fillStyle = col(1, 0.9); c.fillRect(x - 30, DOOR - 6, 60, 6);
+    c.fillStyle = hot ? (Math.sin(t * 9) > 0 ? '#ff3c2c' : '#5a1810') : o > 0.5 ? '#3cff9e' : '#ffd23c'; c.fillRect(x - 9, DOOR - 30, 18, 10);
+    const h = (FLOOR - DOOR) * (1 - o);
+    if (h > 2) {
+      c.save(); c.beginPath(); c.rect(x - 17, DOOR, 34, h); c.clip();
+      c.fillStyle = '#39465a'; c.fillRect(x - 17, DOOR, 34, h);
+      for (let y = DOOR + h - 400; y < DOOR + h; y += 44) poly([[x - 17, y + 22], [x + 17, y], [x + 17, y + 12], [x - 17, y + 34]], 'rgba(255,210,60,.55)');
+      c.restore(); c.strokeStyle = '#586a86'; c.lineWidth = 2; c.strokeRect(x - 17, DOOR, 34, h);
+    }
+    c.fillStyle = '#2c3749'; c.fillRect(x - 30, FLOOR - 4, 60, 8);
   }
 
   function draw(now) {
-    const t = now / 1000;
-    if (move) { const e = move.p * move.p * (3 - 2 * move.p); drawRoom(room, -move.dir * e * W, t); drawRoom(move.to, move.dir * (1 - e) * W, t); }
-    else drawRoom(room, 0, t);
-    dust.forEach((d) => { d[0] = (d[0] + Math.cos(d[2]) * 0.25 + W) % W; d[1] = (d[1] + Math.sin(d[2]) * 0.25 + H) % H; c.fillStyle = 'rgba(200,225,255,.25)'; c.fillRect(d[0], d[1], 2, 2); });
-    if (mode === 'voyage') {
-      const hot = alerts().some((x) => x[0] === room);
-      if (hot) { c.fillStyle = 'rgba(255,40,30,' + (0.07 + 0.07 * Math.sin(t * 6)) + ')'; c.fillRect(0, 0, W, H); }
-      if (S.flash > 0) { c.fillStyle = 'rgba(255,255,255,' + S.flash * 0.5 + ')'; c.fillRect(0, 0, W, H); S.flash -= 0.04; }
+    const t = now / 1000, fly = mode !== 'config', p = fly ? clamp(S.t / T_TOTAL, 0, 1) : 0;
+    const shake = fly && S.flash > 0 ? S.flash * 9 : 0;
+    const cx = Math.round(cam.x + (Math.random() - 0.5) * shake), cy = Math.sin(t * 0.8) * 3 + (Math.random() - 0.5) * shake;
+    c.fillStyle = '#02040a'; c.fillRect(0, 0, W, H);
+    wstars.forEach((s) => {                                   // estrellas con paralaje
+      const x = (((s[0] * 2400 - cx * 0.1 * s[2] - (mode === 'voyage' ? t * 12 * s[2] : 0)) % W) + W) % W;
+      c.fillStyle = 'rgba(220,235,255,' + (0.35 + 0.5 * Math.abs(Math.sin(t * s[2] + s[0] * 9))) + ')'; c.fillRect(x, s[1] * H, s[2], s[2]);
+    });
+    if (!fly) {                                               // la Tierra bajo la nave en órbita
+      const ex = 800 - cx * 0.04, g = c.createLinearGradient(0, 790, 0, 900); g.addColorStop(0, '#8fd0ff'); g.addColorStop(0.25, '#1f6fd0'); g.addColorStop(1, '#06224f');
+      c.fillStyle = g; c.beginPath(); c.arc(ex, 790 + 2600, 2600, 0, 7); c.fill();
+    } else {                                                  // Marte, más cerca cada día
+      const mr = 7 + p * p * 62, mx = 1090 - cx * 0.02, my = 74, g = c.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, 1, mx, my, mr); g.addColorStop(0, '#ffb07a'); g.addColorStop(1, '#8a3216');
+      c.fillStyle = g; c.beginPath(); c.arc(mx, my, mr, 0, 7); c.fill();
+    }
+    c.save(); c.translate(-cx, cy);
+    const x1 = cx - 40, x2 = cx + W + 40, bad = faults(), hot = new Set(bad.map((a) => station(a[0]).room)), cur = paused ? null : current();
+    hull(t, Math.max(0, x1), Math.min(SHIP_W, x2));
+    ROOMS.forEach((r, i) => { if (r.x0 < x2 && r.x0 + r.w > x1) roomBack(r, i, t, hot.has(r.id)); });
+    if (x1 < 160) { bow(t); drawSeat(); }
+    const hotSt = new Set(bad.map((a) => a[0]));
+    ST.forEach((s) => { if (s.x > x1 - 160 && s.x < x2 + 160) drawStation(s, t, cur === s, hotSt.has(s.id)); });
+    astronaut(t);
+    ROOMS.forEach((r, i) => { if (i && r.x0 > x1 - 40 && r.x0 < x2 + 40) bulkhead(i, t, hot.has(r.id) || hot.has(ROOMS[i - 1].id)); });
+    dust.forEach((d) => {                                     // polvo en suspensión dentro del casco
+      d[0] += Math.cos(d[2]) * 0.25; d[1] = CEIL + ((d[1] + Math.sin(d[2]) * 0.2 - CEIL + (FLOOR - CEIL)) % (FLOOR - CEIL));
+      const x = cx + ((((d[0] - cx) % W) + W) % W);
+      if (x > 0 && x < SHIP_W) { c.fillStyle = 'rgba(200,225,255,.22)'; c.fillRect(x, d[1], 2, 2); }
+    });
+    c.restore();
+    if (fly) {
+      if (S.flash > 0) { c.fillStyle = 'rgba(255,255,255,' + S.flash * 0.45 + ')'; c.fillRect(0, 0, W, H); S.flash -= 0.04; }
       if (S.comms < 35) for (let i = 0; i < 5; i++) { c.fillStyle = 'rgba(180,220,255,.08)'; c.fillRect(0, Math.random() * H, W, 3); }
     }
-    const v = c.createRadialGradient(800, 450, 420, 800, 450, 980); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.6)'); c.fillStyle = v; c.fillRect(0, 0, W, H);
-    $('#console').style.visibility = move ? 'hidden' : '';
+    const v = c.createRadialGradient(800, 450, 430, 800, 450, 1000); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)'); c.fillStyle = v; c.fillRect(0, 0, W, H);
   }
 
   function loop(now) {
@@ -535,15 +810,16 @@
     if (mode === 'off' || $('#screen-ship').classList.contains('hidden')) { mode = 'off'; return; }
     const dt = Math.min(0.05, (now - last) / 1000) * (A.ts || 1); last = now;
     if (!paused) {
-      if (!move && queue.length) step(queue.shift());
-      if (move) { move.p += dt / 0.4 * Math.max(1, A.ts || 1); if (move.p >= 1) { room = move.to; move = null; conKey = ''; alertKey = ''; } }
+      movePlayer(dt);
       if (mode === 'voyage') update(dt);
-    }
-    if (mode !== 'off') {
-      draw(now);
-      hud += dt; if (hud > 0.15 || !conKey) { hud = 0; if (mode === 'config' || mode === 'voyage') { renderConsole(); renderHud(); } }
-      raf = requestAnimationFrame(loop);
-    }
+    } else P.vx = 0;
+    if (mode === 'off') return;
+    cam.x += (camTarget() - cam.x) * (1 - Math.exp(-dt * 5));   // la cámara sigue al cadete con suavidad
+    draw(now);
+    renderAct();
+    const me = $('#map-me'); if (me) me.style.left = (clamp(P.x / SHIP_W, 0, 1) * 100).toFixed(1) + '%';
+    hud += dt; if (hud > 0.15 || dirty) { hud = 0; dirty = false; renderConsole(); renderHud(); }
+    raf = requestAnimationFrame(loop);
   }
 
   A.resume = function (save) {
@@ -553,14 +829,21 @@
   };
 
   // ---------- Teclado ----------
+  const live = () => mode === 'config' || mode === 'voyage' || mode === 'arrived';
   window.addEventListener('keydown', (e) => {
-    if (mode !== 'config' && mode !== 'voyage') return;
-    if (e.target && e.target.tagName === 'INPUT') return;
+    if (!live() || (e.target && e.target.tagName === 'INPUT')) return;
     const k = e.key.toLowerCase();
-    if (k === 'a' || k === 'arrowleft') step(-1);
-    if (k === 'd' || k === 'arrowright') step(1);
-    if (k === 'e' && mode === 'voyage') serv = true;
-    if (k === 'escape' && !paused) { mode = 'off'; A.show('menu'); }
+    if (k === 'escape' && !paused) { if (mode === 'config' && open && open !== 'seat') { open = null; dirty = true; } else { mode = 'off'; A.show('menu'); } return; }
+    if (paused) return;
+    if (k === 'a' || k === 'arrowleft') { keys.l = true; e.preventDefault(); }
+    if (k === 'd' || k === 'arrowright') { keys.r = true; e.preventDefault(); }
+    if (k === 'e' || k === ' ') { e.preventDefault(); if (!e.repeat) press(); }
   });
-  window.addEventListener('keyup', (e) => { if (e.key.toLowerCase() === 'e') serv = false; });
+  window.addEventListener('keyup', (e) => {
+    const k = e.key.toLowerCase();
+    if (k === 'a' || k === 'arrowleft') keys.l = false;
+    if (k === 'd' || k === 'arrowright') keys.r = false;
+    if (k === 'e' || k === ' ') { serv = false; if (live() && !paused && k === ' ') e.preventDefault(); }
+  });
+  window.addEventListener('blur', () => { keys.l = keys.r = false; serv = false; });
 })();

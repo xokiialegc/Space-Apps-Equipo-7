@@ -1,6 +1,7 @@
 # AEON-01 · Space Simulator
 
-Juego 2D en primera persona sobre un viaje espacial de la Tierra a Marte.
+Juego 2D sobre un viaje espacial de la Tierra a Marte: cabina en primera persona para pilotar
+y nave en corte lateral para recorrerla a pie.
 Proyecto del **Equipo 7** para el hackatón Space Apps (reto: *Juego de diseño de misiones espaciales*).
 
 - **Tecnología:** HTML, Tailwind CSS (CDN) y JavaScript puro. Sin compilación ni dependencias que instalar.
@@ -13,22 +14,30 @@ Abre `index.html` en un navegador (o publica la carpeta en GitHub Pages / cualqu
 | Pantalla | Controles |
 |---|---|
 | Menú | Ratón o táctil |
+| Hangar de lanzamiento (Personalizar) | `←` / `→`, flechas en pantalla o clic para cambiar de cohete · ratón o táctil para color y calcomanías · `Esc` o «Menú Principal» para volver |
 | Briefing | Ratón o táctil |
 | Despegue (Fase 1) | Mantener `Espacio` (o `W` / `↑` / pantalla IMPULSORES) para encender los impulsores · `Esc` abortar |
-| Interior de la nave | `A` / `D` (o puertas y minimapa) moverse entre salas · mantener `E` para reponer el recurso de la sala · `Esc` menú |
+| Interior de la nave | `E` levantarse del asiento del piloto o sentarse · `A` / `D` o `←` / `→` caminar libremente (la cámara sigue al cadete) · `E` o `Espacio` junto a un panel, cuando aparece el indicador: abrir su consola, atender un evento o, manteniéndola, reparar · `Esc` cerrar consola / menú |
 | Descenso en Marte | `A` / `D` ángulo de entrada · `P` paracaídas · mantener `Espacio` retropropulsores |
 
 ## Flujo del juego
 
-1. **Menú principal** — en *Personalizar* se elige el vehículo de lanzamiento, el color y el nombre.
+1. **Menú principal** — *Personalizar* abre el hangar de lanzamiento: un carrusel para elegir
+   cohete (Centella, X o Apollo 11, cada uno con su capacidad de carga y su coste), color
+   principal en tiempo real, hasta tres calcomanías sobre el fuselaje y nombre de la nave.
 2. **Nueva partida** — briefing del Instructor Jefe y Manual rápido de telemetría.
 3. **Fase 1 · Lanzamiento** — en la cabina: verificar carga y presupuesto, cuenta atrás y despegue
    hasta 7,8 km/s por encima de 100 km.
-4. **3.2 · Segmento espacial** — recorrer el interior de la nave (seis salas) y configurar nave
-   principal, tanques, soporte vital, energía, lander, escudo térmico e instrumentos.
+4. **3.2 · Segmento espacial** — el cadete se levanta del asiento del piloto y recorre a pie la
+   nave, un mapa lateral continuo de seis salas unidas por puertas, de proa a popa: Puente,
+   Soporte vital, Laboratorio, Hangar, Energía y Propulsión. En la consola de cada sala configura
+   nave principal, soporte vital, instrumentos, lander y escudo térmico, energía y tanques; de
+   vuelta en el asiento, verifica el diseño e inicia el viaje.
 5. **Fase 2 · Viaje interplanetario** — 210 días comprimidos: vigilar oxígeno, energía, delta-v,
-   escudo, comunicaciones e instrumentos, cada uno en su sala; el panel de alertas lleva directo a
-   la sala afectada. Tres eventos críticos de Control de Misión con decisión A/B.
+   escudo, comunicaciones e instrumentos. Cada avería enciende las luces de alarma de su módulo y
+   se repara allí mismo, junto al panel; el panel de alertas lleva andando hasta el módulo
+   afectado. Tres eventos críticos de Control de Misión con decisión A/B. Al llegar a Marte hay
+   que volver al puesto del piloto.
 6. **Fase 3 · Descenso en Marte** — de vuelta en la cabina: entrada atmosférica, paracaídas,
    retropropulsores y aterrizaje.
 7. **Reporte final** — evaluación de los cuatro segmentos, eficiencia, calificación y cierre.
@@ -39,13 +48,19 @@ Abre `index.html` en un navegador (o publica la carpeta en GitHub Pages / cualqu
 index.html      Menú principal, cabina de vuelo y paneles
 assets/cockpit.webp Imagen de la cabina con los cristales transparentes (Fase 1)
 css/style.css   Estilos propios (neón, título metálico, indicadores)
-js/menu.js      Fondo espacial, botones, ajustes, personalización, guardado
+js/menu.js      Fondo espacial, botones, ajustes, guardado
 js/mission.js   Configuración de misión, briefing, telemetría y verificación de lanzamiento
+js/rockets.js   Cohetes en 2D dibujados por código, color principal y calcomanías
+js/custom.js    Hangar de lanzamiento: pantalla de personalización del cohete
 js/sky.js       Vista animada por las ventanas: cielo → espacio
 js/launch.js    Fase 1 en la cabina: verificación (holograma), cuenta atrás y despegue
-js/ship.js      Interior de la nave (casco con tuberías, cables y paneles), configuración (3.2) y viaje (Fase 2)
+js/ship.js      Interior de la nave en mapa lateral (casco con tuberías, cables y paneles): movimiento libre, configuración (3.2) y viaje (Fase 2)
 js/edl.js       Fase 3: descenso en Marte, reporte final y resultados
 docs/PROCESO.md Bitácora del proceso de desarrollo
 ```
 
 El progreso y los ajustes se guardan en `localStorage` del navegador.
+
+En el interior también se puede jugar con ratón o pantalla táctil: los botones `◀ A` y `D ▶` se
+mantienen pulsados para caminar, el indicador de acción hace de tecla `E`, y el minimapa y el
+panel de alertas llevan al cadete andando hasta el puesto elegido.

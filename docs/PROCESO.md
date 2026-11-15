@@ -244,3 +244,122 @@ salas y por debajo de las puertas y del equipo de cada sala:
 
 ### Pruebas
 Las seis salas renderizadas en Chrome sin interfaz, sin errores de JavaScript del juego.
+
+## Etapa 7 · Hangar de lanzamiento: personalización del cohete (15-11-2026)
+
+### Pedido
+Que el botón «Personalizar» abra una pantalla propia en lugar del panel sobre el menú: fondo 2D
+con una plataforma de lanzamiento y el cohete elegido en el centro, título «AEON-01», carrusel de
+cohetes bajo el título, panel para cambiar el color principal en tiempo real y aplicar
+calcomanías sobre el fuselaje, y un botón «Menú Principal» que vuelva al inicio. Como referencia
+de distribución se adjuntó una captura del menú de un juego de carreras, y como naves, tres
+imágenes para pasar a 2D.
+
+### Qué se construyó
+1. **Cohetes en 2D** (`js/rockets.js`): tres cohetes dibujados por código, sin imágenes, con
+   volumen por degradado. **Apollo 11** (Saturno V: tres etapas, bandas negras, módulos de
+   servicio y de mando, torre de escape), **X** (nave de acero con cuatro aletas) y **Centella**
+   (avión espacial de ala delta, diseño propio).
+2. **Hangar de lanzamiento** (`js/custom.js`, pantalla `#screen-custom`): atardecer en el
+   complejo de lanzamiento con torre de servicio, brazos que llegan al fuselaje, focos, vapor de
+   los depósitos y luces de plataforma. Título y botón «Menú Principal» arriba; debajo, el
+   carrusel con miniatura, nombre, capacidad y coste de cada cohete.
+3. **Color principal**: librea original, ocho colores y un selector libre. Se aplica al instante
+   al cohete de la plataforma y a su miniatura, y también a la franja de la nave del menú y del
+   traje del cadete.
+4. **Calcomanías**: seis diseños propios (Emblema AEON, Equipo 7, Destino Marte, Estrella,
+   Galones, Rayo) y «Tu imagen», que carga un archivo del jugador reducido a 160 px. Hasta tres a
+   la vez, en posiciones fijas del fuselaje; la cuarta sustituye a la más antigua.
+5. **Cámara exterior del despegue** (`js/launch.js`): muestra el cohete elegido con su color.
+
+### Decisiones
+- **El cohete es el vehículo de lanzamiento.** El panel anterior tenía tres lanzadores (ARES-M,
+  ARES-H, TITAN-X) que fijaban capacidad y coste. Para no tener dos selectores de cohete, cada
+  cohete del carrusel ocupa uno: Centella 70 t / 900 M$, Apollo 11 100 t / 1 400 M$ y X 130 t /
+  2 100 M$. Las cifras y los identificadores internos no cambian, así que las partidas guardadas
+  siguen valiendo.
+- **Primera nave.** La imagen era un X-wing de Star Wars, un diseño con derechos de autor; no se
+  dibujó. Su casilla la ocupa Centella, un diseño original.
+- **Logotipo de la NASA.** No se incluyó como calcomanía: las condiciones de Space Apps prohíben
+  usar la insignia y otros identificadores de la NASA sin permiso expreso por escrito
+  (https://www.spaceappschallenge.org/navigator-terms-conditions/).
+- **Referencia de menú.** Se tomó solo la distribución (título, botón de menú, tira de casillas,
+  vehículo sobre plataforma); la tipografía, los colores y los paneles son los de AEON-01.
+- **Tamaños.** Los cohetes no están a escala entre sí: se dibujan para que los tres se vean bien
+  en la plataforma.
+
+### Pruebas
+Automatizadas en Chrome sin interfaz: abrir desde «Personalizar», carrusel con flechas en
+pantalla, teclado y clic, cambio de color medido en los píxeles del cohete, selector libre,
+calcomanías (aplicar, quitar, límite de tres), carga de una imagen propia, nombre, vuelta al menú
+con el botón y con Esc, conservación al recargar y cohete elegido en la verificación y la cámara
+del despegue. Sin errores de JavaScript. No se probó en un móvil físico.
+
+## Etapa 8 · Movimiento libre por el interior de la nave (14-11-2026, integrada el 15-11-2026)
+
+### Pedido
+Issue #1: que el personaje se mueva de forma libre y fluida entre habitaciones, sin saltos de
+cámara. Mapa continuo en vista lateral con salas conectadas por puertas, control directo con A/D
+o las flechas al levantarse del asiento del piloto (E), cámara que sigue al personaje e
+interacción por proximidad (E o Espacio cuando aparece el indicador), sin romper el vuelo ni las
+fases que ya funcionaban.
+
+### Qué se construyó
+1. **Mapa lateral continuo** (`js/ship.js`): la nave en corte, de proa a popa, 6 300 px de
+   mundo. Morro con parabrisas, tablero y asiento del piloto; seis salas con sus mamparos y
+   puertas correderas que se abren al acercarse; popa con el bloque de motores, encendidos
+   durante el viaje. El equipo de cada sala es el mismo dibujo de la etapa 5, ahora sobre la
+   pared del fondo. Orden nuevo, de izquierda a derecha: Puente, Soporte vital, Laboratorio,
+   Hangar, Energía y Propulsión.
+2. **Cadete**: astronauta dibujado por código con animación de caminar, espera, trabajo y
+   sentado. Se empieza sentado a los mandos; `E` lo levanta. Velocidad de 470 px/s con arranque
+   y frenada suaves.
+3. **Cámara**: sigue al cadete con suavizado y un pequeño adelanto en el sentido de la marcha; se
+   desplaza para dejar sitio cuando hay una consola abierta.
+4. **Interacción por proximidad**: siete puestos (asiento del piloto y una consola por sala). A
+   menos de 125 px aparece el indicador con la acción disponible. En la configuración, `E` abre
+   la consola del componente y alejarse la cierra. En el viaje, hay que mantener `E` junto al
+   panel averiado, y los eventos críticos se atienden en su puesto: comunicaciones en la consola
+   del puente, tormenta solar en la sala de energía y desviación de trayectoria en el asiento
+   del piloto. Al llegar a Marte hay que volver al asiento para pilotar el descenso.
+5. **Alarmas en el mapa**: cada módulo tiene su baliza y sus luces; con una avería activa la
+   sala entera parpadea en rojo y se ve desde las salas vecinas. Sobre cada consola flota su
+   lectura en tiempo real.
+6. **Alertas y minimapa**: el minimapa es proporcional a la nave y marca la posición del cadete;
+   pulsarlo, o pulsar una alerta, lo lleva andando hasta el puesto. Cualquier tecla de
+   movimiento cancela ese paseo.
+
+### Integración con la etapa 6 (issue #2)
+La etapa 6 añadió tuberías, cables y paneles a las salas en primera persona, que este cambio
+sustituye por el mapa lateral. Para no perder ese trabajo, el detalle se llevó a la vista nueva
+con los mismos materiales y colores (`detailLayer` en `js/ship.js`):
+- **Pared del fondo de cada sala**: tubería gruesa con bridas, tubería fina con abrazaderas y
+  bandeja portacables con su mazo, de mamparo a mamparo; paneles técnicos con rejilla, testigo y
+  registro de mantenimiento junto a las puertas; zócalo de paneles técnicos; guía de luz junto
+  al suelo y baño de luz ambiental fría.
+- **Techo del casco**: bandeja de cables y conducto metálico con bridas a lo largo de la nave.
+
+Lo que no se pudo conservar es la condición del issue #2 de mantener la composición y la
+perspectiva: el issue #1 pide justo cambiarlas. La capa de las paredes laterales y del suelo en
+perspectiva no tiene equivalente en una vista en corte. Es una decisión de equipo: si se
+prefiere la vista en primera persona, basta con no fusionar este cambio.
+
+### Decisiones
+- **Base**: el issue describe un único `index.html`; se trabajó sobre AEON-01 y se mantuvo la
+  estructura de archivos, por decisión del equipo.
+- **Una sola cubierta**: no hay escaleras ni gravedad cero; el issue lo dejaba como opcional.
+- **Eventos críticos con tecla**: ya no se abren solos al entrar en la sala.
+- **Fuga de propelente**: pierde 0,013 km/s por segundo en lugar de 0,022, porque ahora hay que
+  cruzar la nave andando para sellarla (hasta unos 12 s de proa a popa).
+- **Sin cambios** en el menú, el briefing, el despegue, el descenso y el reporte final, ni en el
+  resto de consumos y reglas del viaje.
+
+### Pruebas
+Automatizadas en Chrome sin interfaz, manejando el juego solo con teclado, ratón y lo que se ve
+en pantalla: configuración completa (levantarse, cruzar la nave, abrir consolas, diseño rechazado
+y corregido, confirmar), viaje completo a velocidad real y acelerada (alertas, reparaciones, los
+tres eventos, una respuesta incorrecta y su reintento, vuelta al asiento y paso al descenso),
+fallo por recursos agotados, botones táctiles, Esc y Continuar. Sin errores de JavaScript. El
+despegue y el descenso no se volvieron a jugar enteros: su código no se tocó. No se probó con
+jugadores reales ni en un móvil físico.
+

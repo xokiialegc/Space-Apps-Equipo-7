@@ -6,11 +6,11 @@
   const $ = (s) => document.querySelector(s);
 
   // ---------- Configuración de la misión ----------
-  // El lanzador se elige en Personalizar; los sistemas, a bordo (Segmento Espacial).
+  // El lanzador es el cohete elegido en Personalizar (js/rockets.js); los sistemas, a bordo (Segmento Espacial).
   const LAUNCHERS = [
-    { id: 'ares-m', name: 'ARES-M', cap: 70, cost: 900 },
-    { id: 'ares-h', name: 'ARES-H', cap: 100, cost: 1400 },
-    { id: 'titan-x', name: 'TITAN-X', cap: 130, cost: 2100 }
+    { id: 'ares-m', name: 'CENTELLA', cap: 70, cost: 900 },
+    { id: 'ares-h', name: 'APOLLO 11', cap: 100, cost: 1400 },
+    { id: 'titan-x', name: 'X', cap: 130, cost: 2100 }
   ];
   const COMP = {
     hull:   [{ n: 'Compacta', mass: 30, cost: 480, spares: 3 }, { n: 'Equilibrada', mass: 38, cost: 600, spares: 5 }, { n: 'Extendida', mass: 48, cost: 760, spares: 7 }],
