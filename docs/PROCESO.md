@@ -590,3 +590,34 @@ línea; pantallas de inicio, pausa y créditos limpias, con botones grandes. Sin
 Recorrido automático en Chrome por menú, créditos, ajustes, briefing, verificación, despegue,
 pausa (la altitud y el día del viaje no avanzan en pausa), configuración, viaje con eventos,
 descenso fallido y descenso completo hasta «¡Misión cumplida!». Sin errores de JavaScript.
+
+## Etapa 11 · Música por escena y panel de partida (15-11-2026)
+
+### Pedido
+Tres canciones: «Cornfield Chase» (Hans Zimmer) en el descenso a Marte; «Everybody Wants to Rule
+the World» (Tears for Fears) en todo lo demás, desde el menú hasta el descenso; «Riders on the
+Storm» (The Doors, remix) solo en el hangar de personalización. El deslizador de música de Ajustes
+debe controlarlas. Y un panel pequeño, desde que empieza la partida, con pausa y vuelta al menú.
+
+### Qué se construyó
+- **Reproductor por escena** (`js/menu.js`): cada pantalla pide su canción; al cambiar, la
+  anterior se funde a cero en ~1 s y se pausa, y la nueva sube al volumen del deslizador. La
+  principal y la de personalización continúan donde se quedaron; la del descenso empieza siempre
+  desde el principio (`js/edl.js` la pide al iniciar el descenso y sigue hasta el informe final).
+- **Volumen**: «Ajustes → Música» fija el volumen al instante; el botón del altavoz la silencia.
+  Se quitó el zumbido ambiental sintetizado, que sonaba debajo de las canciones.
+- **Panel de partida**: PAUSA (o Esc) y MENÚ, arriba a la derecha, en el briefing, la cabina, la
+  nave y el descenso. MENÚ cierra cualquier informe abierto y vuelve al menú principal.
+
+### Decisiones
+- Las canciones se recodificaron a 128 kbps (12 MB en total en lugar de 29) para que el juego
+  cargue antes.
+- El repositorio es público y las canciones tienen derechos de autor: por decisión del
+  responsable del proyecto no se suben (`.gitignore`). `assets/music/LEEME.md` explica los nombres
+  de archivo. Sin ellas el juego funciona igual, en silencio.
+
+### Pruebas
+Prueba en Chrome: la canción correcta suena en el menú, el hangar, el briefing, la nave y el
+descenso; el deslizador y el silencio cambian el volumen; el panel aparece solo en partida, pausa
+y vuelve al menú. Sin los MP3, el juego no da errores.
+
